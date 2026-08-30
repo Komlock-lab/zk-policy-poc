@@ -17,21 +17,28 @@
 
 ```text
 Public Inputs:
-  value
-  policyCommitment
+  value: u128              # 実際の送金額、wei
+  policyCommitment: Field
 
 Private Inputs:
-  maxAmount
-  salt
+  maxAmount: u128          # 支出上限、wei
+  salt: Field
 
 Constraints:
   value <= maxAmount
-  hash(maxAmount, salt) == policyCommitment
+  Poseidon2(maxAmount, salt) == policyCommitment
 ```
+
+Contractの外部入力はEVM標準の`uint256`とし、Verifierへ渡す前に`u128`の範囲内で
+あることを検証する。ETH表記への変換はスクリプト境界だけで行い、Contract、Circuit、
+Proofではweiの整数を使用する。
 
 ## Contract Wallet
 
 `ZkPolicyAccount.sol`は、実際に送金する`value`と登録済み`policyCommitment`をPublic InputとしてSolidity Verifierへ渡す。Proofが有効な場合だけnative tokenを送金する。
+
+Phase 1ではOwner、Verifier、`policyCommitment`をconstructorで登録して変更不可とする。
+Policy更新はPhase 2で実装する。
 
 Owner EOAの署名を認証に使用し、ZK Proofは支出ポリシーの検証にだけ使用する。
 

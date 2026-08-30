@@ -1,0 +1,16 @@
+node_modules/
+.pnpm-store/
+coverage/
+
+circuits/*/target/
+circuits/*/Prover.toml
+contracts/cache/
+contracts/out/
+contracts/broadcast/
+
+target/
+proof
+vk
+
+.env
+.DS_Store
