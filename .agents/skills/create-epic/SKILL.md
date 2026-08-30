@@ -45,7 +45,7 @@ Create one `proposed` ADR per material decision using `assets/adr.md`. Present t
 ### 3. Decompose into Stories and Tasks
 
 1. Create exactly one Story per observable user action. A user may be an end user, developer, owner, client, or AI agent.
-2. Give every Story normal, error, and non-functional acceptance criteria in Given/When/Then form. One error condition is one criterion.
+2. Give every Story normal and error acceptance criteria in Given/When/Then form. One error condition is one criterion.
 3. Define explicit scope exclusions and link applicable Epic invariants, ADRs, and Wiki pages.
 4. Build an acyclic dependency graph within the Epic. Do not create cross-Epic `depends_on` links.
 5. Decompose every Story into bounded implementation Tasks. Include a verification method and observable completion condition for each Task.

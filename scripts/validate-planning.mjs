@@ -257,9 +257,6 @@ export function validatePlanning(root = process.cwd()) {
       if (!/AC-\d+\s+\[異常系\]/.test(story.content)) {
         errors.push(`${label}: approved story requires an error acceptance criterion`);
       }
-      if (!/AC-\d+\s+\[非機能\]/.test(story.content)) {
-        errors.push(`${label}: approved story requires a non-functional acceptance criterion`);
-      }
       const storyTasks = tasks.filter((task) => task.metadata.story === story.metadata.id);
       if (storyTasks.length === 0) {
         errors.push(`${label}: approved story requires at least one task`);

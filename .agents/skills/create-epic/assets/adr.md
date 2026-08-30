@@ -25,14 +25,6 @@ date: YYYY-MM-DD
 
 得られる利点、制約、トレードオフ。
 
-## Invariants
-
-Storyをまたいで守る条件。
-
-## Affected Stories
-
-- 対象Story。
-
 ## References
 
 - 関連するWikiページまたは一次資料。

@@ -76,7 +76,6 @@ function writeValidPlan(root) {
       "",
       "- AC-1 [正常系]: Given valid input / When user creates / Then policy exists",
       "- AC-2 [異常系]: Given invalid input / When user creates / Then request fails",
-      "- AC-3 [非機能]: secrets are not logged",
     ].join("\n"),
   );
   writeDocument(
@@ -171,7 +170,6 @@ test("rejects an approved story without required criteria and tasks", () => {
 
   assert.ok(result.errors.some((error) => error.includes("normal acceptance criterion")));
   assert.ok(result.errors.some((error) => error.includes("error acceptance criterion")));
-  assert.ok(result.errors.some((error) => error.includes("non-functional acceptance criterion")));
   assert.ok(result.errors.some((error) => error.includes("at least one task")));
 });
 
