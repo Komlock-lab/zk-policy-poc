@@ -21,6 +21,7 @@ Epic 01の要求をすべて検証し、main向けPRとして提出する。
 - ローカル決済フローを実行する。
 - Storyの受け入れ条件と実装結果を対応付ける。
 - 対象外機能とpublic chain操作が追加されていないことを確認する。
+- 参照した一次資料をLLM Wikiへ取り込み、Wiki lintを実行する。
 - 監査結果を記録し、変更をcommit・pushしてPRを作成する。
 
 ## 完了条件
@@ -39,6 +40,7 @@ Epic 01の要求をすべて検証し、main向けPRとして提出する。
 ## 検証結果
 
 - 全テスト、Proofベンチマーク、ローカル決済、差分チェックが成功した。
+- 公式資料5件、article 5件、concept 3件を登録し、Wiki lintが成功した。
 - [audit-01](../../audits/audit-01-zk-payment.md)はpassed、CRITICAL/HIGH残件は0件である。
 - main向けPR https://github.com/Komlock-lab/zk-policy-poc/pull/2 を作成した。
 

@@ -6,11 +6,17 @@ No papers ingested.
 
 ## Articles
 
-No articles ingested.
+- [[noir-installation]]
+- [[noir-data-types]]
+- [[noir-integers]]
+- [[noirup]]
+- [[bbup]]
 
 ## Concepts
 
-No concepts created.
+- [[noir-barretenberg-toolchain]]
+- [[noir-public-and-private-inputs]]
+- [[noir-integer-types]]
 
 ## Queries
 

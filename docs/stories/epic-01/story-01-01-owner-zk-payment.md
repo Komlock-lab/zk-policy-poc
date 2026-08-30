@@ -49,7 +49,7 @@ ZK Policy Enforcement Layerの最小PoCとして、Proof生成からオンチェ
 
 - [epic-01](../../epics/epic-01-zk-payment.md)の不変条件を維持する。
 - [adr-0001](../../adr/adr-0001-amount-and-public-inputs.md)、[adr-0002](../../adr/adr-0002-authorization-and-policy-boundary.md)、[adr-0003](../../adr/adr-0003-commitment-and-proving-system.md)に従う。
-- LLM Wikiの再利用可能な資料は未登録であり、このStoryはWikiページを参照しない。
+- [Noir integer types](../../../llm-wiki/wiki/concepts/noir-integer-types.md)、[Public and Private Inputs](../../../llm-wiki/wiki/concepts/noir-public-and-private-inputs.md)、[Noir and Barretenberg Toolchain](../../../llm-wiki/wiki/concepts/noir-barretenberg-toolchain.md)を技術的根拠として参照する。
 
 ## Task
 

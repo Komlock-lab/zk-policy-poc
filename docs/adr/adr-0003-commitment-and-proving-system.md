@@ -36,5 +36,4 @@ date: 2026-08-30
 ## References
 
 - [epic-01](../epics/epic-01-zk-payment.md)
-- [Noir documentation](https://noir-lang.org/docs/)
-- [Barretenberg](https://github.com/AztecProtocol/aztec-packages/tree/next/barretenberg)
+- [Noir and Barretenberg Toolchain](../../llm-wiki/wiki/concepts/noir-barretenberg-toolchain.md)

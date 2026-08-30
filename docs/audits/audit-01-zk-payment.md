@@ -15,6 +15,7 @@ date: 2026-08-30
 - `pnpm benchmark:circuit`: ACIR Opcodes 12、Proof 7,232 bytes、生成時間332msを記録した。
 - `pnpm local:payment`: 非forkのローカルAnvilで0.01 ETH送金と受取人残高増加を確認した。
 - `git diff --check`: whitespace errorがないことを確認した。
+- LLM Wiki lint: raw不変性、wikilink、索引、frontmatter、重複、version情報に問題がないことを確認した。
 - 認証とPolicy検証の分離、実送金額とPublic Inputの結合、秘密情報のログ、外部RPC経路、範囲検証を確認した。
 
 ## Findings

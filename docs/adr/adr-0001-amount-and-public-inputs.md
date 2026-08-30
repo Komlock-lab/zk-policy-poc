@@ -36,4 +36,5 @@ Circuitの制約コストを抑えつつEVMの標準ABIと接続し、Proofで�
 ## References
 
 - [epic-01](../epics/epic-01-zk-payment.md)
-- [Noir integer types](https://noir-lang.org/docs/noir/concepts/data_types/integers)
+- [Noir integer types](../../llm-wiki/wiki/concepts/noir-integer-types.md)
+- [Noir Public and Private Inputs](../../llm-wiki/wiki/concepts/noir-public-and-private-inputs.md)
