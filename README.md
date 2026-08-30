@@ -2,7 +2,7 @@
 
 秘密の支出ポリシーをZK Proofで検証し、条件を満たす場合だけSmart Accountからトランザクションを実行するためのPoCです。
 
-開発順序は[ロードマップ](docs/roadmap.md)、最初の実装範囲は[Phase 1チケット](docs/tickets/phase-1-zk-payment.md)を参照してください。
+開発順序は[ロードマップ](docs/roadmap.md)、現在の実装範囲は[Phase 1 Epic](docs/epics/epic-01-zk-payment.md)を参照してください。
 
 ## アーキテクチャ
 
@@ -93,8 +93,14 @@ Smart Accountの実装方針は次のとおりです。
 ├── e2e/                           # Proof生成から決済までの結合テスト
 ├── docs/
 │   ├── roadmap.md
-│   ├── tickets/
-│   └── adr/                       # 後続Phaseの技術選定記録
+│   ├── epics/                     # Phase単位の計画と進捗
+│   ├── stories/                   # ユーザーアクションと受け入れ条件
+│   ├── tasks/                     # Storyを構成する実装作業
+│   ├── adr/                       # 合意済みの設計判断
+│   └── audits/                    # Epic完了時の監査結果
+├── llm-wiki/
+│   ├── raw/                       # 人間が追加する不変の一次資料
+│   └── wiki/                      # LLMが管理する再利用可能な知識
 ├── guidelines/
 │   ├── common.md
 │   ├── apps.md

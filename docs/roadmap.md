@@ -2,7 +2,20 @@
 
 AIエージェントが提案したトランザクションに対し、秘密の支出ポリシーをZK Proofで検証し、条件を満たす場合だけSmart Accountから実行できる仕組みを段階的に開発する。
 
+## Epic
+
+| Phase | Epic | Status |
+| --- | --- | --- |
+| 1 | [epic-01: 1回あたりの支出上限を使ったZK決済](epics/epic-01-zk-payment.md) | review |
+| 2 | Policy管理・Proof生成API | 未計画 |
+| 3 | ERC-4337対応 | 未計画 |
+| 4 | Claude Code・Codex接続 | 未計画 |
+| 5 | 攻撃・異常系の検証 | 未計画 |
+| 6 | 複数ポリシー対応 | 未計画 |
+
 ## 1. 単一条件のZK PoC
+
+詳細なスコープ、設計判断、検証結果は[epic-01](epics/epic-01-zk-payment.md)を正本とする。
 
 - 「1回あたりの支出上限」を証明するZK Circuitを実装する
 - ローカルでProofを生成する
