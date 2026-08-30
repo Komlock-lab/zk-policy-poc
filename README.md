@@ -114,7 +114,8 @@ Smart Accountの実装方針は次のとおりです。
 | 実行環境 | Node.js | TypeScriptアプリケーションの実行 |
 | Package管理 | pnpm workspace | TypeScriptパッケージの管理 |
 | ZK Circuit | [Noir](https://noir-lang.org/docs/) / Nargo | 支出ポリシーの制約、テスト、fuzz |
-| Proving Backend | Barretenberg (`bb` / `bb.js`) | Proof、Verification Key、Solidity Verifierの生成 |
+| ZK証明方式 | UltraHonk（zk-SNARK系、EVM向けKeccak設定） | オンチェーンで検証するZK Proof |
+| Proving Backend | Barretenberg (`bb` / `bb.js`) | UltraHonk Proof、Verification Key、Solidity Verifierの生成 |
 | Contract | Solidity | VerifierとSmart Accountの実装 |
 | Contract開発 | [Foundry](https://getfoundry.sh/) | ビルド、テスト、デプロイ |
 | Ethereum Client | [viem](https://viem.sh/) | Contract呼び出しとトランザクション送信 |
