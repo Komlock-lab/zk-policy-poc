@@ -2,7 +2,7 @@
 
 秘密の支出ポリシーをZK Proofで検証し、条件を満たす場合だけSmart Accountからトランザクションを実行するためのPoCです。
 
-開発順序は[ロードマップ](docs/roadmap.md)、最初の実装範囲は[Phase 1チケット](docs/tickets/phase-1-zk-payment.md)を参照してください。
+開発順序は[ロードマップ](docs/roadmap.md)、現在の実装範囲は[Phase 1 Epic](docs/epics/epic-01-zk-payment.md)を参照してください。
 
 ## アーキテクチャ
 
@@ -93,8 +93,14 @@ Smart Accountの実装方針は次のとおりです。
 ├── e2e/                           # Proof生成から決済までの結合テスト
 ├── docs/
 │   ├── roadmap.md
-│   ├── tickets/
-│   └── adr/                       # 後続Phaseの技術選定記録
+│   ├── epics/                     # Phase単位の計画と進捗
+│   ├── stories/                   # ユーザーアクションと受け入れ条件
+│   ├── tasks/                     # Storyを構成する実装作業
+│   ├── adr/                       # 合意済みの設計判断
+│   └── audits/                    # Epic完了時の監査結果
+├── llm-wiki/
+│   ├── raw/                       # 人間が追加する不変の一次資料
+│   └── wiki/                      # LLMが管理する再利用可能な知識
 ├── guidelines/
 │   ├── common.md
 │   ├── apps.md
@@ -191,3 +197,38 @@ CircomとsnarkjsもSolidity Verifierを生成でき、Groth16、PLONK、FFLONK�
 - Claude CodeとCodexに秘密のPolicyやOwner Keyを渡さない
 
 開発ルールは[guidelines](guidelines/common.md)で管理します。
+
+## Phase 1のローカル実行
+
+Phase 1はローカルAnvilだけを対象にする。デプロイ・送金コードはHTTPのloopback addressと
+chain ID `31337`以外を拒否する。
+
+固定ツールチェーンは[`.tool-versions`](.tool-versions)を参照する。NoirとBarretenbergは
+対応するversion managerで同じversionを導入する。
+
+```sh
+noirup --version 1.0.0-beta.26
+bbup --version 5.2.0
+pnpm install
+```
+
+全成果物を生成してテストする。
+
+```sh
+pnpm build
+pnpm test
+```
+
+Proof生成からVerifier・Accountのデプロイ、0.01 ETHの送金、残高差分の検証までを、
+スクリプトが一時的に起動するAnvil上で実行する。
+
+```sh
+pnpm local:payment
+```
+
+CircuitとVerifierを変更した場合、生成Verifierを次のコマンドで再生成する。生成された
+`contracts/src/verifiers/generated/SpendLimitVerifier.sol`は手動編集しない。
+
+```sh
+pnpm generate:verifier
+```
