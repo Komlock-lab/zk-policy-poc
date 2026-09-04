@@ -34,6 +34,11 @@ describe("policy API routes", () => {
     });
     expect(invalidChecksum.statusCode).toBe(400);
     expect(invalidChecksum.json()).toEqual({ error: "INVALID_REQUEST" });
+    const uppercaseAddress = await app.inject({
+      method: "GET",
+      url: "/v1/accounts/0xDE709F2102306220921060314715629080E2FB77/policy-context",
+    });
+    expect(uppercaseAddress.statusCode).toBe(200);
     const nonceOverflow = await app.inject({
       method: "PUT",
       url: "/v1/policies/00000000-0000-4000-8000-000000000001",
@@ -103,6 +108,7 @@ describe("policy API routes", () => {
     expect(createProof).not.toHaveBeenCalled();
 
     for (const payload of [
+      { valueWei: "not-a-number" },
       { valueWei: "01" },
       { valueWei: "-1" },
       { valueWei: (U128_MAX + 1n).toString() },
@@ -177,6 +183,7 @@ describe("policy API routes", () => {
     };
 
     for (const payload of [
+      { ...validPayload, nonce: "not-a-number" },
       { ...validPayload, nonce: "01" },
       { ...validPayload, nonce: ((1n << 256n) - 1n).toString() },
       { ...validPayload, nonce: (1n << 256n).toString() },

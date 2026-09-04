@@ -7,7 +7,10 @@ import { PolicyApiError, PolicyService } from "./service.ts";
 const addressSchema = z
   .string()
   .regex(/^0x[0-9a-fA-F]{40}$/)
-  .refine((value) => isAddress(value, { strict: true }))
+  .refine((value) => {
+    const body = value.slice(2);
+    return body === body.toLowerCase() || body === body.toUpperCase() || isAddress(value, { strict: true });
+  })
   .transform((value) => getAddress(value) as Address);
 const bytes32Schema = z.string().regex(/^0x[0-9a-fA-F]{64}$/).transform((value) => value as Hex);
 const signatureSchema = z
@@ -18,12 +21,10 @@ const uuidSchema = z.string().uuid();
 const MAX_UINT256 = (1n << 256n) - 1n;
 const uint256DecimalSchema = z
   .string()
-  .regex(/^(0|[1-9][0-9]*)$/)
-  .refine((value) => BigInt(value) < MAX_UINT256);
+  .refine((value) => /^(0|[1-9][0-9]*)$/.test(value) && BigInt(value) < MAX_UINT256);
 const circuitAmountDecimalSchema = z
   .string()
-  .regex(/^(0|[1-9][0-9]*)$/)
-  .refine((value) => BigInt(value) <= U128_MAX);
+  .refine((value) => /^(0|[1-9][0-9]*)$/.test(value) && BigInt(value) <= U128_MAX);
 
 function bearerToken(header: string | undefined): string {
   const match = /^Bearer (zkp_[A-Za-z0-9_-]{43})$/.exec(header ?? "");
