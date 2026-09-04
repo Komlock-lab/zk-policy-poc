@@ -2,9 +2,9 @@
 id: epic-01
 type: epic
 title: 1回あたりの支出上限を使ったZK決済
-status: review
+status: done
 created: 2026-08-30
-updated: 2026-08-30
+updated: 2026-09-04
 adrs: [adr-0001, adr-0002, adr-0003]
 ---
 

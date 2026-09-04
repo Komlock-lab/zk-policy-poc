@@ -6,8 +6,8 @@ AIエージェントが提案したトランザクションに対し、秘密の
 
 | Phase | Epic | Status |
 | --- | --- | --- |
-| 1 | [epic-01: 1回あたりの支出上限を使ったZK決済](epics/epic-01-zk-payment.md) | review |
-| 2 | Policy管理・Proof生成API | 未計画 |
+| 1 | [epic-01: 1回あたりの支出上限を使ったZK決済](epics/epic-01-zk-payment.md) | done |
+| 2 | [epic-02: Policy管理・Proof生成API](epics/epic-02-policy-management-proof-api.md) | approved |
 | 3 | ERC-4337対応 | 未計画 |
 | 4 | Claude Code・Codex接続 | 未計画 |
 | 5 | 攻撃・異常系の検証 | 未計画 |
@@ -25,15 +25,14 @@ AIエージェントが提案したトランザクションに対し、秘密の
 
 ## 2. Policy管理・Proof生成API
 
-- ユーザーが支出上限Policyを作成・更新できるAPIを実装する
-- Policy CLIでsaltとpolicyCommitmentを生成する
-- Owner EOAがPolicy更新リクエストをEIP-712で署名する
-- Policy APIがOwner、nonce、有効期限、policyCommitmentを検証する
-- 秘密のPolicyをOff-chainに保存する
-- Ownerが署名したTransactionでpolicyCommitmentをContract Walletへ登録する
-- 支出額とPolicy IDを受け取るProof生成APIを実装する
-- クライアントへProofとPublic Inputを返す
-- API経由で生成したProofを使ってPhase 1と同じ決済を実行する
+詳細なスコープと設計判断は[epic-02](epics/epic-02-policy-management-proof-api.md)を正本とする。
+
+- Ownerが支出上限Policyを作成・更新する
+- EIP-712署名、API nonce、有効期限でPolicy更新を認可する
+- 秘密のPolicyを暗号化してOff-chainへ保存する
+- OwnerのTransactionでpolicyCommitmentをContract Walletへ登録する
+- Policy単位のTokenで同期Proof生成APIを利用する
+- API経由で生成したProofを使ってローカル決済を実行する
 
 ## 3. ERC-4337対応
 
