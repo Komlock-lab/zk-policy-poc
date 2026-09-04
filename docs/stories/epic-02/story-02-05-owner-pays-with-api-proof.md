@@ -3,7 +3,7 @@ id: story-02-05
 type: story
 title: OwnerがAPI生成Proofで送金する
 epic: epic-02
-status: approved
+status: done
 depends_on: [story-02-02, story-02-03, story-02-04]
 adrs: [adr-0004, adr-0005, adr-0006, adr-0007]
 created: 2026-09-04
