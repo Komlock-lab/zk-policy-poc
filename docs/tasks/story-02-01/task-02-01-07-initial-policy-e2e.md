@@ -3,7 +3,7 @@ id: task-02-01-07
 type: task
 title: 初回Policy登録E2E
 story: story-02-01
-status: pending
+status: done
 blocked_by: [task-02-01-06]
 created: 2026-09-04
 updated: 2026-09-04
@@ -32,7 +32,9 @@ Story 02-01の初回登録と拒否条件をlocal stack全体で検証する。
 
 ## 検証結果
 
-未実施。
+- `pnpm test:e2e`でPolicy登録E2E 1件と既存決済E2E 2件が成功した。
+- 新規E2Eで非fork Anvilのchain ID 31337、実API、CLI、Accountを接続し、version 1のactive化とオンチェーンCommitment一致を確認した。
+- `pnpm test`でCircuit 4件、Contract 15件、TypeScript 23件、E2E 3件が成功した。
 
 ## Blocked
 

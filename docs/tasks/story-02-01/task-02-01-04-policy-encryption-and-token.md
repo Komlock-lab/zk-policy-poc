@@ -3,7 +3,7 @@ id: task-02-01-04
 type: task
 title: Policy暗号化とToken管理
 story: story-02-01
-status: pending
+status: done
 blocked_by: [task-02-01-03]
 created: 2026-09-04
 updated: 2026-09-04
@@ -32,7 +32,8 @@ updated: 2026-09-04
 
 ## 検証結果
 
-未実施。
+- Crypto・Token unit test 3件が成功し、AES-256-GCM round trip、AAD不一致、ciphertext改ざん、Token hash照合を確認した。
+- file-backed DBのbytesを検査し、`maxAmountWei`、`salt`、平文Tokenが含まれないことを確認した。
 
 ## Blocked
 

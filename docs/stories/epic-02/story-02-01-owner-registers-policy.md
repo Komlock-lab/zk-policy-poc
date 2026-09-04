@@ -3,7 +3,7 @@ id: story-02-01
 type: story
 title: Ownerが初回Policyを登録する
 epic: epic-02
-status: approved
+status: in-progress
 depends_on: []
 adrs: [adr-0004, adr-0005, adr-0006, adr-0007]
 created: 2026-09-04
@@ -59,17 +59,25 @@ AccountとAPIが同じCommitmentを正本として共有し、秘密値をオン
 
 | ID | Task | Status |
 | --- | --- | --- |
-| [task-02-01-01](../../tasks/story-02-01/task-02-01-01-api-workspace-and-config.md) | API workspaceと設定 | pending |
-| [task-02-01-02](../../tasks/story-02-01/task-02-01-02-account-policy-registration.md) | AccountのPolicy登録・更新機能 | pending |
-| [task-02-01-03](../../tasks/story-02-01/task-02-01-03-sqlite-policy-repository.md) | SQLite Policy repository | pending |
-| [task-02-01-04](../../tasks/story-02-01/task-02-01-04-policy-encryption-and-token.md) | Policy暗号化とToken管理 | pending |
-| [task-02-01-05](../../tasks/story-02-01/task-02-01-05-signed-policy-registration-api.md) | EIP-712 Policy登録API | pending |
-| [task-02-01-06](../../tasks/story-02-01/task-02-01-06-policy-create-activation-cli.md) | Policy作成・active化CLI | pending |
-| [task-02-01-07](../../tasks/story-02-01/task-02-01-07-initial-policy-e2e.md) | 初回Policy登録E2E | pending |
+| [task-02-01-01](../../tasks/story-02-01/task-02-01-01-api-workspace-and-config.md) | API workspaceと設定 | done |
+| [task-02-01-02](../../tasks/story-02-01/task-02-01-02-account-policy-registration.md) | AccountのPolicy登録・更新機能 | done |
+| [task-02-01-03](../../tasks/story-02-01/task-02-01-03-sqlite-policy-repository.md) | SQLite Policy repository | done |
+| [task-02-01-04](../../tasks/story-02-01/task-02-01-04-policy-encryption-and-token.md) | Policy暗号化とToken管理 | done |
+| [task-02-01-05](../../tasks/story-02-01/task-02-01-05-signed-policy-registration-api.md) | EIP-712 Policy登録API | done |
+| [task-02-01-06](../../tasks/story-02-01/task-02-01-06-policy-create-activation-cli.md) | Policy作成・active化CLI | done |
+| [task-02-01-07](../../tasks/story-02-01/task-02-01-07-initial-policy-e2e.md) | 初回Policy登録E2E | done |
 
 ## 検証結果
 
-未実施。
+- AC-1: `e2e/policy-registration.test.ts`で0.1 ETH上限をCLI登録し、APIのversion 1がactive、AccountのCommitmentと一致することを確認した。
+- AC-2: Service testで初回Tokenが一度だけresponseに現れ、Repository testでDB fileに平文TokenがなくSHA-256 hashだけを保持することを確認した。
+- AC-3: Service testでOwner以外の署名を拒否し、Policy recordが作られないことを確認した。
+- AC-4: Service testで期限切れ署名を拒否し、Policy recordが作られないことを確認した。
+- AC-5: Service testで同じnonceの再送を拒否し、nonceが`1`のまま変化しないことを確認した。
+- AC-6: Service testで秘密値から再計算したCommitmentとの不一致を保存前に拒否した。
+- AC-7: Contract testでPolicy未設定Accountの送金が`PolicyNotConfigured`でrevertすることを確認した。
+- `pnpm test`: Circuit 4件、Contract 15件、TypeScript 23件、E2E 3件が成功した。
+- `pnpm benchmark:circuit`: ACIR Opcodes 12、Proof 7,232 bytes、生成時間619msだった。
 
 ## Blocked
 

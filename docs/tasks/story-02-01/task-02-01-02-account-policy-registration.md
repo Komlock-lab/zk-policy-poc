@@ -3,7 +3,7 @@ id: task-02-01-02
 type: task
 title: AccountのPolicy登録・更新機能
 story: story-02-01
-status: pending
+status: done
 blocked_by: [task-02-01-01]
 created: 2026-09-04
 updated: 2026-09-04
@@ -33,7 +33,8 @@ OwnerがPolicy未設定AccountへCommitmentを登録・更新できるように�
 
 ## 検証結果
 
-未実施。
+- 変更対象2 fileの`forge fmt --check`が成功した。
+- `forge test --root contracts`でunit・fuzz test 15件が成功し、Owner限定更新、Field範囲、Event、未設定送金拒否を確認した。
 
 ## Blocked
 

@@ -3,7 +3,7 @@ id: task-02-01-03
 type: task
 title: SQLite Policy repository
 story: story-02-01
-status: pending
+status: done
 blocked_by: [task-02-01-01]
 created: 2026-09-04
 updated: 2026-09-04
@@ -33,7 +33,8 @@ Policy version、状態、nonce、Token hashを原子的に永続化する。
 
 ## 検証結果
 
-未実施。
+- Repository unit test 3件が成功し、初回作成とactive化、重複時rollback、file再open後の状態保持を確認した。
+- `pnpm typecheck`が成功した。
 
 ## Blocked
 

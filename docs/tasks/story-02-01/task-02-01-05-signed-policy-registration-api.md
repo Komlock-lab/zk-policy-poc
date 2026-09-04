@@ -3,7 +3,7 @@ id: task-02-01-05
 type: task
 title: EIP-712 Policy登録API
 story: story-02-01
-status: pending
+status: done
 blocked_by: [task-02-01-02, task-02-01-04]
 created: 2026-09-04
 updated: 2026-09-04
@@ -32,7 +32,8 @@ Owner署名を検証して初回Policyをpending保存し、active化できるAP
 
 ## 検証結果
 
-未実施。
+- Service test 6件とHTTP route test 1件が成功した。
+- Owner署名、未設定Account、deadline、nonce replay、Commitment、Tx receipt/calldata/current stateの検証と、失敗時の非更新を確認した。
 
 ## Blocked
 
