@@ -140,4 +140,4 @@ Ownerが1回あたりの支出上限PolicyをCLIから登録・更新でき、�
 
 ## Delivery
 
-- Epic PR: 未作成
+- Epic PR: https://github.com/Komlock-lab/zk-policy-poc/pull/8
