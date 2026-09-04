@@ -17,6 +17,7 @@ date: 2026-09-04
 
 - `apps/policy-api`をFastify `5.12.1`、Zod、viemで実装する。
 - Node.js runtimeを`>=22.13 <25`とし、組み込み`node:sqlite`を使用する。
+- repository固定のNode.js `23.3.0`では`--experimental-sqlite`を明示する。
 - APIは単一process、単一file-backed databaseで動かし、testでは`:memory:`を使用する。
 - Proof生成は同期HTTP request内で実行し、ProofとPublic Inputを同じresponseで返す。
 - APIは`127.0.0.1`へbindし、非forkのAnvil chain ID `31337`だけへ接続する。
@@ -34,6 +35,7 @@ date: 2026-09-04
 - API requestだけでProofを取得でき、Client実装が単純になる。
 - SQLiteとProof生成が同期処理なので、水平分散や高負荷用途には適さない。
 - Node.js最低versionを22.13へ引き上げる必要がある。
+- Node.js 23系でflagなしに移行する場合は23.4以降へ更新する必要がある。
 
 ## References
 

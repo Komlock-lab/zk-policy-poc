@@ -3,7 +3,7 @@ id: task-02-01-06
 type: task
 title: Policy作成・active化CLI
 story: story-02-01
-status: pending
+status: done
 blocked_by: [task-02-01-05]
 created: 2026-09-04
 updated: 2026-09-04
@@ -33,7 +33,8 @@ Ownerが1 command flowでPolicy登録、Tx送信、API確定を実行できる�
 
 ## 検証結果
 
-未実施。
+- local Anvil、実HTTP server、実Accountを使うE2EでCLI flowが成功した。
+- API responseをZodで検証し、CLI結果ではPolicy ID、version、初回Tokenだけを標準出力対象にした。
 
 ## Blocked
 

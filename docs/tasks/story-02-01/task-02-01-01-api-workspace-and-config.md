@@ -3,7 +3,7 @@ id: task-02-01-01
 type: task
 title: API workspaceと設定
 story: story-02-01
-status: pending
+status: done
 blocked_by: []
 created: 2026-09-04
 updated: 2026-09-04
@@ -33,7 +33,8 @@ updated: 2026-09-04
 
 ## 検証結果
 
-未実施。
+- `pnpm typecheck`が成功した。
+- API設定unit test 3件が成功し、local設定の受理、remote RPC URLと不正鍵の拒否を確認した。
 
 ## Blocked
 
