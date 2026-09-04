@@ -99,7 +99,6 @@ describe("policy update", () => {
         accountAddress,
         ownerPrivateKey: OWNER_PRIVATE_KEY,
         policyId: initial.policyId,
-        currentPolicyVersion: 1,
         token: initial.token,
         maxAmountWei: parseEther("0.2"),
         deadline: Math.floor(Date.now() / 1_000) + 600,

@@ -54,6 +54,14 @@ export function verifyPendingRegistration(
   return expectedCalldata;
 }
 
+export function nextPolicyVersionFromNonce(nonce: string): number {
+  const version = BigInt(nonce) + 1n;
+  if (version > BigInt(Number.MAX_SAFE_INTEGER)) {
+    throw new Error("policy version exceeds the supported integer range");
+  }
+  return Number(version);
+}
+
 export async function waitForPolicyUpdateReceipt(input: {
   policyVersion: number;
   txHash: Hex;
@@ -177,7 +185,6 @@ export async function updateAndActivatePolicy(input: {
   accountAddress: Address;
   ownerPrivateKey: Hex;
   policyId: string;
-  currentPolicyVersion: number;
   token: string;
   maxAmountWei: bigint;
   deadline: number;
@@ -186,7 +193,6 @@ export async function updateAndActivatePolicy(input: {
   assertLocalUrl(input.rpcUrl, "rpcUrl");
   const policyId = policyIdSchema.parse(input.policyId);
   const token = z.string().regex(/^zkp_[A-Za-z0-9_-]{43}$/).parse(input.token);
-  const currentPolicyVersion = z.number().int().positive().parse(input.currentPolicyVersion);
   const owner = privateKeyToAccount(input.ownerPrivateKey);
   const accountAddress = getAddress(input.accountAddress);
   const maxAmount = parseCircuitAmount(input.maxAmountWei);
@@ -200,6 +206,7 @@ export async function updateAndActivatePolicy(input: {
     contextResponseSchema,
   );
   if (context.policyId !== policyId) throw new Error("policy context does not match the requested policy");
+  const nextPolicyVersion = nextPolicyVersionFromNonce(context.nonce);
   const salt = generateSalt();
   const commitment = toHex(await computePolicyCommitment(maxAmount, salt), { size: 32 });
   const signature = await owner.signTypedData({
@@ -232,7 +239,7 @@ export async function updateAndActivatePolicy(input: {
   );
   const expectedCalldata = verifyPendingRegistration(registration, {
     policyId,
-    policyVersion: currentPolicyVersion + 1,
+    policyVersion: nextPolicyVersion,
     commitment,
   });
 

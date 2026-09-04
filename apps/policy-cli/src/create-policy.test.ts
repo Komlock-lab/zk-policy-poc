@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { encodeFunctionData, toHex } from "viem";
 import { zkPolicyAccountAbi } from "../../policy-api/src/chain.ts";
-import { verifyPendingRegistration, waitForPolicyUpdateReceipt } from "./create-policy.ts";
+import {
+  nextPolicyVersionFromNonce,
+  verifyPendingRegistration,
+  waitForPolicyUpdateReceipt,
+} from "./create-policy.ts";
 
 const policyId = "00000000-0000-4000-8000-000000000001";
 const commitment = toHex(123n, { size: 32 });
@@ -12,6 +16,11 @@ const calldata = encodeFunctionData({
 });
 
 describe("policy CLI response verification", () => {
+  it("derives the next version from the API nonce, including pending replacement", () => {
+    expect(nextPolicyVersionFromNonce("1")).toBe(2);
+    expect(nextPolicyVersionFromNonce("2")).toBe(3);
+  });
+
   it("uses locally reconstructed calldata for the expected pending version", () => {
     expect(
       verifyPendingRegistration(
