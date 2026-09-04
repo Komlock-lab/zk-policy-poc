@@ -69,7 +69,7 @@ updated: 2026-09-04
 - AC-4: service testで未設定またはCommitment不一致を`409 ONCHAIN_POLICY_MISMATCH`として復号・Proof生成前に拒否。
 - AC-5: service testで上限100に対する101を`422 POLICY_LIMIT_EXCEEDED`としてProof生成前に拒否。
 - AC-6: service testでauthentication tag改ざんを`500 POLICY_SECRET_INVALID`へ変換し、秘密値をresponseへ含めずProofを返さないことを確認。
-- 品質gate: `pnpm test`成功（Circuit 4、Contract 15、unit 31、E2E 4）、`pnpm benchmark:circuit`成功（ACIR 12、Brillig 8、Proof 7,232 bytes、327 ms）。
+- 品質gate: 最新Epicへのrebase後に`pnpm test`成功（Circuit 4、Contract 15、unit 44、E2E 5）、`pnpm benchmark:circuit`成功（ACIR 12、Brillig 8、Proof 7,232 bytes、329 ms）。
 
 ## Blocked
 

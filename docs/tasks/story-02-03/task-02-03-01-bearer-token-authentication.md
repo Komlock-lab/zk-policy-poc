@@ -31,7 +31,7 @@ Policyに対応するTokenを持つClientだけがProof処理へ進めるよう�
 
 ## 検証結果
 
-- `pnpm test:unit`: 9 files、31 tests成功。正しいTokenだけを通し、不正Tokenでは`getActive`、chain照会、Proof生成が呼ばれないことを確認。
+- `pnpm test:unit`: 10 files、44 tests成功。正しいTokenだけを通し、不正Tokenでは`getActive`、chain照会、Proof生成が呼ばれないことを確認。
 - API testでAuthorization欠落、不正scheme、長さ不正をすべて`401 INVALID_POLICY_TOKEN`へ統一したことを確認。
 
 ## Blocked
