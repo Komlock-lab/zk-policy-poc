@@ -3,7 +3,7 @@ id: task-02-05-02
 type: task
 title: ローカルAnvil統合E2E
 story: story-02-05
-status: pending
+status: done
 blocked_by: [task-02-05-01]
 created: 2026-09-04
 updated: 2026-09-04
@@ -31,7 +31,11 @@ Policy作成からAPI Proof決済までのobservable flowを非fork Anvilで検�
 
 ## 検証結果
 
-未実施。
+- `pnpm test:e2e`: 6 files、8 testsが成功した。
+- 0.1 ETHの更新済みactive Policyと再発行済みTokenで0.01 ETHを送金し、受取人残高が正確に0.01 ETH増加した。
+- 1 ETHの上限超過はAPIがHTTP 422で拒否し、Owner nonceと受取人残高が変化しなかった。
+- Account更新前のProofを更新後に明示的なgas付きTxで送信し、receiptが`reverted`、受取人残高が不変であることを確認した。
+- Account Commitmentだけを変更してAPIのactive状態と不一致にし、Proof取得がHTTP 409で拒否され、Owner nonceと受取人残高が変化しなかった。
 
 ## Blocked
 

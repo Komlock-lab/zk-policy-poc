@@ -35,11 +35,11 @@ const activationResponseSchema = z.object({
 
 export function verifyPendingRegistration(
   registration: z.infer<typeof updateResponseSchema>,
-  expected: { policyId: string; policyVersion: number; commitment: Hex },
+  expected: { policyId: string; policyVersion?: number; commitment: Hex },
 ): Hex {
   if (
     registration.policyId !== expected.policyId ||
-    registration.policyVersion !== expected.policyVersion
+    (expected.policyVersion !== undefined && registration.policyVersion !== expected.policyVersion)
   ) {
     throw new Error("policy API returned unexpected policy identity or version");
   }
@@ -52,14 +52,6 @@ export function verifyPendingRegistration(
     throw new Error("policy API returned calldata that does not match the signed commitment");
   }
   return expectedCalldata;
-}
-
-export function nextPolicyVersionFromNonce(nonce: string): number {
-  const version = BigInt(nonce) + 1n;
-  if (version > BigInt(Number.MAX_SAFE_INTEGER)) {
-    throw new Error("policy version exceeds the supported integer range");
-  }
-  return Number(version);
 }
 
 export async function waitForPolicyUpdateReceipt(input: {
@@ -206,7 +198,6 @@ export async function updateAndActivatePolicy(input: {
     contextResponseSchema,
   );
   if (context.policyId !== policyId) throw new Error("policy context does not match the requested policy");
-  const nextPolicyVersion = nextPolicyVersionFromNonce(context.nonce);
   const salt = generateSalt();
   const commitment = toHex(await computePolicyCommitment(maxAmount, salt), { size: 32 });
   const signature = await owner.signTypedData({
@@ -239,7 +230,6 @@ export async function updateAndActivatePolicy(input: {
   );
   const expectedCalldata = verifyPendingRegistration(registration, {
     policyId,
-    policyVersion: nextPolicyVersion,
     commitment,
   });
 
