@@ -15,6 +15,7 @@ date: 2026-09-04
 
 ## Decision
 
+- 本ADRは、[adr-0002](adr-0002-authorization-and-policy-boundary.md)のうちPolicy Commitmentをconstructorで固定し更新時に再deployするPhase 1の判断を置き換える。Owner認証とPolicy検証を分離する境界は引き続き維持する。
 - AccountはPolicy未設定でデプロイし、設定状態をCommitment値とは別に保持する。
 - Ownerだけが`updatePolicyCommitment(bytes32)`で初回登録と更新を行う。
 - Off-chainでは1 Accountに1つの安定したPolicy IDを割り当て、更新ごとにversionを増やす。
