@@ -35,12 +35,12 @@ Phase 2全体がarchitecture、security、acceptance criteriaを満たすこと�
 
 ## 検証結果
 
-- `pnpm test`: build・typecheck、Circuit 4 tests、Contract 15 tests、TypeScript unit 63 tests、ローカルAnvil E2E 8 testsが成功した。
-- `pnpm benchmark:circuit`: ACIR Opcodes 12、Brillig Opcodes 8、Proof 7,232 bytes、Proof生成324msを記録した。
+- Epic監査修正後の`pnpm test`: build・typecheck、Circuit 4 tests、Contract 15 tests、TypeScript unit 68 tests、ローカルAnvil E2E 8 testsが成功した。
+- Epic監査修正後の`pnpm benchmark:circuit`: ACIR Opcodes 12、Brillig Opcodes 8、Proof 7,232 bytes、Proof生成322msを記録した。
 - `node scripts/validate-planning.mjs`: 成功。
 - `git diff --check`: whitespace errorなし。
-- LLM Wikiは変更しておらず、`llm-wiki/raw/`の一次資料も変更していない。
-- [audit-02](../../audits/audit-02-policy-management-proof-api.md)で秘密情報、入力境界、署名replay、状態遷移、Proof bindingを自己監査し、CRITICAL/HIGH残件0件を確認した。
+- LLM Wiki lintで実装にないtimestamp記述を訂正し、`llm-wiki/raw/`の一次資料が不変であることを確認した。
+- [audit-02](../../audits/audit-02-policy-management-proof-api.md)でarchitecture/ZK、Contract、API/securityを独立監査・再監査し、CRITICAL/HIGH/MEDIUM残件0件を確認した。
 
 ## Blocked
 

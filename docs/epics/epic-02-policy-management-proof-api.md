@@ -2,7 +2,7 @@
 id: epic-02
 type: epic
 title: Policy管理・Proof生成API
-status: in-progress
+status: review
 created: 2026-09-04
 updated: 2026-09-04
 adrs: [adr-0004, adr-0005, adr-0006, adr-0007]

@@ -65,8 +65,8 @@ Policy登録、更新、秘密保存、Proof APIがPhase 1のオンチェーン�
 - AC-2: 同E2Eで1 ETHのProof要求がHTTP 422で拒否され、Owner nonceと受取人残高が不変であることを確認した。
 - AC-3: 同E2Eで更新前CommitmentのProofをAccount更新後に送信し、receiptが`reverted`、受取人残高が不変であることを確認した。
 - AC-4: 同E2EでAPIのactive CommitmentとAccountを不一致にし、Proof取得がHTTP 409で拒否され、Owner nonceと受取人残高が不変であることを確認した。
-- `pnpm test`: Circuit 4、Contract 15、TypeScript unit 63、E2E 8 testsが成功した。
-- `pnpm benchmark:circuit`: ACIR 12、Brillig 8、Proof 7,232 bytes、生成324ms。
+- Epic監査修正後の`pnpm test`: Circuit 4、Contract 15、TypeScript unit 68、E2E 8 testsが成功した。
+- Epic監査修正後の`pnpm benchmark:circuit`: ACIR 12、Brillig 8、Proof 7,232 bytes、生成322ms。
 - `node scripts/validate-planning.mjs`と`git diff --check`: 成功。
 
 ## Blocked
