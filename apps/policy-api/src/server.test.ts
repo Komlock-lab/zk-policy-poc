@@ -28,6 +28,12 @@ describe("policy API routes", () => {
     const invalid = await app.inject({ method: "PUT", url: "/v1/policies/not-a-uuid", payload: {} });
     expect(invalid.statusCode).toBe(400);
     expect(invalid.json()).toEqual({ error: "INVALID_REQUEST" });
+    const invalidChecksum = await app.inject({
+      method: "GET",
+      url: "/v1/accounts/0x52908400098527886E0F7030069857D2E4169Ee7/policy-context",
+    });
+    expect(invalidChecksum.statusCode).toBe(400);
+    expect(invalidChecksum.json()).toEqual({ error: "INVALID_REQUEST" });
     const nonceOverflow = await app.inject({
       method: "PUT",
       url: "/v1/policies/00000000-0000-4000-8000-000000000001",
@@ -43,6 +49,21 @@ describe("policy API routes", () => {
     });
     expect(nonceOverflow.statusCode).toBe(400);
     expect(nonceOverflow.json()).toEqual({ error: "INVALID_REQUEST" });
+    const nonceExhausted = await app.inject({
+      method: "PUT",
+      url: "/v1/policies/00000000-0000-4000-8000-000000000001",
+      payload: {
+        account,
+        maxAmountWei: "1",
+        salt: "1",
+        policyCommitment: `0x${"00".repeat(32)}`,
+        nonce: ((1n << 256n) - 1n).toString(),
+        deadline: 2_000_000_000,
+        signature: `0x${"00".repeat(65)}`,
+      },
+    });
+    expect(nonceExhausted.statusCode).toBe(400);
+    expect(nonceExhausted.json()).toEqual({ error: "INVALID_REQUEST" });
     await app.close();
     repository.close();
   });
@@ -157,6 +178,7 @@ describe("policy API routes", () => {
 
     for (const payload of [
       { ...validPayload, nonce: "01" },
+      { ...validPayload, nonce: ((1n << 256n) - 1n).toString() },
       { ...validPayload, nonce: (1n << 256n).toString() },
       { ...validPayload, deadline: -1 },
       { ...validPayload, extra: true },

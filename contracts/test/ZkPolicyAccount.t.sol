@@ -161,12 +161,17 @@ contract ZkPolicyAccountTest {
         RejectEther recipient = new RejectEther();
         vm.deal(address(account), value);
         verifier.configure(true, bytes32(value), POLICY_COMMITMENT);
+        uint256 accountBalanceBefore = address(account).balance;
+        uint256 recipientBalanceBefore = address(recipient).balance;
         vm.expectRevert(abi.encodeWithSelector(ZkPolicyAccount.TransferFailed.selector));
 
         account.execute(payable(address(recipient)), value, PROOF);
+
+        require(address(account).balance == accountBalanceBefore, "account balance changed");
+        require(address(recipient).balance == recipientBalanceBefore, "recipient balance changed");
     }
 
-    function testFuzzExecuteUsesActualValue(uint96 value) public {
+    function testFuzzExecuteUsesActualValue(uint128 value) public {
         vm.assume(value > 0);
         address payable recipient = payable(address(0xCAFE));
         vm.deal(address(account), value);

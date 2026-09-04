@@ -177,9 +177,15 @@ export class PolicyRepository {
       if (policy.nonce !== input.expectedNonce) {
         throw new PolicyRepositoryConflictError("invalid policy nonce");
       }
+      if (input.expectedNonce >= (1n << 256n) - 1n) {
+        throw new PolicyRepositoryConflictError("policy nonce exhausted");
+      }
       const versionRow = this.database
         .prepare("SELECT COALESCE(MAX(version), 0) AS max_version FROM policy_versions WHERE policy_id = ?")
         .get(input.policyId) as { max_version: number };
+      if (!Number.isSafeInteger(versionRow.max_version) || versionRow.max_version >= Number.MAX_SAFE_INTEGER) {
+        throw new PolicyRepositoryConflictError("policy version exhausted");
+      }
       const version = versionRow.max_version + 1;
       const secret = input.secretForVersion(version);
 
@@ -239,6 +245,9 @@ export class PolicyRepository {
       if (policy.nonce !== input.expectedNonce) {
         throw new PolicyRepositoryConflictError("invalid policy nonce");
       }
+      if (input.expectedNonce >= (1n << 256n) - 1n) {
+        throw new PolicyRepositoryConflictError("policy nonce exhausted");
+      }
       const result = this.database
         .prepare(
           "UPDATE policies SET next_nonce = ?, token_hash = ? WHERE id = ? AND next_nonce = ?",
@@ -274,7 +283,9 @@ export class PolicyRepository {
       const result = this.database
         .prepare("UPDATE policy_versions SET status = 'active' WHERE policy_id = ? AND version = ? AND status = 'pending'")
         .run(policyId, version);
-      if (result.changes !== 1) throw new Error("pending policy version not found");
+      if (result.changes !== 1) {
+        throw new PolicyRepositoryConflictError("pending policy version not found");
+      }
       this.database.exec("COMMIT");
     } catch (error) {
       this.database.exec("ROLLBACK");

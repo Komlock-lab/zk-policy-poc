@@ -148,6 +148,41 @@ describe("PolicyRepository", () => {
     repository.close();
   });
 
+  it("rejects exhausted nonce and version counters before writing", () => {
+    const repository = new PolicyRepository(":memory:");
+    createInitial(repository);
+    const maxNonce = ((1n << 256n) - 1n).toString();
+    repository.database
+      .prepare("UPDATE policies SET next_nonce = ? WHERE id = ?")
+      .run(maxNonce, policyId);
+
+    expect(() =>
+      repository.rotatePolicyToken({
+        policyId,
+        account,
+        expectedNonce: BigInt(maxNonce),
+        tokenHash: Buffer.alloc(32, 2),
+      }),
+    ).toThrow("policy nonce exhausted");
+    expect(repository.getPolicy(policyId)?.nonce).toBe(BigInt(maxNonce));
+
+    repository.database.prepare("UPDATE policies SET next_nonce = '1' WHERE id = ?").run(policyId);
+    repository.database
+      .prepare("UPDATE policy_versions SET version = ? WHERE policy_id = ?")
+      .run(Number.MAX_SAFE_INTEGER, policyId);
+    expect(() =>
+      repository.createNextPending({
+        policyId,
+        account,
+        expectedNonce: 1n,
+        commitment: "0x02",
+        secretForVersion: () => secret,
+      }),
+    ).toThrow("policy version exhausted");
+    expect(repository.getPolicy(policyId)?.nonce).toBe(1n);
+    repository.close();
+  });
+
   it("rejects duplicate accounts without consuming state", () => {
     const repository = new PolicyRepository(":memory:");
     const input = {

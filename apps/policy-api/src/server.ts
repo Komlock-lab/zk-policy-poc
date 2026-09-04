@@ -1,20 +1,25 @@
 import Fastify, { type FastifyInstance } from "fastify";
 import { z } from "zod";
-import type { Address, Hex } from "viem";
+import { getAddress, isAddress, type Address, type Hex } from "viem";
 import { U128_MAX } from "../../../packages/policy/src/index.ts";
 import { PolicyApiError, PolicyService } from "./service.ts";
 
-const addressSchema = z.string().regex(/^0x[0-9a-fA-F]{40}$/).transform((value) => value as Address);
+const addressSchema = z
+  .string()
+  .regex(/^0x[0-9a-fA-F]{40}$/)
+  .refine((value) => isAddress(value, { strict: true }))
+  .transform((value) => getAddress(value) as Address);
 const bytes32Schema = z.string().regex(/^0x[0-9a-fA-F]{64}$/).transform((value) => value as Hex);
 const signatureSchema = z
   .string()
   .regex(/^0x(?:[0-9a-fA-F]{128}|[0-9a-fA-F]{130})$/)
   .transform((value) => value as Hex);
 const uuidSchema = z.string().uuid();
+const MAX_UINT256 = (1n << 256n) - 1n;
 const uint256DecimalSchema = z
   .string()
   .regex(/^(0|[1-9][0-9]*)$/)
-  .refine((value) => BigInt(value) < 1n << 256n);
+  .refine((value) => BigInt(value) < MAX_UINT256);
 const circuitAmountDecimalSchema = z
   .string()
   .regex(/^(0|[1-9][0-9]*)$/)

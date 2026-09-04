@@ -24,7 +24,7 @@ Phase 2の単一プロセスPolicy APIは、metadataと暗号化した秘密Poli
 ## Stored data
 
 - 暗号化対象: `maxAmount`、`salt`
-- 平文metadata: Policy ID、Account、version、Commitment、status、nonce、timestamps、token hash
+- 平文metadata: Policy ID、Account、version、Commitment、status、nonce、token hash
 - 保存禁止: Owner private key、平文Proof API Token
 
 ## Scope boundary

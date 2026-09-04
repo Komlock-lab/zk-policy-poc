@@ -323,6 +323,26 @@ describe("PolicyService policy updates", () => {
     repository.close();
   });
 
+  it("rejects an exhausted authorization nonce without changing policy state", async () => {
+    const { repository, service } = await setupActive();
+    const before = repository.getPolicy(policyId)!;
+    const nonce = ((1n << 256n) - 1n).toString();
+
+    await expect(
+      service.register(
+        await signedInput(owner, {
+          maxAmountWei: "101",
+          policyCommitment: toHex(301n, { size: 32 }),
+          nonce,
+        }),
+      ),
+    ).rejects.toMatchObject({ statusCode: 400, code: "INVALID_NONCE" });
+
+    expect(repository.getPolicy(policyId)).toEqual(before);
+    expect(repository.getPending(policyId)).toBeUndefined();
+    repository.close();
+  });
+
   it("keeps state unchanged for every activation rejection", async () => {
     const scenarios: Array<{
       name: string;
@@ -450,6 +470,12 @@ describe("PolicyService token rotation", () => {
       code: "SIGNATURE_EXPIRED",
       statusCode: 401,
     },
+    {
+      name: "exhausted nonce",
+      sign: () => signedTokenRotation(owner, { nonce: ((1n << 256n) - 1n).toString() }),
+      code: "INVALID_NONCE",
+      statusCode: 400,
+    },
   ])("keeps state unchanged for $name", async ({ sign, code, statusCode }) => {
     const { repository, service } = await setupActive();
     const before = repository.getPolicy(policyId)!;
@@ -523,6 +549,49 @@ describe("PolicyService token rotation", () => {
       nonce: 3n,
       tokenHash: hashPolicyToken(rotation.token),
     });
+    state.repository.close();
+  });
+
+  it("maps a pending replacement during activation to a stable conflict", async () => {
+    const state = await setupPendingUpdate();
+    const transaction = deferred<PolicyTransaction>();
+    const getTransaction = vi.spyOn(state.chain, "getTransaction").mockReturnValue(transaction.promise);
+    state.chain.commitment = state.commitment;
+
+    const activation = state.service.activate({
+      policyId,
+      token: state.token,
+      txHash: toHex(2n, { size: 32 }),
+    });
+    await vi.waitFor(() => expect(getTransaction).toHaveBeenCalledOnce());
+    const replacementCommitment = toHex(302n, { size: 32 });
+    state.repository.createNextPending({
+      policyId,
+      account,
+      expectedNonce: 2n,
+      commitment: replacementCommitment,
+      secretForVersion: (version) =>
+        encryptPolicySecret(
+          { maxAmountWei: "102", salt: "200" },
+          Buffer.alloc(32, 1),
+          policyId,
+          version,
+        ),
+    });
+    transaction.resolve({
+      from: owner.address,
+      to: account,
+      input: state.update.calldata,
+      status: "success",
+    });
+
+    await expect(activation).rejects.toMatchObject({
+      statusCode: 409,
+      code: "POLICY_NOT_PENDING",
+    });
+    expect(state.repository.getActive(policyId)?.version).toBe(1);
+    expect(state.repository.getVersion(policyId, 2)?.status).toBe("superseded");
+    expect(state.repository.getPending(policyId)?.version).toBe(3);
     state.repository.close();
   });
 
@@ -629,6 +698,49 @@ describe("PolicyService proof generation", () => {
     });
     expect(generateProof).not.toHaveBeenCalled();
     repository.close();
+  });
+
+  it("does not return a stale proof when the active policy changes during proving", async () => {
+    const fixture = setupProofPolicy();
+    const generated = deferred<{ proof: Hex; publicInputs: readonly [Hex, Hex] }>();
+    fixture.generateProof.mockReturnValueOnce(generated.promise);
+
+    const proof = fixture.service.createProof({
+      policyId,
+      token: fixture.token,
+      valueWei: "10",
+    });
+    await vi.waitFor(() => expect(fixture.generateProof).toHaveBeenCalledOnce());
+    const nextCommitment = toHex(301n, { size: 32 });
+    fixture.repository.createNextPending({
+      policyId,
+      account,
+      expectedNonce: 1n,
+      commitment: nextCommitment,
+      secretForVersion: (version) =>
+        encryptPolicySecret(
+          { maxAmountWei: "101", salt: "200" },
+          Buffer.alloc(32, 1),
+          policyId,
+          version,
+        ),
+    });
+    fixture.repository.activate(
+      policyId,
+      2,
+      fixture.repository.getPolicy(policyId)!.tokenHash,
+    );
+    fixture.chain.commitment = nextCommitment;
+    generated.resolve({
+      proof: "0x1234",
+      publicInputs: [toHex(10n, { size: 32 }), fixture.commitment],
+    });
+
+    await expect(proof).rejects.toMatchObject({
+      statusCode: 409,
+      code: "POLICY_STATE_CHANGED",
+    });
+    fixture.repository.close();
   });
 
   it("maps authenticated-ciphertext and prover failures to stable secret-free errors", async () => {

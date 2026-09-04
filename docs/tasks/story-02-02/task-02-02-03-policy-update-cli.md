@@ -31,7 +31,7 @@ Ownerが既存Policy IDを維持したまま上限を更新できるようにす
 
 ## 検証結果
 
-`pnpm test:unit`のCLI 5件と`pnpm test:e2e`のPolicy更新scenarioが成功。CLIがPolicy ID、API nonceから導出した次version、pending statusを検証し、署名済みCommitmentからcalldataを再構築してAPI応答との一致後に送信することを確認した。既存pendingの置換でも手入力versionへ依存しない。送信・receipt待機・active化失敗時のerrorにはpending versionと、取得済みの場合はtx hashを含める。
+`pnpm test:unit`のCLI 5件と`pnpm test:e2e`のPolicy更新scenarioが成功。CLIがPolicy ID、APIが返す正のversion、pending statusを検証し、署名済みCommitmentからcalldataを再構築してAPI応答との一致後に送信することを確認した。API認可nonceとPolicy versionは独立して扱い、既存pendingの置換やToken再発行後の更新でも手入力versionへ依存しない。送信・receipt待機・active化失敗時のerrorにはpending versionと、取得済みの場合はtx hashを含める。
 
 ## Blocked
 

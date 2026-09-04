@@ -210,7 +210,11 @@ export class PolicyService {
       this.repository.activate(input.policyId, pending.version, hashPolicyToken(input.token));
     } catch (error) {
       if (error instanceof PolicyRepositoryConflictError) {
-        throw new PolicyApiError(401, "INVALID_POLICY_TOKEN");
+        const currentPolicy = this.repository.getPolicy(input.policyId);
+        if (!currentPolicy || !matchesPolicyToken(input.token, currentPolicy.tokenHash)) {
+          throw new PolicyApiError(401, "INVALID_POLICY_TOKEN");
+        }
+        throw new PolicyApiError(409, "POLICY_NOT_PENDING");
       }
       throw error;
     }
@@ -221,7 +225,7 @@ export class PolicyService {
     const account = getAddress(input.account);
     if (input.deadline < this.now()) throw new PolicyApiError(401, "SIGNATURE_EXPIRED");
     const nonce = BigInt(input.nonce);
-    if (nonce < 0n || nonce > MAX_UINT256) throw new PolicyApiError(400, "INVALID_NONCE");
+    if (nonce < 0n || nonce >= MAX_UINT256) throw new PolicyApiError(400, "INVALID_NONCE");
 
     const policy = this.repository.getPolicy(input.policyId);
     if (!policy || !isAddressEqual(policy.account, account)) {
@@ -271,7 +275,7 @@ export class PolicyService {
       throw new PolicyApiError(400, "POLICY_COMMITMENT_MISMATCH");
     }
     const nonce = BigInt(input.nonce);
-    if (nonce < 0n || nonce > MAX_UINT256) throw new PolicyApiError(400, "INVALID_NONCE");
+    if (nonce < 0n || nonce >= MAX_UINT256) throw new PolicyApiError(400, "INVALID_NONCE");
     const message = {
       policyId: input.policyId,
       account,
@@ -361,6 +365,18 @@ export class PolicyService {
       generated.publicInputs[1].toLowerCase() !== active.commitment.toLowerCase()
     ) {
       throw new PolicyApiError(500, "PROOF_PUBLIC_INPUT_MISMATCH");
+    }
+
+    const currentState = await this.chain.getPolicyState(policy.account);
+    const currentActive = this.repository.getActive(input.policyId);
+    if (
+      !currentActive ||
+      currentActive.version !== active.version ||
+      currentActive.commitment.toLowerCase() !== active.commitment.toLowerCase() ||
+      !currentState.configured ||
+      currentState.commitment.toLowerCase() !== active.commitment.toLowerCase()
+    ) {
+      throw new PolicyApiError(409, "POLICY_STATE_CHANGED");
     }
 
     const currentPolicy = this.repository.getPolicy(input.policyId);
