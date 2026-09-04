@@ -3,7 +3,11 @@ import { type Address, type Hex, toHex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import type { PolicyChainGateway, PolicyTransaction } from "./chain.ts";
 import { encryptPolicySecret, hashPolicyToken } from "./crypto.ts";
-import { policyDomain, policyUpdateTypes } from "./eip712.ts";
+import {
+  policyAccessTokenRotationTypes,
+  policyDomain,
+  policyUpdateTypes,
+} from "./eip712.ts";
 import { PolicyRepository } from "./repository.ts";
 import { PolicyApiError, PolicyService, type RegisterPolicyInput } from "./service.ts";
 
@@ -73,10 +77,18 @@ function setup() {
   return { repository, chain, service };
 }
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
+}
+
 async function setupActive() {
   const state = setup();
   const registration = await state.service.registerInitial(await signedInput());
-  state.repository.activate(policyId, 1);
+  state.repository.activate(policyId, 1, state.repository.getPolicy(policyId)!.tokenHash);
   state.chain.configured = true;
   state.chain.commitment = state.repository.getActive(policyId)!.commitment;
   return { ...state, token: registration.token };
@@ -93,6 +105,31 @@ async function setupPendingUpdate() {
     }),
   );
   return { ...state, commitment, update };
+}
+
+async function signedTokenRotation(
+  signer = owner,
+  overrides: Partial<{ policyId: string; account: Address; nonce: string; deadline: number }> = {},
+) {
+  const unsigned = {
+    policyId,
+    account,
+    nonce: "1",
+    deadline: 2_000,
+    ...overrides,
+  };
+  const signature = await signer.signTypedData({
+    domain: policyDomain(unsigned.account),
+    types: policyAccessTokenRotationTypes,
+    primaryType: "PolicyAccessTokenRotation",
+    message: {
+      policyId: unsigned.policyId,
+      account: unsigned.account,
+      nonce: BigInt(unsigned.nonce),
+      deadline: BigInt(unsigned.deadline),
+    },
+  });
+  return { ...unsigned, signature };
 }
 
 function setupProofPolicy(active = true) {
@@ -113,7 +150,7 @@ function setupProofPolicy(active = true) {
     ),
     tokenHash: hashPolicyToken(token),
   });
-  if (active) repository.activate(policyId, 1);
+  if (active) repository.activate(policyId, 1, repository.getPolicy(policyId)!.tokenHash);
   chain.configured = true;
   chain.commitment = commitment;
   const generateProof = vi.fn(async ({ value }: { value: bigint }) => ({
@@ -377,6 +414,148 @@ describe("PolicyService policy updates", () => {
         }),
       ),
     ).rejects.toThrow("database unavailable");
+    repository.close();
+  });
+});
+
+describe("PolicyService token rotation", () => {
+  it("replaces the token hash, consumes the nonce, and invalidates the old token", async () => {
+    const { repository, service, token: oldToken } = await setupActive();
+
+    const result = await service.rotatePolicyToken(await signedTokenRotation());
+
+    expect(result).toMatchObject({ policyId, token: expect.stringMatching(/^zkp_/) });
+    expect(result.token).not.toBe(oldToken);
+    expect(repository.getPolicy(policyId)).toMatchObject({
+      nonce: 2n,
+      tokenHash: hashPolicyToken(result.token),
+    });
+    await expect(service.createProof({ policyId, token: oldToken, valueWei: "10" })).rejects.toMatchObject({
+      statusCode: 401,
+      code: "INVALID_POLICY_TOKEN",
+    });
+    repository.close();
+  });
+
+  it.each([
+    {
+      name: "wrong owner",
+      sign: () => signedTokenRotation(attacker),
+      code: "INVALID_OWNER_SIGNATURE",
+      statusCode: 401,
+    },
+    {
+      name: "expired signature",
+      sign: () => signedTokenRotation(owner, { deadline: 999 }),
+      code: "SIGNATURE_EXPIRED",
+      statusCode: 401,
+    },
+  ])("keeps state unchanged for $name", async ({ sign, code, statusCode }) => {
+    const { repository, service } = await setupActive();
+    const before = repository.getPolicy(policyId)!;
+
+    await expect(service.rotatePolicyToken(await sign())).rejects.toMatchObject({ code, statusCode });
+
+    expect(repository.getPolicy(policyId)).toEqual(before);
+    repository.close();
+  });
+
+  it("rejects replay and preserves the first rotated token hash and nonce", async () => {
+    const { repository, service } = await setupActive();
+    const request = await signedTokenRotation();
+    const first = await service.rotatePolicyToken(request);
+    const afterFirst = repository.getPolicy(policyId)!;
+
+    await expect(service.rotatePolicyToken(request)).rejects.toMatchObject({
+      statusCode: 409,
+      code: "POLICY_OR_NONCE_CONFLICT",
+    });
+
+    expect(repository.getPolicy(policyId)).toEqual(afterFirst);
+    expect(afterFirst.tokenHash).toEqual(hashPolicyToken(first.token));
+    repository.close();
+  });
+
+  it("rotates a pending initial policy so a lost initial token can be recovered", async () => {
+    const { repository, service } = setup();
+    const registration = await service.registerInitial(await signedInput());
+
+    const rotation = await service.rotatePolicyToken(await signedTokenRotation());
+
+    expect(repository.getPending(policyId)?.version).toBe(1);
+    expect(repository.getPolicy(policyId)).toMatchObject({
+      nonce: 2n,
+      tokenHash: hashPolicyToken(rotation.token),
+    });
+    expect(rotation.token).not.toBe(registration.token);
+    repository.close();
+  });
+
+  it("rejects an activation authenticated by an old token when rotation wins the race", async () => {
+    const state = await setupPendingUpdate();
+    const transaction = deferred<PolicyTransaction>();
+    const getTransaction = vi.spyOn(state.chain, "getTransaction").mockReturnValue(transaction.promise);
+    state.chain.commitment = state.commitment;
+
+    const activation = state.service.activate({
+      policyId,
+      token: state.token,
+      txHash: toHex(2n, { size: 32 }),
+    });
+    await vi.waitFor(() => expect(getTransaction).toHaveBeenCalledOnce());
+    const rotation = await state.service.rotatePolicyToken(
+      await signedTokenRotation(owner, { nonce: "2" }),
+    );
+    transaction.resolve({
+      from: owner.address,
+      to: account,
+      input: state.update.calldata,
+      status: "success",
+    });
+
+    await expect(activation).rejects.toMatchObject({
+      statusCode: 401,
+      code: "INVALID_POLICY_TOKEN",
+    });
+    expect(state.repository.getVersion(policyId, 1)?.status).toBe("active");
+    expect(state.repository.getPending(policyId)?.version).toBe(2);
+    expect(state.repository.getPolicy(policyId)).toMatchObject({
+      nonce: 3n,
+      tokenHash: hashPolicyToken(rotation.token),
+    });
+    state.repository.close();
+  });
+
+  it("does not return a proof authenticated by a token rotated during proving", async () => {
+    const state = setupProofPolicy();
+    const generated = deferred<{ proof: Hex; publicInputs: readonly [Hex, Hex] }>();
+    state.generateProof.mockReturnValueOnce(generated.promise);
+
+    const proof = state.service.createProof({ policyId, token: state.token, valueWei: "10" });
+    await vi.waitFor(() => expect(state.generateProof).toHaveBeenCalledOnce());
+    const rotation = await state.service.rotatePolicyToken(await signedTokenRotation());
+    generated.resolve({
+      proof: "0x1234",
+      publicInputs: [toHex(10n, { size: 32 }), state.commitment],
+    });
+
+    await expect(proof).rejects.toMatchObject({
+      statusCode: 401,
+      code: "INVALID_POLICY_TOKEN",
+    });
+    await expect(
+      state.service.createProof({ policyId, token: rotation.token, valueWei: "10" }),
+    ).resolves.toMatchObject({ policyId, policyVersion: 1 });
+    state.repository.close();
+  });
+
+  it("does not translate unexpected repository failures into conflicts", async () => {
+    const { repository, service } = await setupActive();
+    vi.spyOn(repository, "rotatePolicyToken").mockImplementation(() => {
+      throw new Error("database unavailable");
+    });
+
+    await expect(service.rotatePolicyToken(await signedTokenRotation())).rejects.toThrow("database unavailable");
     repository.close();
   });
 });

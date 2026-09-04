@@ -224,9 +224,52 @@ export class PolicyRepository {
     }
   }
 
-  activate(policyId: string, version: number): void {
+  rotatePolicyToken(input: {
+    policyId: string;
+    account: Address;
+    expectedNonce: bigint;
+    tokenHash: Buffer;
+  }): void {
     this.database.exec("BEGIN IMMEDIATE");
     try {
+      const policy = this.getPolicy(input.policyId);
+      if (!policy || policy.account.toLowerCase() !== input.account.toLowerCase()) {
+        throw new PolicyRepositoryConflictError("policy does not match account");
+      }
+      if (policy.nonce !== input.expectedNonce) {
+        throw new PolicyRepositoryConflictError("invalid policy nonce");
+      }
+      const result = this.database
+        .prepare(
+          "UPDATE policies SET next_nonce = ?, token_hash = ? WHERE id = ? AND next_nonce = ?",
+        )
+        .run(
+          (input.expectedNonce + 1n).toString(),
+          input.tokenHash,
+          input.policyId,
+          input.expectedNonce.toString(),
+        );
+      if (result.changes !== 1) {
+        throw new PolicyRepositoryConflictError("policy nonce changed");
+      }
+      this.database.exec("COMMIT");
+    } catch (error) {
+      this.database.exec("ROLLBACK");
+      if (error instanceof PolicyRepositoryConflictError) throw error;
+      if (isSqliteConstraintError(error)) {
+        throw new PolicyRepositoryConflictError("policy token or nonce conflict", { cause: error });
+      }
+      throw error;
+    }
+  }
+
+  activate(policyId: string, version: number, expectedTokenHash: Buffer): void {
+    this.database.exec("BEGIN IMMEDIATE");
+    try {
+      const policy = this.getPolicy(policyId);
+      if (!policy || !policy.tokenHash.equals(expectedTokenHash)) {
+        throw new PolicyRepositoryConflictError("policy token changed");
+      }
       this.database.prepare("UPDATE policy_versions SET status = 'superseded' WHERE policy_id = ? AND status = 'active'").run(policyId);
       const result = this.database
         .prepare("UPDATE policy_versions SET status = 'active' WHERE policy_id = ? AND version = ? AND status = 'pending'")
@@ -235,6 +278,7 @@ export class PolicyRepository {
       this.database.exec("COMMIT");
     } catch (error) {
       this.database.exec("ROLLBACK");
+      if (error instanceof PolicyRepositoryConflictError) throw error;
       throw error;
     }
   }

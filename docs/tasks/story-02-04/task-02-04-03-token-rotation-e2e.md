@@ -3,7 +3,7 @@ id: task-02-04-03
 type: task
 title: Token切り替えE2E
 story: story-02-04
-status: pending
+status: done
 blocked_by: [task-02-04-02]
 created: 2026-09-04
 updated: 2026-09-04
@@ -30,7 +30,9 @@ Token再発行後の新旧Tokenの権限切り替えをProof APIで検証する�
 
 ## 検証結果
 
-未実施。
+- `PATH="..." NODE_OPTIONS=--experimental-sqlite pnpm exec vitest run e2e/policy-token-rotation.test.ts`: 2 tests成功。
+- 非fork Anvil chain ID 31337で、不正Owner署名とreplayがnonce/hash不変で拒否され、旧Token 2世代が401、新Tokenで実Proof生成が成功することを確認した。
+- 初回Tokenを利用せず、Account contextだけからpending PolicyのTokenをCLI再発行し、その新Tokenでオンチェーンactive化できることを確認した。
 
 ## Blocked
 

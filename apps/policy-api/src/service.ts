@@ -21,7 +21,10 @@ import {
   hashPolicyToken,
   matchesPolicyToken,
 } from "./crypto.ts";
-import { recoverPolicyUpdateSigner } from "./eip712.ts";
+import {
+  recoverPolicyAccessTokenRotationSigner,
+  recoverPolicyUpdateSigner,
+} from "./eip712.ts";
 import { PolicyRepository, PolicyRepositoryConflictError } from "./repository.ts";
 
 const MAX_UINT256 = (1n << 256n) - 1n;
@@ -40,6 +43,14 @@ export interface RegisterPolicyInput {
   maxAmountWei: string;
   salt: string;
   policyCommitment: Hex;
+  nonce: string;
+  deadline: number;
+  signature: Hex;
+}
+
+export interface RotatePolicyTokenInput {
+  policyId: string;
+  account: Address;
   nonce: string;
   deadline: number;
   signature: Hex;
@@ -195,8 +206,59 @@ export class PolicyService {
     if (!state.configured || state.commitment.toLowerCase() !== pending.commitment.toLowerCase()) {
       throw new PolicyApiError(409, "ONCHAIN_POLICY_MISMATCH");
     }
-    this.repository.activate(input.policyId, pending.version);
+    try {
+      this.repository.activate(input.policyId, pending.version, hashPolicyToken(input.token));
+    } catch (error) {
+      if (error instanceof PolicyRepositoryConflictError) {
+        throw new PolicyApiError(401, "INVALID_POLICY_TOKEN");
+      }
+      throw error;
+    }
     return { policyVersion: pending.version, status: "active" };
+  }
+
+  async rotatePolicyToken(input: RotatePolicyTokenInput): Promise<{ policyId: string; token: string }> {
+    const account = getAddress(input.account);
+    if (input.deadline < this.now()) throw new PolicyApiError(401, "SIGNATURE_EXPIRED");
+    const nonce = BigInt(input.nonce);
+    if (nonce < 0n || nonce > MAX_UINT256) throw new PolicyApiError(400, "INVALID_NONCE");
+
+    const policy = this.repository.getPolicy(input.policyId);
+    if (!policy || !isAddressEqual(policy.account, account)) {
+      throw new PolicyApiError(409, "POLICY_OR_NONCE_CONFLICT");
+    }
+    let signer: Address;
+    try {
+      signer = await recoverPolicyAccessTokenRotationSigner(
+        {
+          policyId: input.policyId,
+          account,
+          nonce,
+          deadline: BigInt(input.deadline),
+        },
+        input.signature,
+      );
+    } catch {
+      throw new PolicyApiError(401, "INVALID_OWNER_SIGNATURE");
+    }
+    const owner = await this.chain.getOwner(account);
+    if (!isAddressEqual(signer, owner)) throw new PolicyApiError(401, "INVALID_OWNER_SIGNATURE");
+
+    const token = generatePolicyToken();
+    try {
+      this.repository.rotatePolicyToken({
+        policyId: input.policyId,
+        account,
+        expectedNonce: nonce,
+        tokenHash: hashPolicyToken(token),
+      });
+    } catch (error) {
+      if (error instanceof PolicyRepositoryConflictError) {
+        throw new PolicyApiError(409, "POLICY_OR_NONCE_CONFLICT");
+      }
+      throw error;
+    }
+    return { policyId: input.policyId, token };
   }
 
   private async validatePolicyUpdate(input: RegisterPolicyInput): Promise<ValidatedPolicyUpdate> {
@@ -299,6 +361,11 @@ export class PolicyService {
       generated.publicInputs[1].toLowerCase() !== active.commitment.toLowerCase()
     ) {
       throw new PolicyApiError(500, "PROOF_PUBLIC_INPUT_MISMATCH");
+    }
+
+    const currentPolicy = this.repository.getPolicy(input.policyId);
+    if (!currentPolicy || !matchesPolicyToken(input.token, currentPolicy.tokenHash)) {
+      throw new PolicyApiError(401, "INVALID_POLICY_TOKEN");
     }
 
     return {
