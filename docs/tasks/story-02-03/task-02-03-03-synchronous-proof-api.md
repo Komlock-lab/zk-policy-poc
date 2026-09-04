@@ -3,7 +3,7 @@ id: task-02-03-03
 type: task
 title: 同期Proof生成API
 story: story-02-03
-status: pending
+status: done
 blocked_by: [task-02-03-02]
 created: 2026-09-04
 updated: 2026-09-04
@@ -33,7 +33,9 @@ Policy IDとwei金額から検証可能なProofを同期responseで返す。
 
 ## 検証結果
 
-未実施。
+- `pnpm build:circuit`: Noir artifact生成成功。
+- `NODE_OPTIONS=--experimental-sqlite pnpm exec vitest run e2e/policy-proof.test.ts`: 1 test成功。0.1 ETHの暗号化Policyから0.01 ETHのUltraHonk Proofを同期生成し、local backend検証成功。
+- Unit・API testで`valueWei`のdecimal/u128境界、上限超過、Prover失敗、返却Public Inputの順序・金額・active Commitment再検証を確認。
 
 ## Blocked
 

@@ -3,7 +3,7 @@ id: story-02-03
 type: story
 title: Clientがactive PolicyのProofを取得する
 epic: epic-02
-status: approved
+status: in-progress
 depends_on: [story-02-01]
 adrs: [adr-0004, adr-0006, adr-0007]
 created: 2026-09-04
@@ -56,14 +56,20 @@ updated: 2026-09-04
 
 | ID | Task | Status |
 | --- | --- | --- |
-| [task-02-03-01](../../tasks/story-02-03/task-02-03-01-bearer-token-authentication.md) | Bearer Token認証 | pending |
-| [task-02-03-02](../../tasks/story-02-03/task-02-03-02-active-policy-chain-check.md) | active Policy読込とオンチェーン確認 | pending |
-| [task-02-03-03](../../tasks/story-02-03/task-02-03-03-synchronous-proof-api.md) | 同期Proof生成API | pending |
-| [task-02-03-04](../../tasks/story-02-03/task-02-03-04-proof-api-tests.md) | Proof APIテスト | pending |
+| [task-02-03-01](../../tasks/story-02-03/task-02-03-01-bearer-token-authentication.md) | Bearer Token認証 | done |
+| [task-02-03-02](../../tasks/story-02-03/task-02-03-02-active-policy-chain-check.md) | active Policy読込とオンチェーン確認 | done |
+| [task-02-03-03](../../tasks/story-02-03/task-02-03-03-synchronous-proof-api.md) | 同期Proof生成API | done |
+| [task-02-03-04](../../tasks/story-02-03/task-02-03-04-proof-api-tests.md) | Proof APIテスト | done |
 
 ## 検証結果
 
-未実施。
+- AC-1: `e2e/policy-proof.test.ts`で0.1 ETHのactive Policyへ0.01 ETHを要求し、同期生成したUltraHonk Proofのlocal backend検証と、`publicInputs = [value, active commitment]`を確認。
+- AC-2: service/API testで不正・欠落・形式不正Tokenを`401 INVALID_POLICY_TOKEN`へ統一し、暗号化version取得前に拒否することを確認。
+- AC-3: service testでpendingのみのPolicyを`409 POLICY_NOT_ACTIVE`としてProof生成前に拒否。
+- AC-4: service testで未設定またはCommitment不一致を`409 ONCHAIN_POLICY_MISMATCH`として復号・Proof生成前に拒否。
+- AC-5: service testで上限100に対する101を`422 POLICY_LIMIT_EXCEEDED`としてProof生成前に拒否。
+- AC-6: service testでauthentication tag改ざんを`500 POLICY_SECRET_INVALID`へ変換し、秘密値をresponseへ含めずProofを返さないことを確認。
+- 品質gate: `pnpm test`成功（Circuit 4、Contract 15、unit 31、E2E 4）、`pnpm benchmark:circuit`成功（ACIR 12、Brillig 8、Proof 7,232 bytes、327 ms）。
 
 ## Blocked
 

@@ -3,7 +3,7 @@ id: task-02-03-01
 type: task
 title: Bearer Token認証
 story: story-02-03
-status: pending
+status: done
 blocked_by: []
 created: 2026-09-04
 updated: 2026-09-04
@@ -31,7 +31,8 @@ Policyに対応するTokenを持つClientだけがProof処理へ進めるよう�
 
 ## 検証結果
 
-未実施。
+- `pnpm test:unit`: 9 files、31 tests成功。正しいTokenだけを通し、不正Tokenでは`getActive`、chain照会、Proof生成が呼ばれないことを確認。
+- API testでAuthorization欠落、不正scheme、長さ不正をすべて`401 INVALID_POLICY_TOKEN`へ統一したことを確認。
 
 ## Blocked
 

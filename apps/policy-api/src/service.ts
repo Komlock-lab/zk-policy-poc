@@ -8,18 +8,31 @@ import {
   toHex,
 } from "viem";
 import { computePolicyCommitment, fieldElementSchema, parseCircuitAmount } from "../../../packages/policy/src/index.ts";
+import {
+  generateSpendLimitProof,
+  type SpendLimitProof,
+  type SpendLimitProofInput,
+} from "../../../packages/prover/src/index.ts";
 import { type PolicyChainGateway, zkPolicyAccountAbi } from "./chain.ts";
-import { encryptPolicySecret, generatePolicyToken, hashPolicyToken, matchesPolicyToken } from "./crypto.ts";
+import {
+  decryptPolicySecret,
+  encryptPolicySecret,
+  generatePolicyToken,
+  hashPolicyToken,
+  matchesPolicyToken,
+} from "./crypto.ts";
 import { recoverPolicyUpdateSigner } from "./eip712.ts";
 import { PolicyRepository, PolicyRepositoryConflictError } from "./repository.ts";
 
 const MAX_UINT256 = (1n << 256n) - 1n;
 
 export class PolicyApiError extends Error {
-  constructor(readonly statusCode: number, readonly code: string) {
-    super(code);
+  constructor(readonly statusCode: number, readonly code: string, options?: ErrorOptions) {
+    super(code, options);
   }
 }
+
+export type PolicyProofGenerator = (input: SpendLimitProofInput) => Promise<SpendLimitProof>;
 
 export interface RegisterPolicyInput {
   policyId: string;
@@ -57,6 +70,7 @@ export class PolicyService {
     private readonly now: () => number = () => Math.floor(Date.now() / 1_000),
     private readonly computeCommitment: (maxAmount: bigint, salt: bigint) => Promise<bigint> =
       computePolicyCommitment,
+    private readonly generateProof: PolicyProofGenerator = generateSpendLimitProof,
   ) {}
 
   getContext(accountInput: Address): { policyId: string; nonce: string } {
@@ -223,5 +237,75 @@ export class PolicyService {
       functionName: "updatePolicyCommitment",
       args: [commitment],
     });
+  }
+
+  async createProof(input: {
+    policyId: string;
+    token: string;
+    valueWei: string;
+  }): Promise<{
+    policyId: string;
+    policyVersion: number;
+    proof: Hex;
+    publicInputs: readonly [Hex, Hex];
+  }> {
+    const policy = this.repository.getPolicy(input.policyId);
+    if (!policy || !matchesPolicyToken(input.token, policy.tokenHash)) {
+      throw new PolicyApiError(401, "INVALID_POLICY_TOKEN");
+    }
+
+    const active = this.repository.getActive(input.policyId);
+    if (!active) throw new PolicyApiError(409, "POLICY_NOT_ACTIVE");
+
+    const state = await this.chain.getPolicyState(policy.account);
+    if (!state.configured || state.commitment.toLowerCase() !== active.commitment.toLowerCase()) {
+      throw new PolicyApiError(409, "ONCHAIN_POLICY_MISMATCH");
+    }
+
+    let maxAmount: bigint;
+    let salt: bigint;
+    try {
+      const secret = decryptPolicySecret(
+        active,
+        this.encryptionKey,
+        active.policyId,
+        active.version,
+      );
+      maxAmount = parseCircuitAmount(BigInt(secret.maxAmountWei));
+      salt = fieldElementSchema.parse(BigInt(secret.salt));
+    } catch (error) {
+      throw new PolicyApiError(500, "POLICY_SECRET_INVALID", { cause: error });
+    }
+
+    const value = parseCircuitAmount(BigInt(input.valueWei));
+    if (value > maxAmount) throw new PolicyApiError(422, "POLICY_LIMIT_EXCEEDED");
+
+    let generated: SpendLimitProof;
+    try {
+      generated = await this.generateProof({
+        value,
+        maxAmount,
+        salt,
+        policyCommitment: BigInt(active.commitment),
+      });
+    } catch (error) {
+      throw new PolicyApiError(500, "PROOF_GENERATION_FAILED", { cause: error });
+    }
+
+    const expectedValue = toHex(value, { size: 32 });
+    if (
+      generated.publicInputs.length !== 2 ||
+      generated.publicInputs[0].toLowerCase() !== expectedValue.toLowerCase() ||
+      generated.publicInputs[1].toLowerCase() !== active.commitment.toLowerCase()
+    ) {
+      throw new PolicyApiError(500, "PROOF_PUBLIC_INPUT_MISMATCH");
+    }
+
+    return {
+      policyId: active.policyId,
+      policyVersion: active.version,
+      proof: generated.proof,
+      publicInputs: generated.publicInputs,
+    };
   }
 }

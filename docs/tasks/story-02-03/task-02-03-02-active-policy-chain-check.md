@@ -3,7 +3,7 @@ id: task-02-03-02
 type: task
 title: active Policy読込とオンチェーン確認
 story: story-02-03
-status: pending
+status: done
 blocked_by: [task-02-03-01]
 created: 2026-09-04
 updated: 2026-09-04
@@ -31,7 +31,8 @@ Proof生成対象を現在のAccount Commitmentと一致するactive versionへ�
 
 ## 検証結果
 
-未実施。
+- `pnpm test:unit`: pending、未設定または不一致のオンチェーンCommitment、AES-GCM authentication tag改ざんを分類して拒否するservice testが成功。
+- 不正Token時に暗号化versionを取得せず、active metadataとオンチェーンCommitment一致後だけ復号する呼出順をspyで確認。
 
 ## Blocked
 
