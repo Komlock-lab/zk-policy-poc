@@ -422,6 +422,17 @@ describe("PolicyService proof generation", () => {
     expect(pending.generateProof).not.toHaveBeenCalled();
     pending.repository.close();
 
+    const unconfigured = setupProofPolicy();
+    unconfigured.chain.configured = false;
+    unconfigured.repository.database
+      .prepare("UPDATE policy_versions SET auth_tag = ? WHERE policy_id = ? AND version = 1")
+      .run(Buffer.alloc(16), policyId);
+    await expect(
+      unconfigured.service.createProof({ policyId, token: unconfigured.token, valueWei: "10" }),
+    ).rejects.toMatchObject({ statusCode: 409, code: "ONCHAIN_POLICY_MISMATCH" });
+    expect(unconfigured.generateProof).not.toHaveBeenCalled();
+    unconfigured.repository.close();
+
     const mismatched = setupProofPolicy();
     mismatched.chain.commitment = toHex(301n, { size: 32 });
     await expect(
