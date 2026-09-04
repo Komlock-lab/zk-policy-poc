@@ -3,7 +3,7 @@ id: story-02-03
 type: story
 title: Clientがactive PolicyのProofを取得する
 epic: epic-02
-status: in-progress
+status: done
 depends_on: [story-02-01]
 adrs: [adr-0004, adr-0006, adr-0007]
 created: 2026-09-04

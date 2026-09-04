@@ -3,7 +3,7 @@ id: story-02-02
 type: story
 title: OwnerがPolicyを更新する
 epic: epic-02
-status: in-progress
+status: done
 depends_on: [story-02-01]
 adrs: [adr-0004, adr-0005, adr-0006, adr-0007]
 created: 2026-09-04
