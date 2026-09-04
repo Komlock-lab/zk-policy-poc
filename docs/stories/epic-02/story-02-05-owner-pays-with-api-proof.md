@@ -55,13 +55,19 @@ Policy登録、更新、秘密保存、Proof APIがPhase 1のオンチェーン�
 
 | ID | Task | Status |
 | --- | --- | --- |
-| [task-02-05-01](../../tasks/story-02-05/task-02-05-01-api-backed-payment-client.md) | API接続型Payment Client | pending |
-| [task-02-05-02](../../tasks/story-02-05/task-02-05-02-local-api-payment-e2e.md) | ローカルAnvil統合E2E | pending |
-| [task-02-05-03](../../tasks/story-02-05/task-02-05-03-phase-2-quality-gate.md) | Phase 2全体の品質ゲート | pending |
+| [task-02-05-01](../../tasks/story-02-05/task-02-05-01-api-backed-payment-client.md) | API接続型Payment Client | done |
+| [task-02-05-02](../../tasks/story-02-05/task-02-05-02-local-api-payment-e2e.md) | ローカルAnvil統合E2E | done |
+| [task-02-05-03](../../tasks/story-02-05/task-02-05-03-phase-2-quality-gate.md) | Phase 2全体の品質ゲート | done |
 
 ## 検証結果
 
-未実施。
+- AC-1: `e2e/policy-payment.test.ts`で0.1 ETHの更新済みactive Policyと再発行済みTokenを使い、0.01 ETHのProof取得、Owner署名`execute()`、受取人残高の0.01 ETH増加を確認した。
+- AC-2: 同E2Eで1 ETHのProof要求がHTTP 422で拒否され、Owner nonceと受取人残高が不変であることを確認した。
+- AC-3: 同E2Eで更新前CommitmentのProofをAccount更新後に送信し、receiptが`reverted`、受取人残高が不変であることを確認した。
+- AC-4: 同E2EでAPIのactive CommitmentとAccountを不一致にし、Proof取得がHTTP 409で拒否され、Owner nonceと受取人残高が不変であることを確認した。
+- `pnpm test`: Circuit 4、Contract 15、TypeScript unit 63、E2E 8 testsが成功した。
+- `pnpm benchmark:circuit`: ACIR 12、Brillig 8、Proof 7,232 bytes、生成324ms。
+- `node scripts/validate-planning.mjs`と`git diff --check`: 成功。
 
 ## Blocked
 

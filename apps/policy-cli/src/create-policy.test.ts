@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { encodeFunctionData, toHex } from "viem";
 import { zkPolicyAccountAbi } from "../../policy-api/src/chain.ts";
 import {
-  nextPolicyVersionFromNonce,
   verifyPendingRegistration,
   waitForPolicyUpdateReceipt,
 } from "./create-policy.ts";
@@ -16,16 +15,20 @@ const calldata = encodeFunctionData({
 });
 
 describe("policy CLI response verification", () => {
-  it("derives the next version from the API nonce, including pending replacement", () => {
-    expect(nextPolicyVersionFromNonce("1")).toBe(2);
-    expect(nextPolicyVersionFromNonce("2")).toBe(3);
-  });
-
-  it("uses locally reconstructed calldata for the expected pending version", () => {
+  it("uses locally reconstructed calldata for the expected initial version", () => {
     expect(
       verifyPendingRegistration(
         { policyId, policyVersion: 2, status: "pending", calldata },
         { policyId, policyVersion: 2, commitment },
+      ),
+    ).toBe(calldata);
+  });
+
+  it("does not derive a policy version from the independent API authorization nonce", () => {
+    expect(
+      verifyPendingRegistration(
+        { policyId, policyVersion: 2, status: "pending", calldata },
+        { policyId, commitment },
       ),
     ).toBe(calldata);
   });

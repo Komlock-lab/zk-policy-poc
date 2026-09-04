@@ -3,7 +3,7 @@ id: task-02-05-03
 type: task
 title: Phase 2全体の品質ゲート
 story: story-02-05
-status: pending
+status: done
 blocked_by: [task-02-05-02]
 created: 2026-09-04
 updated: 2026-09-04
@@ -35,7 +35,12 @@ Phase 2全体がarchitecture、security、acceptance criteriaを満たすこと�
 
 ## 検証結果
 
-未実施。
+- `pnpm test`: build・typecheck、Circuit 4 tests、Contract 15 tests、TypeScript unit 63 tests、ローカルAnvil E2E 8 testsが成功した。
+- `pnpm benchmark:circuit`: ACIR Opcodes 12、Brillig Opcodes 8、Proof 7,232 bytes、Proof生成324msを記録した。
+- `node scripts/validate-planning.mjs`: 成功。
+- `git diff --check`: whitespace errorなし。
+- LLM Wikiは変更しておらず、`llm-wiki/raw/`の一次資料も変更していない。
+- [audit-02](../../audits/audit-02-policy-management-proof-api.md)で秘密情報、入力境界、署名replay、状態遷移、Proof bindingを自己監査し、CRITICAL/HIGH残件0件を確認した。
 
 ## Blocked
 

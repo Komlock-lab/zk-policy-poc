@@ -36,6 +36,17 @@ export const zkPolicyAccountAbi = [
     inputs: [{ name: "newCommitment", type: "bytes32" }],
     outputs: [],
   },
+  {
+    type: "function",
+    name: "execute",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "recipient", type: "address" },
+      { name: "value", type: "uint256" },
+      { name: "proof", type: "bytes" },
+    ],
+    outputs: [],
+  },
 ] as const;
 
 export interface PolicyTransaction {
