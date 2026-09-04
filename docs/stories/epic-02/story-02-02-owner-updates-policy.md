@@ -69,7 +69,7 @@ Ownerは同じPolicy IDの支出上限を更新し、新versionをAccountとAPI�
 - AC-4: Service testとPolicy更新E2Eで存在しないtx hashを409拒否し、active/pending状態が不変であることを確認した。
 - AC-5: Service testでrevert、wrong to/from/calldata、on-chain Commitment不一致を、Policy更新E2Eでwrong targetを拒否し、状態不変を確認した。
 - AC-6: Service testとPolicy更新E2Eで消費済みnonceの署名replayを409拒否し、pendingとnonceが不変であることを確認した。
-- Quality gate: 固定toolchainの`pnpm test`でbuild/typecheck、Circuit 4件、Contract 15件、Unit 34件、非fork Anvil E2E 4件がすべて成功した。`pnpm benchmark:circuit`は12 ACIR opcodes、8 Brillig opcodes、proof 7,232 bytes、生成335 msを確認した。
+- Quality gate: 固定toolchainの`pnpm test`でbuild/typecheck、Circuit 4件、Contract 15件、Unit 36件、非fork Anvil E2E 4件がすべて成功した。`pnpm benchmark:circuit`は12 ACIR opcodes、8 Brillig opcodes、proof 7,232 bytes、生成335 msを確認した。
 
 ## Blocked
 

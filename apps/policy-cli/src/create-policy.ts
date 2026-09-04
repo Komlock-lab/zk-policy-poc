@@ -54,6 +54,27 @@ export function verifyPendingRegistration(
   return expectedCalldata;
 }
 
+export async function waitForPolicyUpdateReceipt(input: {
+  policyVersion: number;
+  txHash: Hex;
+  wait: () => Promise<{ status: "success" | "reverted" }>;
+}): Promise<void> {
+  let receipt: { status: "success" | "reverted" };
+  try {
+    receipt = await input.wait();
+  } catch (cause) {
+    throw new Error(
+      `policy version ${input.policyVersion} remains pending; transaction ${input.txHash} status is unknown`,
+      { cause },
+    );
+  }
+  if (receipt.status !== "success") {
+    throw new Error(
+      `policy version ${input.policyVersion} remains pending; transaction ${input.txHash} reverted`,
+    );
+  }
+}
+
 function assertLocalUrl(value: string, label: string): void {
   const url = new URL(value);
   if (url.protocol !== "http:" || url.hostname !== "127.0.0.1") {
@@ -223,10 +244,11 @@ export async function updateAndActivatePolicy(input: {
       cause,
     });
   }
-  const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
-  if (receipt.status !== "success") {
-    throw new Error(`policy version ${registration.policyVersion} remains pending; transaction ${txHash} reverted`);
-  }
+  await waitForPolicyUpdateReceipt({
+    policyVersion: registration.policyVersion,
+    txHash,
+    wait: () => publicClient.waitForTransactionReceipt({ hash: txHash }),
+  });
   try {
     const activation = await json(
       await fetch(`${input.apiUrl}/v1/policies/${policyId}/activate`, {

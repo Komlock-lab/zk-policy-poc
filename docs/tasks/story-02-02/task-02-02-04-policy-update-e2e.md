@@ -30,7 +30,7 @@ Policy version更新と拒否条件をlocal stack全体で検証する。
 
 ## 検証結果
 
-固定toolchainで`pnpm test`が成功。非fork Anvil chain ID 31337上のPolicy更新E2E 1件で、v1→v2、pending置換、Unauthorized、未確定Tx、不一致Tx、nonce replay、最終active化を確認した。全体ではCircuit 4件、Contract 15件、Unit 34件、E2E 4件が成功した。
+固定toolchainで`pnpm test`が成功。非fork Anvil chain ID 31337上のPolicy更新E2E 1件で、v1→v2、pending置換、Unauthorized、未確定Tx、不一致Tx、nonce replay、最終active化を確認した。全体ではCircuit 4件、Contract 15件、Unit 36件、E2E 4件が成功した。
 
 ## Blocked
 
