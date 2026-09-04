@@ -10,6 +10,10 @@ const signatureSchema = z
   .regex(/^0x(?:[0-9a-fA-F]{128}|[0-9a-fA-F]{130})$/)
   .transform((value) => value as Hex);
 const uuidSchema = z.string().uuid();
+const uint256DecimalSchema = z
+  .string()
+  .regex(/^(0|[1-9][0-9]*)$/)
+  .refine((value) => BigInt(value) < 1n << 256n);
 
 function bearerToken(header: string | undefined): string {
   const match = /^Bearer (zkp_[A-Za-z0-9_-]{43})$/.exec(header ?? "");
@@ -45,12 +49,12 @@ export function buildPolicyApi(service: PolicyService): FastifyInstance {
         maxAmountWei: z.string().regex(/^(0|[1-9][0-9]*)$/),
         salt: z.string().regex(/^(0|[1-9][0-9]*)$/),
         policyCommitment: bytes32Schema,
-        nonce: z.string().regex(/^(0|[1-9][0-9]*)$/),
+        nonce: uint256DecimalSchema,
         deadline: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
         signature: signatureSchema,
       })
       .parse(request.body);
-    return service.registerInitial({ policyId, ...body });
+    return service.register({ policyId, ...body });
   });
 
   app.post("/v1/policies/:policyId/activate", async (request) => {
