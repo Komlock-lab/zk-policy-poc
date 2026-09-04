@@ -52,7 +52,7 @@ describe("policy proof API", () => {
       ),
       tokenHash: hashPolicyToken(token),
     });
-    repository.activate(policyId, 1);
+    repository.activate(policyId, 1, repository.getPolicy(policyId)!.tokenHash);
     const chain = {
       getOwner: async () => account,
       getPolicyState: async () => ({ configured: true, commitment: commitmentHex }),

@@ -26,7 +26,11 @@ describe("PolicyRepository", () => {
     createInitial(repository);
     expect(repository.getPolicyByAccount(account)?.nonce).toBe(1n);
     expect(repository.getVersion("00000000-0000-4000-8000-000000000001", 1)?.status).toBe("pending");
-    repository.activate("00000000-0000-4000-8000-000000000001", 1);
+    repository.activate(
+      "00000000-0000-4000-8000-000000000001",
+      1,
+      repository.getPolicy(policyId)!.tokenHash,
+    );
     expect(repository.getActive("00000000-0000-4000-8000-000000000001")?.status).toBe("active");
     repository.close();
   });
@@ -34,7 +38,7 @@ describe("PolicyRepository", () => {
   it("increments versions while preserving active until activation", () => {
     const repository = new PolicyRepository(":memory:");
     createInitial(repository);
-    repository.activate(policyId, 1);
+    repository.activate(policyId, 1, repository.getPolicy(policyId)!.tokenHash);
 
     const version2 = repository.createNextPending({
       policyId,
@@ -48,7 +52,7 @@ describe("PolicyRepository", () => {
     expect(repository.getPending(policyId)?.version).toBe(2);
     expect(repository.getPolicy(policyId)?.nonce).toBe(2n);
 
-    repository.activate(policyId, 2);
+    repository.activate(policyId, 2, repository.getPolicy(policyId)!.tokenHash);
     expect(repository.getVersion(policyId, 1)?.status).toBe("superseded");
     expect(repository.getVersion(policyId, 2)?.status).toBe("active");
     repository.close();
@@ -57,7 +61,7 @@ describe("PolicyRepository", () => {
   it("supersedes only the previous pending version on replacement", () => {
     const repository = new PolicyRepository(":memory:");
     createInitial(repository);
-    repository.activate(policyId, 1);
+    repository.activate(policyId, 1, repository.getPolicy(policyId)!.tokenHash);
     repository.createNextPending({
       policyId,
       account,
@@ -84,7 +88,7 @@ describe("PolicyRepository", () => {
   it("rolls back pending replacement when nonce validation fails", () => {
     const repository = new PolicyRepository(":memory:");
     createInitial(repository);
-    repository.activate(policyId, 1);
+    repository.activate(policyId, 1, repository.getPolicy(policyId)!.tokenHash);
     repository.createNextPending({
       policyId,
       account,
@@ -106,6 +110,41 @@ describe("PolicyRepository", () => {
     expect(repository.getVersion(policyId, 2)?.status).toBe("pending");
     expect(repository.getVersion(policyId, 3)).toBeUndefined();
     expect(repository.getPolicy(policyId)?.nonce).toBe(2n);
+    repository.close();
+  });
+
+  it("atomically rotates the token hash and consumes the expected nonce", () => {
+    const repository = new PolicyRepository(":memory:");
+    createInitial(repository);
+    repository.activate(policyId, 1, repository.getPolicy(policyId)!.tokenHash);
+    const nextHash = Buffer.alloc(32, 2);
+
+    repository.rotatePolicyToken({
+      policyId,
+      account,
+      expectedNonce: 1n,
+      tokenHash: nextHash,
+    });
+
+    expect(repository.getPolicy(policyId)).toMatchObject({ nonce: 2n, tokenHash: nextHash });
+    repository.close();
+  });
+
+  it("keeps the token hash and nonce unchanged when rotation validation fails", () => {
+    const repository = new PolicyRepository(":memory:");
+    createInitial(repository);
+    const before = repository.getPolicy(policyId)!;
+
+    expect(() =>
+      repository.rotatePolicyToken({
+        policyId,
+        account,
+        expectedNonce: 0n,
+        tokenHash: Buffer.alloc(32, 2),
+      }),
+    ).toThrow("invalid policy nonce");
+
+    expect(repository.getPolicy(policyId)).toEqual(before);
     repository.close();
   });
 

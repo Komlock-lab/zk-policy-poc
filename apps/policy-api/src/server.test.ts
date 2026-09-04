@@ -128,4 +128,56 @@ describe("policy API routes", () => {
     await app.close();
     repository.close();
   });
+
+  it("strictly parses token rotation requests", async () => {
+    const repository = new PolicyRepository(":memory:");
+    const service = new PolicyService(
+      repository,
+      {
+        getOwner: async () => account,
+        getPolicyState: async () => ({ configured: true, commitment: toHex(1n, { size: 32 }) }),
+        getTransaction: async () => {
+          throw new Error("not found");
+        },
+      },
+      Buffer.alloc(32, 1),
+    );
+    const rotatePolicyToken = vi.spyOn(service, "rotatePolicyToken").mockResolvedValue({
+      policyId: "00000000-0000-4000-8000-000000000001",
+      token: `zkp_${"b".repeat(43)}`,
+    });
+    const app = buildPolicyApi(service);
+    const url = "/v1/policies/00000000-0000-4000-8000-000000000001/token";
+    const validPayload = {
+      account,
+      nonce: "1",
+      deadline: 2_000_000_000,
+      signature: `0x${"11".repeat(65)}`,
+    };
+
+    for (const payload of [
+      { ...validPayload, nonce: "01" },
+      { ...validPayload, nonce: (1n << 256n).toString() },
+      { ...validPayload, deadline: -1 },
+      { ...validPayload, extra: true },
+    ]) {
+      const response = await app.inject({ method: "POST", url, payload });
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toEqual({ error: "INVALID_REQUEST" });
+    }
+    expect(rotatePolicyToken).not.toHaveBeenCalled();
+
+    const response = await app.inject({ method: "POST", url, payload: validPayload });
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({
+      policyId: "00000000-0000-4000-8000-000000000001",
+      token: `zkp_${"b".repeat(43)}`,
+    });
+    expect(rotatePolicyToken).toHaveBeenCalledWith({
+      policyId: "00000000-0000-4000-8000-000000000001",
+      ...validPayload,
+    });
+    await app.close();
+    repository.close();
+  });
 });

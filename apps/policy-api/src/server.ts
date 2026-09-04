@@ -82,5 +82,19 @@ export function buildPolicyApi(service: PolicyService): FastifyInstance {
     });
   });
 
+  app.post("/v1/policies/:policyId/token", async (request) => {
+    const { policyId } = z.object({ policyId: uuidSchema }).parse(request.params);
+    const body = z
+      .object({
+        account: addressSchema,
+        nonce: uint256DecimalSchema,
+        deadline: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+        signature: signatureSchema,
+      })
+      .strict()
+      .parse(request.body);
+    return service.rotatePolicyToken({ policyId, ...body });
+  });
+
   return app;
 }

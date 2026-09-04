@@ -3,7 +3,7 @@ id: task-02-04-02
 type: task
 title: Token再発行CLI
 story: story-02-04
-status: pending
+status: done
 blocked_by: [task-02-04-01]
 created: 2026-09-04
 updated: 2026-09-04
@@ -30,7 +30,9 @@ OwnerがCLIからToken再発行へ署名し、新Tokenを受け取れるよう�
 
 ## 検証結果
 
-未実施。
+- `PATH="..." pnpm typecheck`: 成功。
+- `PATH="..." pnpm test:unit`: 11 files、59 tests成功。CLI client 3 testsでAccount contextからのPolicy ID・nonce取得、exact EIP-712署名、Zod response検証を確認した。
+- CLI entry pointはAccountとOwner鍵から再発行し、新Tokenを含むresponseだけを標準出力へ1回出力する。秘密値や署名のlog出力はない。
 
 ## Blocked
 

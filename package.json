@@ -18,6 +18,7 @@
     "local:payment": "pnpm build && tsx scripts/deploy-and-pay.ts",
     "policy-api": "NODE_OPTIONS=--experimental-sqlite tsx apps/policy-api/src/index.ts",
     "policy:create": "NODE_OPTIONS=--experimental-sqlite tsx apps/policy-cli/src/index.ts",
+    "policy:rotate-token": "NODE_OPTIONS=--experimental-sqlite tsx apps/policy-cli/src/rotate-token.ts",
     "policy:update": "NODE_OPTIONS=--experimental-sqlite tsx apps/policy-cli/src/update-policy.ts",
     "proof": "pnpm build:circuit && tsx scripts/generate-proof.ts",
     "test": "pnpm build && pnpm test:circuit && pnpm test:contracts && pnpm test:unit && pnpm test:e2e",
