@@ -105,7 +105,7 @@ Ownerが1回あたりの支出上限PolicyをCLIから登録・更新でき、�
 
 | ID | Story | Depends on | Status |
 | --- | --- | --- | --- |
-| [story-02-01](../stories/epic-02/story-02-01-owner-registers-policy.md) | Ownerが初回Policyを登録する | なし | approved |
+| [story-02-01](../stories/epic-02/story-02-01-owner-registers-policy.md) | Ownerが初回Policyを登録する | なし | done |
 | [story-02-02](../stories/epic-02/story-02-02-owner-updates-policy.md) | OwnerがPolicyを更新する | story-02-01 | approved |
 | [story-02-03](../stories/epic-02/story-02-03-client-requests-proof.md) | Clientがactive PolicyのProofを取得する | story-02-01 | approved |
 | [story-02-04](../stories/epic-02/story-02-04-owner-rotates-proof-token.md) | OwnerがProof API Tokenを再発行する | story-02-03 | approved |
