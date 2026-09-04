@@ -1,6 +1,7 @@
 import Fastify, { type FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { Address, Hex } from "viem";
+import { U128_MAX } from "../../../packages/policy/src/index.ts";
 import { PolicyApiError, PolicyService } from "./service.ts";
 
 const addressSchema = z.string().regex(/^0x[0-9a-fA-F]{40}$/).transform((value) => value as Address);
@@ -14,6 +15,10 @@ const uint256DecimalSchema = z
   .string()
   .regex(/^(0|[1-9][0-9]*)$/)
   .refine((value) => BigInt(value) < 1n << 256n);
+const circuitAmountDecimalSchema = z
+  .string()
+  .regex(/^(0|[1-9][0-9]*)$/)
+  .refine((value) => BigInt(value) <= U128_MAX);
 
 function bearerToken(header: string | undefined): string {
   const match = /^Bearer (zkp_[A-Za-z0-9_-]{43})$/.exec(header ?? "");
@@ -63,6 +68,16 @@ export function buildPolicyApi(service: PolicyService): FastifyInstance {
     return service.activate({
       policyId,
       txHash,
+      token: bearerToken(request.headers.authorization),
+    });
+  });
+
+  app.post("/v1/policies/:policyId/proofs", async (request) => {
+    const { policyId } = z.object({ policyId: uuidSchema }).parse(request.params);
+    const { valueWei } = z.object({ valueWei: circuitAmountDecimalSchema }).strict().parse(request.body);
+    return service.createProof({
+      policyId,
+      valueWei,
       token: bearerToken(request.headers.authorization),
     });
   });

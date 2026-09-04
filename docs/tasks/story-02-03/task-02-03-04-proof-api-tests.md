@@ -3,7 +3,7 @@ id: task-02-03-04
 type: task
 title: Proof APIテスト
 story: story-02-03
-status: pending
+status: done
 blocked_by: [task-02-03-03]
 created: 2026-09-04
 updated: 2026-09-04
@@ -31,7 +31,10 @@ Proof APIの正常系と各拒否境界を自動testで固定する。
 
 ## 検証結果
 
-未実施。
+- `pnpm test`: build・typecheck、Circuit 4、Contract 15（各fuzz 256 runs）、unit 44、E2E 5 testsがすべて成功。
+- Story固有testで正常Proof、不正Token、pending、chain不一致、上限超過、ciphertext改ざん、Prover失敗、Public Input不一致を確認。
+- API error responseとProof responseを厳密に検証し、秘密値・内部error fieldを返さないことを確認。
+- `pnpm benchmark:circuit`: ACIR 12、Brillig 8、Proof 7,232 bytes、生成329 ms。
 
 ## Blocked
 
