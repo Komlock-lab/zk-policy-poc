@@ -154,6 +154,76 @@ export class PolicyRepository {
     return row ? this.mapVersion(row) : undefined;
   }
 
+  getPending(policyId: string): PolicyVersionRecord | undefined {
+    const row = this.database
+      .prepare("SELECT * FROM policy_versions WHERE policy_id = ? AND status = 'pending'")
+      .get(policyId) as VersionRow | undefined;
+    return row ? this.mapVersion(row) : undefined;
+  }
+
+  createNextPending(input: {
+    policyId: string;
+    account: Address;
+    expectedNonce: bigint;
+    commitment: Hex;
+    secretForVersion: (version: number) => EncryptedPolicySecret;
+  }): PolicyVersionRecord {
+    this.database.exec("BEGIN IMMEDIATE");
+    try {
+      const policy = this.getPolicy(input.policyId);
+      if (!policy || policy.account.toLowerCase() !== input.account.toLowerCase()) {
+        throw new PolicyRepositoryConflictError("policy does not match account");
+      }
+      if (policy.nonce !== input.expectedNonce) {
+        throw new PolicyRepositoryConflictError("invalid policy nonce");
+      }
+      const versionRow = this.database
+        .prepare("SELECT COALESCE(MAX(version), 0) AS max_version FROM policy_versions WHERE policy_id = ?")
+        .get(input.policyId) as { max_version: number };
+      const version = versionRow.max_version + 1;
+      const secret = input.secretForVersion(version);
+
+      this.database
+        .prepare("UPDATE policy_versions SET status = 'superseded' WHERE policy_id = ? AND status = 'pending'")
+        .run(input.policyId);
+      this.database
+        .prepare(`INSERT INTO policy_versions
+          (policy_id, account, version, commitment, status, ciphertext, iv, auth_tag)
+          VALUES (?, ?, ?, ?, 'pending', ?, ?, ?)`)
+        .run(
+          input.policyId,
+          input.account.toLowerCase(),
+          version,
+          input.commitment,
+          secret.ciphertext,
+          secret.iv,
+          secret.authTag,
+        );
+      const nonceResult = this.database
+        .prepare("UPDATE policies SET next_nonce = ? WHERE id = ? AND next_nonce = ?")
+        .run((input.expectedNonce + 1n).toString(), input.policyId, input.expectedNonce.toString());
+      if (nonceResult.changes !== 1) {
+        throw new PolicyRepositoryConflictError("policy nonce changed");
+      }
+      this.database.exec("COMMIT");
+      return {
+        ...secret,
+        policyId: input.policyId,
+        account: input.account,
+        version,
+        commitment: input.commitment,
+        status: "pending",
+      };
+    } catch (error) {
+      this.database.exec("ROLLBACK");
+      if (error instanceof PolicyRepositoryConflictError) throw error;
+      if (isSqliteConstraintError(error)) {
+        throw new PolicyRepositoryConflictError("policy version or nonce conflict", { cause: error });
+      }
+      throw error;
+    }
+  }
+
   activate(policyId: string, version: number): void {
     this.database.exec("BEGIN IMMEDIATE");
     try {

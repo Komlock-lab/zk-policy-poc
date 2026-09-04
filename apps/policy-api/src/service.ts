@@ -13,6 +13,8 @@ import { encryptPolicySecret, generatePolicyToken, hashPolicyToken, matchesPolic
 import { recoverPolicyUpdateSigner } from "./eip712.ts";
 import { PolicyRepository, PolicyRepositoryConflictError } from "./repository.ts";
 
+const MAX_UINT256 = (1n << 256n) - 1n;
+
 export class PolicyApiError extends Error {
   constructor(readonly statusCode: number, readonly code: string) {
     super(code);
@@ -29,6 +31,23 @@ export interface RegisterPolicyInput {
   deadline: number;
   signature: Hex;
 }
+
+interface ValidatedPolicyUpdate {
+  account: Address;
+  maxAmount: bigint;
+  salt: bigint;
+  commitment: Hex;
+  nonce: bigint;
+  configured: boolean;
+}
+
+export type RegisterPolicyResult = {
+  policyId: string;
+  policyVersion: number;
+  status: "pending";
+  calldata: Hex;
+  token?: string;
+};
 
 export class PolicyService {
   constructor(
@@ -48,40 +67,23 @@ export class PolicyService {
       : { policyId: randomUUID(), nonce: "0" };
   }
 
-  async registerInitial(input: RegisterPolicyInput): Promise<{
-    policyId: string;
-    policyVersion: number;
-    status: "pending";
-    token: string;
-    calldata: Hex;
-  }> {
+  async register(input: RegisterPolicyInput): Promise<RegisterPolicyResult> {
     const account = getAddress(input.account);
-    if (input.deadline < this.now()) throw new PolicyApiError(401, "SIGNATURE_EXPIRED");
-    const maxAmount = parseCircuitAmount(BigInt(input.maxAmountWei));
-    const salt = fieldElementSchema.parse(BigInt(input.salt));
-    const commitment = toHex(await this.computeCommitment(maxAmount, salt), { size: 32 });
-    if (commitment.toLowerCase() !== input.policyCommitment.toLowerCase()) {
-      throw new PolicyApiError(400, "POLICY_COMMITMENT_MISMATCH");
+    const existing = this.repository.getPolicyByAccount(account);
+    if (!existing) return this.registerInitial(input);
+    if (existing.policyId !== input.policyId) {
+      throw new PolicyApiError(409, "POLICY_OR_NONCE_CONFLICT");
     }
-    const nonce = BigInt(input.nonce);
-    const message = {
-      policyId: input.policyId,
-      account,
-      policyCommitment: commitment,
-      nonce,
-      deadline: BigInt(input.deadline),
-    };
-    const [signer, owner, policyState] = await Promise.all([
-      recoverPolicyUpdateSigner(message, input.signature),
-      this.chain.getOwner(account),
-      this.chain.getPolicyState(account),
-    ]);
-    if (!isAddressEqual(signer, owner)) throw new PolicyApiError(401, "INVALID_OWNER_SIGNATURE");
-    if (policyState.configured) throw new PolicyApiError(409, "POLICY_ALREADY_CONFIGURED");
+    return this.registerUpdate(input);
+  }
+
+  async registerInitial(input: RegisterPolicyInput): Promise<RegisterPolicyResult & { token: string }> {
+    const validated = await this.validatePolicyUpdate(input);
+    if (validated.configured) throw new PolicyApiError(409, "POLICY_ALREADY_CONFIGURED");
 
     const token = generatePolicyToken();
     const secret = encryptPolicySecret(
-      { maxAmountWei: maxAmount.toString(), salt: salt.toString() },
+      { maxAmountWei: validated.maxAmount.toString(), salt: validated.salt.toString() },
       this.encryptionKey,
       input.policyId,
       1,
@@ -89,9 +91,9 @@ export class PolicyService {
     try {
       this.repository.createInitialPending({
         policyId: input.policyId,
-        account,
-        expectedNonce: nonce,
-        commitment,
+        account: validated.account,
+        expectedNonce: validated.nonce,
+        commitment: validated.commitment,
         secret,
         tokenHash: hashPolicyToken(token),
       });
@@ -106,7 +108,44 @@ export class PolicyService {
       policyVersion: 1,
       status: "pending",
       token,
-      calldata: encodeFunctionData({ abi: zkPolicyAccountAbi, functionName: "updatePolicyCommitment", args: [commitment] }),
+      calldata: this.encodeCommitmentUpdate(validated.commitment),
+    };
+  }
+
+  async registerUpdate(input: RegisterPolicyInput): Promise<RegisterPolicyResult> {
+    const validated = await this.validatePolicyUpdate(input);
+    const policy = this.repository.getPolicy(input.policyId);
+    if (!policy || !isAddressEqual(policy.account, validated.account)) {
+      throw new PolicyApiError(409, "POLICY_OR_NONCE_CONFLICT");
+    }
+    if (!validated.configured) throw new PolicyApiError(409, "POLICY_NOT_CONFIGURED");
+
+    let pending;
+    try {
+      pending = this.repository.createNextPending({
+        policyId: input.policyId,
+        account: validated.account,
+        expectedNonce: validated.nonce,
+        commitment: validated.commitment,
+        secretForVersion: (version) =>
+          encryptPolicySecret(
+            { maxAmountWei: validated.maxAmount.toString(), salt: validated.salt.toString() },
+            this.encryptionKey,
+            input.policyId,
+            version,
+          ),
+      });
+    } catch (error) {
+      if (error instanceof PolicyRepositoryConflictError) {
+        throw new PolicyApiError(409, "POLICY_OR_NONCE_CONFLICT");
+      }
+      throw error;
+    }
+    return {
+      policyId: input.policyId,
+      policyVersion: pending.version,
+      status: "pending",
+      calldata: this.encodeCommitmentUpdate(validated.commitment),
     };
   }
 
@@ -115,7 +154,7 @@ export class PolicyService {
     if (!policy || !matchesPolicyToken(input.token, policy.tokenHash)) {
       throw new PolicyApiError(401, "INVALID_POLICY_TOKEN");
     }
-    const pending = this.repository.getVersion(input.policyId, 1);
+    const pending = this.repository.getPending(input.policyId);
     if (!pending || pending.status !== "pending") throw new PolicyApiError(409, "POLICY_NOT_PENDING");
     let transaction;
     try {
@@ -142,7 +181,47 @@ export class PolicyService {
     if (!state.configured || state.commitment.toLowerCase() !== pending.commitment.toLowerCase()) {
       throw new PolicyApiError(409, "ONCHAIN_POLICY_MISMATCH");
     }
-    this.repository.activate(input.policyId, 1);
-    return { policyVersion: 1, status: "active" };
+    this.repository.activate(input.policyId, pending.version);
+    return { policyVersion: pending.version, status: "active" };
+  }
+
+  private async validatePolicyUpdate(input: RegisterPolicyInput): Promise<ValidatedPolicyUpdate> {
+    const account = getAddress(input.account);
+    if (input.deadline < this.now()) throw new PolicyApiError(401, "SIGNATURE_EXPIRED");
+    const maxAmount = parseCircuitAmount(BigInt(input.maxAmountWei));
+    const salt = fieldElementSchema.parse(BigInt(input.salt));
+    const commitment = toHex(await this.computeCommitment(maxAmount, salt), { size: 32 });
+    if (commitment.toLowerCase() !== input.policyCommitment.toLowerCase()) {
+      throw new PolicyApiError(400, "POLICY_COMMITMENT_MISMATCH");
+    }
+    const nonce = BigInt(input.nonce);
+    if (nonce < 0n || nonce > MAX_UINT256) throw new PolicyApiError(400, "INVALID_NONCE");
+    const message = {
+      policyId: input.policyId,
+      account,
+      policyCommitment: commitment,
+      nonce,
+      deadline: BigInt(input.deadline),
+    };
+    let signer: Address;
+    try {
+      signer = await recoverPolicyUpdateSigner(message, input.signature);
+    } catch {
+      throw new PolicyApiError(401, "INVALID_OWNER_SIGNATURE");
+    }
+    const [owner, policyState] = await Promise.all([
+      this.chain.getOwner(account),
+      this.chain.getPolicyState(account),
+    ]);
+    if (!isAddressEqual(signer, owner)) throw new PolicyApiError(401, "INVALID_OWNER_SIGNATURE");
+    return { account, maxAmount, salt, commitment, nonce, configured: policyState.configured };
+  }
+
+  private encodeCommitmentUpdate(commitment: Hex): Hex {
+    return encodeFunctionData({
+      abi: zkPolicyAccountAbi,
+      functionName: "updatePolicyCommitment",
+      args: [commitment],
+    });
   }
 }

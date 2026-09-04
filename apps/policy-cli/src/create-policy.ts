@@ -3,6 +3,7 @@ import {
   type Hex,
   createPublicClient,
   createWalletClient,
+  encodeFunctionData,
   getAddress,
   http,
   toHex,
@@ -12,6 +13,7 @@ import { foundry } from "viem/chains";
 import { z } from "zod";
 import { computePolicyCommitment, generateSalt, parseCircuitAmount } from "../../../packages/policy/src/index.ts";
 import { policyDomain, policyUpdateTypes } from "../../policy-api/src/eip712.ts";
+import { zkPolicyAccountAbi } from "../../policy-api/src/chain.ts";
 
 const policyIdSchema = z.string().uuid();
 const contextResponseSchema = z.object({
@@ -21,13 +23,36 @@ const contextResponseSchema = z.object({
 const registrationResponseSchema = z.object({
   policyId: policyIdSchema,
   policyVersion: z.number().int().positive(),
+  status: z.literal("pending"),
   token: z.string().regex(/^zkp_[A-Za-z0-9_-]{43}$/),
   calldata: z.string().regex(/^0x[0-9a-fA-F]+$/).transform((value) => value as Hex),
 });
+const updateResponseSchema = registrationResponseSchema.omit({ token: true });
 const activationResponseSchema = z.object({
   policyVersion: z.number().int().positive(),
   status: z.literal("active"),
 });
+
+export function verifyPendingRegistration(
+  registration: z.infer<typeof updateResponseSchema>,
+  expected: { policyId: string; policyVersion: number; commitment: Hex },
+): Hex {
+  if (
+    registration.policyId !== expected.policyId ||
+    registration.policyVersion !== expected.policyVersion
+  ) {
+    throw new Error("policy API returned unexpected policy identity or version");
+  }
+  const expectedCalldata = encodeFunctionData({
+    abi: zkPolicyAccountAbi,
+    functionName: "updatePolicyCommitment",
+    args: [expected.commitment],
+  });
+  if (registration.calldata.toLowerCase() !== expectedCalldata.toLowerCase()) {
+    throw new Error("policy API returned calldata that does not match the signed commitment");
+  }
+  return expectedCalldata;
+}
 
 function assertLocalUrl(value: string, label: string): void {
   const url = new URL(value);
@@ -95,10 +120,15 @@ export async function createAndActivatePolicy(input: {
     }),
     registrationResponseSchema,
   );
-  const txHash = await walletClient.sendTransaction({ to: accountAddress, data: registration.calldata });
+  const expectedCalldata = verifyPendingRegistration(registration, {
+    policyId: context.policyId,
+    policyVersion: 1,
+    commitment,
+  });
+  const txHash = await walletClient.sendTransaction({ to: accountAddress, data: expectedCalldata });
   const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
   if (receipt.status !== "success") throw new Error("policy update transaction reverted");
-  await json(
+  const activation = await json(
     await fetch(`${input.apiUrl}/v1/policies/${context.policyId}/activate`, {
       method: "POST",
       headers: {
@@ -109,10 +139,113 @@ export async function createAndActivatePolicy(input: {
     }),
     activationResponseSchema,
   );
+  if (activation.policyVersion !== registration.policyVersion) {
+    throw new Error("policy API activated an unexpected policy version");
+  }
   return {
     policyId: registration.policyId,
     policyVersion: registration.policyVersion,
     token: registration.token,
     txHash,
   };
+}
+
+export async function updateAndActivatePolicy(input: {
+  apiUrl: string;
+  rpcUrl: string;
+  accountAddress: Address;
+  ownerPrivateKey: Hex;
+  policyId: string;
+  currentPolicyVersion: number;
+  token: string;
+  maxAmountWei: bigint;
+  deadline: number;
+}): Promise<{ policyId: string; policyVersion: number; txHash: Hex }> {
+  assertLocalUrl(input.apiUrl, "apiUrl");
+  assertLocalUrl(input.rpcUrl, "rpcUrl");
+  const policyId = policyIdSchema.parse(input.policyId);
+  const token = z.string().regex(/^zkp_[A-Za-z0-9_-]{43}$/).parse(input.token);
+  const currentPolicyVersion = z.number().int().positive().parse(input.currentPolicyVersion);
+  const owner = privateKeyToAccount(input.ownerPrivateKey);
+  const accountAddress = getAddress(input.accountAddress);
+  const maxAmount = parseCircuitAmount(input.maxAmountWei);
+  const transport = http(input.rpcUrl);
+  const publicClient = createPublicClient({ chain: foundry, transport });
+  const walletClient = createWalletClient({ account: owner, chain: foundry, transport });
+  if ((await publicClient.getChainId()) !== 31_337) throw new Error("local chain id must be 31337");
+
+  const context = await json(
+    await fetch(`${input.apiUrl}/v1/accounts/${accountAddress}/policy-context`),
+    contextResponseSchema,
+  );
+  if (context.policyId !== policyId) throw new Error("policy context does not match the requested policy");
+  const salt = generateSalt();
+  const commitment = toHex(await computePolicyCommitment(maxAmount, salt), { size: 32 });
+  const signature = await owner.signTypedData({
+    domain: policyDomain(accountAddress),
+    types: policyUpdateTypes,
+    primaryType: "PolicyUpdate",
+    message: {
+      policyId,
+      account: accountAddress,
+      policyCommitment: commitment,
+      nonce: BigInt(context.nonce),
+      deadline: BigInt(input.deadline),
+    },
+  });
+  const registration = await json(
+    await fetch(`${input.apiUrl}/v1/policies/${policyId}`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        account: accountAddress,
+        maxAmountWei: maxAmount.toString(),
+        salt: salt.toString(),
+        policyCommitment: commitment,
+        nonce: context.nonce,
+        deadline: input.deadline,
+        signature,
+      }),
+    }),
+    updateResponseSchema,
+  );
+  const expectedCalldata = verifyPendingRegistration(registration, {
+    policyId,
+    policyVersion: currentPolicyVersion + 1,
+    commitment,
+  });
+
+  let txHash: Hex;
+  try {
+    txHash = await walletClient.sendTransaction({ to: accountAddress, data: expectedCalldata });
+  } catch (cause) {
+    throw new Error(`policy version ${registration.policyVersion} remains pending; transaction was not submitted`, {
+      cause,
+    });
+  }
+  const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+  if (receipt.status !== "success") {
+    throw new Error(`policy version ${registration.policyVersion} remains pending; transaction ${txHash} reverted`);
+  }
+  try {
+    const activation = await json(
+      await fetch(`${input.apiUrl}/v1/policies/${policyId}/activate`, {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${token}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ txHash }),
+      }),
+      activationResponseSchema,
+    );
+    if (activation.policyVersion !== registration.policyVersion) {
+      throw new Error("policy API activated an unexpected policy version");
+    }
+  } catch (cause) {
+    throw new Error(`policy version ${registration.policyVersion} remains pending after transaction ${txHash}`, {
+      cause,
+    });
+  }
+  return { policyId, policyVersion: registration.policyVersion, txHash };
 }

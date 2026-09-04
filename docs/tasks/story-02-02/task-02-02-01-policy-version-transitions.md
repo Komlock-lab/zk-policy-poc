@@ -3,7 +3,7 @@ id: task-02-02-01
 type: task
 title: Policy version状態遷移
 story: story-02-02
-status: pending
+status: done
 blocked_by: []
 created: 2026-09-04
 updated: 2026-09-04
@@ -31,7 +31,7 @@ updated: 2026-09-04
 
 ## 検証結果
 
-未実施。
+`pnpm test:unit`でRepository 6件が成功。versionを`MAX(version)+1`で採番し、nonce消費・旧pendingのsuperseded化・新pending保存を同一transactionで実行すること、active維持、activation時の切替、nonce競合時のrollbackを確認した。
 
 ## Blocked
 

@@ -27,6 +27,21 @@ describe("policy API routes", () => {
     const invalid = await app.inject({ method: "PUT", url: "/v1/policies/not-a-uuid", payload: {} });
     expect(invalid.statusCode).toBe(400);
     expect(invalid.json()).toEqual({ error: "INVALID_REQUEST" });
+    const nonceOverflow = await app.inject({
+      method: "PUT",
+      url: "/v1/policies/00000000-0000-4000-8000-000000000001",
+      payload: {
+        account,
+        maxAmountWei: "1",
+        salt: "1",
+        policyCommitment: `0x${"00".repeat(32)}`,
+        nonce: (1n << 256n).toString(),
+        deadline: 2_000_000_000,
+        signature: `0x${"00".repeat(65)}`,
+      },
+    });
+    expect(nonceOverflow.statusCode).toBe(400);
+    expect(nonceOverflow.json()).toEqual({ error: "INVALID_REQUEST" });
     await app.close();
     repository.close();
   });

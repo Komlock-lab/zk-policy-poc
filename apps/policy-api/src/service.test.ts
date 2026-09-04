@@ -62,8 +62,36 @@ async function signedInput(
 function setup() {
   const repository = new PolicyRepository(":memory:");
   const chain = new FakeChain();
-  const service = new PolicyService(repository, chain, Buffer.alloc(32, 1), () => 1_000, async () => 300n);
+  const service = new PolicyService(
+    repository,
+    chain,
+    Buffer.alloc(32, 1),
+    () => 1_000,
+    async (maxAmount, salt) => maxAmount + salt,
+  );
   return { repository, chain, service };
+}
+
+async function setupActive() {
+  const state = setup();
+  const registration = await state.service.registerInitial(await signedInput());
+  state.repository.activate(policyId, 1);
+  state.chain.configured = true;
+  state.chain.commitment = state.repository.getActive(policyId)!.commitment;
+  return { ...state, token: registration.token };
+}
+
+async function setupPendingUpdate() {
+  const state = await setupActive();
+  const commitment = toHex(301n, { size: 32 });
+  const update = await state.service.register(
+    await signedInput(owner, {
+      maxAmountWei: "101",
+      policyCommitment: commitment,
+      nonce: "1",
+    }),
+  );
+  return { ...state, commitment, update };
 }
 
 describe("PolicyService initial registration", () => {
@@ -140,6 +168,178 @@ describe("PolicyService initial registration", () => {
     });
 
     await expect(service.registerInitial(await signedInput())).rejects.toThrow("database unavailable");
+    repository.close();
+  });
+
+  it("rejects an invalid signature value without creating state", async () => {
+    const { repository, service } = setup();
+    const input = await signedInput();
+    input.signature = `0x${"00".repeat(65)}`;
+
+    await expect(service.registerInitial(input)).rejects.toMatchObject({
+      code: "INVALID_OWNER_SIGNATURE",
+      statusCode: 401,
+    });
+    expect(repository.getPolicyByAccount(account)).toBeUndefined();
+    repository.close();
+  });
+});
+
+describe("PolicyService policy updates", () => {
+  it("activates the latest pending version and supersedes the previous active version", async () => {
+    const { repository, chain, service, token } = await setupActive();
+    const commitment = toHex(301n, { size: 32 });
+    const update = await service.register(
+      await signedInput(owner, {
+        maxAmountWei: "101",
+        policyCommitment: commitment,
+        nonce: "1",
+      }),
+    );
+    expect(update).toMatchObject({ policyId, policyVersion: 2, status: "pending" });
+    expect(repository.getVersion(policyId, 1)?.status).toBe("active");
+
+    chain.transaction = { from: owner.address, to: account, input: update.calldata, status: "success" };
+    chain.commitment = commitment;
+    await expect(service.activate({ policyId, token, txHash: toHex(2n, { size: 32 }) })).resolves.toEqual({
+      policyVersion: 2,
+      status: "active",
+    });
+    expect(repository.getVersion(policyId, 1)?.status).toBe("superseded");
+    expect(repository.getVersion(policyId, 2)?.status).toBe("active");
+    repository.close();
+  });
+
+  it("replaces an unconfirmed pending version with a new nonce", async () => {
+    const { repository, service } = await setupActive();
+    await service.register(
+      await signedInput(owner, {
+        maxAmountWei: "101",
+        policyCommitment: toHex(301n, { size: 32 }),
+        nonce: "1",
+      }),
+    );
+    const replacement = await service.register(
+      await signedInput(owner, {
+        maxAmountWei: "102",
+        policyCommitment: toHex(302n, { size: 32 }),
+        nonce: "2",
+      }),
+    );
+
+    expect(replacement.policyVersion).toBe(3);
+    expect(repository.getVersion(policyId, 1)?.status).toBe("active");
+    expect(repository.getVersion(policyId, 2)?.status).toBe("superseded");
+    expect(repository.getVersion(policyId, 3)?.status).toBe("pending");
+    repository.close();
+  });
+
+  it("rejects a replayed update without replacing pending state", async () => {
+    const { repository, service } = await setupActive();
+    const input = await signedInput(owner, {
+      maxAmountWei: "101",
+      policyCommitment: toHex(301n, { size: 32 }),
+      nonce: "1",
+    });
+    await service.register(input);
+
+    await expect(service.register(input)).rejects.toMatchObject({ code: "POLICY_OR_NONCE_CONFLICT" });
+    expect(repository.getPending(policyId)?.version).toBe(2);
+    expect(repository.getPolicy(policyId)?.nonce).toBe(2n);
+    repository.close();
+  });
+
+  it("keeps state unchanged for every activation rejection", async () => {
+    const scenarios: Array<{
+      name: string;
+      expectedCode: string;
+      arrange: (state: Awaited<ReturnType<typeof setupPendingUpdate>>) => string;
+    }> = [
+      {
+        name: "wrong token",
+        expectedCode: "INVALID_POLICY_TOKEN",
+        arrange: ({ token }) => `${token}x`,
+      },
+      {
+        name: "missing receipt",
+        expectedCode: "TRANSACTION_NOT_CONFIRMED",
+        arrange: ({ token }) => token,
+      },
+      {
+        name: "reverted transaction",
+        expectedCode: "TRANSACTION_MISMATCH",
+        arrange: ({ chain, token, update }) => {
+          chain.transaction = { from: owner.address, to: account, input: update.calldata, status: "reverted" };
+          return token;
+        },
+      },
+      {
+        name: "wrong target",
+        expectedCode: "TRANSACTION_MISMATCH",
+        arrange: ({ chain, token, update }) => {
+          chain.transaction = {
+            from: owner.address,
+            to: "0x0000000000000000000000000000000000009999",
+            input: update.calldata,
+            status: "success",
+          };
+          return token;
+        },
+      },
+      {
+        name: "wrong sender",
+        expectedCode: "TRANSACTION_MISMATCH",
+        arrange: ({ chain, token, update }) => {
+          chain.transaction = { from: attacker.address, to: account, input: update.calldata, status: "success" };
+          return token;
+        },
+      },
+      {
+        name: "wrong calldata",
+        expectedCode: "TRANSACTION_MISMATCH",
+        arrange: ({ chain, token }) => {
+          chain.transaction = { from: owner.address, to: account, input: "0x1234", status: "success" };
+          return token;
+        },
+      },
+      {
+        name: "on-chain commitment mismatch",
+        expectedCode: "ONCHAIN_POLICY_MISMATCH",
+        arrange: ({ chain, token, update }) => {
+          chain.transaction = { from: owner.address, to: account, input: update.calldata, status: "success" };
+          return token;
+        },
+      },
+    ];
+
+    for (const [index, scenario] of scenarios.entries()) {
+      const state = await setupPendingUpdate();
+      const token = scenario.arrange(state);
+      await expect(
+        state.service.activate({ policyId, token, txHash: toHex(BigInt(index + 2), { size: 32 }) }),
+        scenario.name,
+      ).rejects.toMatchObject({ code: scenario.expectedCode });
+      expect(state.repository.getVersion(policyId, 1)?.status, scenario.name).toBe("active");
+      expect(state.repository.getPending(policyId)?.version, scenario.name).toBe(2);
+      state.repository.close();
+    }
+  });
+
+  it("does not translate unexpected update repository failures into conflicts", async () => {
+    const { repository, service } = await setupActive();
+    vi.spyOn(repository, "createNextPending").mockImplementation(() => {
+      throw new Error("database unavailable");
+    });
+
+    await expect(
+      service.register(
+        await signedInput(owner, {
+          maxAmountWei: "101",
+          policyCommitment: toHex(301n, { size: 32 }),
+          nonce: "1",
+        }),
+      ),
+    ).rejects.toThrow("database unavailable");
     repository.close();
   });
 });

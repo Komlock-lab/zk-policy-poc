@@ -3,7 +3,7 @@ id: task-02-02-03
 type: task
 title: Policy更新CLI
 story: story-02-02
-status: pending
+status: done
 blocked_by: [task-02-02-02]
 created: 2026-09-04
 updated: 2026-09-04
@@ -31,7 +31,7 @@ Ownerが既存Policy IDを維持したまま上限を更新できるようにす
 
 ## 検証結果
 
-未実施。
+`pnpm test:unit`のCLI 2件と`pnpm test:e2e`のPolicy更新scenarioが成功。CLIがPolicy ID、期待version、pending statusを検証し、署名済みCommitmentからcalldataを再構築してAPI応答との一致後に送信することを確認した。送信・active化失敗時のerrorにはpending versionと、取得済みの場合はtx hashを含める。
 
 ## Blocked
 

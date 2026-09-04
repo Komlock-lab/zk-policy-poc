@@ -3,7 +3,7 @@ id: story-02-02
 type: story
 title: OwnerがPolicyを更新する
 epic: epic-02
-status: approved
+status: in-progress
 depends_on: [story-02-01]
 adrs: [adr-0004, adr-0005, adr-0006, adr-0007]
 created: 2026-09-04
@@ -56,14 +56,20 @@ Ownerは同じPolicy IDの支出上限を更新し、新versionをAccountとAPI�
 
 | ID | Task | Status |
 | --- | --- | --- |
-| [task-02-02-01](../../tasks/story-02-02/task-02-02-01-policy-version-transitions.md) | Policy version状態遷移 | pending |
-| [task-02-02-02](../../tasks/story-02-02/task-02-02-02-policy-update-confirmation-api.md) | Policy更新・確定API | pending |
-| [task-02-02-03](../../tasks/story-02-02/task-02-02-03-policy-update-cli.md) | Policy更新CLI | pending |
-| [task-02-02-04](../../tasks/story-02-02/task-02-02-04-policy-update-e2e.md) | Policy更新E2E | pending |
+| [task-02-02-01](../../tasks/story-02-02/task-02-02-01-policy-version-transitions.md) | Policy version状態遷移 | done |
+| [task-02-02-02](../../tasks/story-02-02/task-02-02-02-policy-update-confirmation-api.md) | Policy更新・確定API | done |
+| [task-02-02-03](../../tasks/story-02-02/task-02-02-03-policy-update-cli.md) | Policy更新CLI | done |
+| [task-02-02-04](../../tasks/story-02-02/task-02-02-04-policy-update-e2e.md) | Policy更新E2E | done |
 
 ## 検証結果
 
-未実施。
+- AC-1: Policy更新E2Eでv1 activeからCLI更新し、v2 active、v1 superseded、Account Commitment一致を確認した。
+- AC-2: Repository testとPolicy更新E2Eでv3 pendingを新nonceのv4が置換し、v3だけがsuperseded、v2 activeが維持されることを確認した。
+- AC-3: Contract testとPolicy更新E2Eで非Ownerの`updatePolicyCommitment`が`Unauthorized`でrevertすることを確認した。
+- AC-4: Service testとPolicy更新E2Eで存在しないtx hashを409拒否し、active/pending状態が不変であることを確認した。
+- AC-5: Service testでrevert、wrong to/from/calldata、on-chain Commitment不一致を、Policy更新E2Eでwrong targetを拒否し、状態不変を確認した。
+- AC-6: Service testとPolicy更新E2Eで消費済みnonceの署名replayを409拒否し、pendingとnonceが不変であることを確認した。
+- Quality gate: 固定toolchainの`pnpm test`でbuild/typecheck、Circuit 4件、Contract 15件、Unit 34件、非fork Anvil E2E 4件がすべて成功した。`pnpm benchmark:circuit`は12 ACIR opcodes、8 Brillig opcodes、proof 7,232 bytes、生成335 msを確認した。
 
 ## Blocked
 
