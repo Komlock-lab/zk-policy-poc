@@ -3,7 +3,7 @@ id: story-02-04
 type: story
 title: OwnerがProof API Tokenを再発行する
 epic: epic-02
-status: in-progress
+status: done
 depends_on: [story-02-03]
 adrs: [adr-0005, adr-0006, adr-0007]
 created: 2026-09-04
