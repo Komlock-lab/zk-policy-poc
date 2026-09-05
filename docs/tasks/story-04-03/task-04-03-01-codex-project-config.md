@@ -3,7 +3,7 @@ id: task-04-03-01
 type: task
 title: Codex project設定と自動許可
 story: story-04-03
-status: pending
+status: done
 blocked_by: []
 created: 2026-09-05
 updated: 2026-09-05
@@ -33,7 +33,10 @@ Codexが共有Serverの決済Toolだけを追加承認なしに利用できる�
 
 ## 検証結果
 
-未実施。
+- Codex CLI `0.153.2`と公式Config Referenceで`env_vars`、`enabled_tools`、`mcp_servers.payment.tools.pay_native.approval_mode = "approve"`を照合した。
+- `codex mcp get payment`: direct Node stdio command、`pay_native`だけのallowlist、credential名だけの転送、startup timeout 30秒、Tool timeout 120秒を表示し、設定読込に成功した。
+- `NODE_OPTIONS=--experimental-sqlite pnpm vitest run apps/payment-mcp`: Codex設定検証を含む6 files、18 tests passed。
+- 実Codex CLI E2Eで3回ともapproval request eventなしに`pay_native`が実行され、各runは`turn.completed`で完了した。
 
 ## Blocked
 

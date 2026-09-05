@@ -3,7 +3,7 @@ id: task-04-03-02
 type: task
 title: Codex自然言語決済E2E
 story: story-04-03
-status: pending
+status: done
 blocked_by: [task-04-03-01]
 created: 2026-09-05
 updated: 2026-09-05
@@ -33,7 +33,9 @@ updated: 2026-09-05
 
 ## 検証結果
 
-未実施。
+- `RUN_CODEX_E2E=1 NODE_OPTIONS=--experimental-sqlite pnpm vitest run e2e/codex-payment.test.ts --reporter=verbose`: 実Codex CLI 0.153.2の3 tests passed（74.34秒）。
+- 0.01 ETHはreceipt成功、recipient残高`+0.01 ETH`、EntryPoint nonce`+1`。1 ETHは`PAYMENT_REJECTED`、不正recipientはMCP schema拒否となり、両異常系で残高とnonceは不変だった。
+- 全Codex JSONL transcriptとstderrにOwner Key、Policy Token、Proof field、approval request eventがないことをcanary照合した。
 
 ## Blocked
 
