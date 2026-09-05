@@ -3,7 +3,7 @@ id: task-03-02-01
 type: task
 title: ローカルAlto harness
 story: story-03-02
-status: pending
+status: done
 blocked_by: []
 created: 2026-09-05
 updated: 2026-09-05
@@ -32,7 +32,11 @@ updated: 2026-09-05
 
 ## 検証結果
 
-未実施。
+`pnpm exec vitest run e2e/bundler-payment.test.ts`: 10件成功。非fork AnvilとAlto 0.0.21の起動、chain ID 31337、supported EntryPoint、終了処理を実行した。
+
+- pnpm patchで127.0.0.1 bind、明示的なローカルv0.8 address対応、top-level trace出力、同梱simulation ABIのRETURN decodeを補正した。
+- safe-modeはtrueのまま。禁止TIMESTAMP opcodeと不正署名を実Bundlerが拒否することを確認した。
+- Altoへ継承する環境はPATHとローカルEntryPointのみ。process出力は保存・転送しない。
 
 ## Blocked
 

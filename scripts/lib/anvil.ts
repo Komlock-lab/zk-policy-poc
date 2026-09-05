@@ -7,7 +7,7 @@ export interface AnvilInstance {
   stop: () => Promise<void>;
 }
 
-async function availablePort(): Promise<number> {
+export async function availablePort(): Promise<number> {
   return await new Promise((resolve, reject) => {
     const server = createServer();
     server.once("error", reject);

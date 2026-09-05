@@ -3,6 +3,11 @@ src = "src"
 test = "test"
 out = "out"
 cache_path = "cache"
+libs = ["lib", "../node_modules"]
+remappings = [
+  "@account-abstraction/=../node_modules/@account-abstraction/",
+  "@openzeppelin/=../node_modules/@openzeppelin/"
+]
 solc_version = "0.8.30"
 evm_version = "cancun"
 optimizer = true

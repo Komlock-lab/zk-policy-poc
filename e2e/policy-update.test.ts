@@ -69,13 +69,16 @@ describe("policy update", () => {
     const publicClient = createPublicClient({ chain: foundry, transport });
     const ownerWallet = createWalletClient({ account: owner, chain: foundry, transport });
     const attackerWallet = createWalletClient({ account: attacker, chain: foundry, transport });
+    const entryPointArtifact = await artifact("EntryPoint");
     const verifierArtifact = await artifact("HonkVerifier");
     const accountArtifact = await artifact("ZkPolicyAccount");
+    const entryPointHash = await ownerWallet.deployContract(entryPointArtifact);
+    const entryPointReceipt = await publicClient.waitForTransactionReceipt({ hash: entryPointHash });
     const verifierHash = await ownerWallet.deployContract(verifierArtifact);
     const verifierReceipt = await publicClient.waitForTransactionReceipt({ hash: verifierHash });
     const accountHash = await ownerWallet.deployContract({
       ...accountArtifact,
-      args: [owner.address, verifierReceipt.contractAddress!],
+      args: [owner.address, verifierReceipt.contractAddress!, entryPointReceipt.contractAddress!],
     });
     const accountReceipt = await publicClient.waitForTransactionReceipt({ hash: accountHash });
     const accountAddress = accountReceipt.contractAddress as Address;

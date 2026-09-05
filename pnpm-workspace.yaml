@@ -3,3 +3,6 @@ packages:
   - packages/*
 
 onlyBuiltDependencies: []
+
+patchedDependencies:
+  '@pimlico/alto@0.0.21': patches/@pimlico__alto@0.0.21.patch

@@ -40,6 +40,7 @@ export interface LocalPaymentInput {
 
 export interface LocalPaymentResult {
   accountAddress: Address;
+  entryPointAddress: Address;
   recipientAddress: Address;
   recipientBalanceBefore: bigint;
   recipientBalanceAfter: bigint;
@@ -58,7 +59,7 @@ export function assertLocalAnvilRpc(rpcUrl: string): void {
   }
 }
 
-async function findArtifact(contractName: string): Promise<{ abi: Abi; bytecode: Hex }> {
+export async function findArtifact(contractName: string): Promise<{ abi: Abi; bytecode: Hex }> {
   const outDirectory = resolve(process.cwd(), "contracts/out");
   const directories = await readdir(outDirectory, { withFileTypes: true });
 
@@ -94,8 +95,17 @@ export async function runLocalPayment(input: LocalPaymentInput): Promise<LocalPa
 
   const policyCommitment = await computePolicyCommitment(maxAmount, salt);
   const proof = await generateSpendLimitProof({ value, maxAmount, salt, policyCommitment });
+  const entryPointArtifact = await findArtifact("EntryPoint");
   const verifierArtifact = await findArtifact("HonkVerifier");
   const accountArtifact = await findArtifact("ZkPolicyAccount");
+
+  const entryPointDeploymentHash = await walletClient.deployContract(entryPointArtifact);
+  const entryPointReceipt = await publicClient.waitForTransactionReceipt({
+    hash: entryPointDeploymentHash,
+  });
+  if (entryPointReceipt.contractAddress == null) {
+    throw new Error("EntryPoint deployment did not return a contract address");
+  }
 
   const verifierDeploymentHash = await walletClient.deployContract({
     abi: verifierArtifact.abi,
@@ -111,7 +121,7 @@ export async function runLocalPayment(input: LocalPaymentInput): Promise<LocalPa
   const accountDeploymentHash = await walletClient.deployContract({
     abi: accountArtifact.abi,
     bytecode: accountArtifact.bytecode,
-    args: [owner.address, verifierReceipt.contractAddress],
+    args: [owner.address, verifierReceipt.contractAddress, entryPointReceipt.contractAddress],
   });
   const accountReceipt = await publicClient.waitForTransactionReceipt({
     hash: accountDeploymentHash,
@@ -153,6 +163,7 @@ export async function runLocalPayment(input: LocalPaymentInput): Promise<LocalPa
 
   return {
     accountAddress: accountReceipt.contractAddress,
+    entryPointAddress: entryPointReceipt.contractAddress,
     recipientAddress,
     recipientBalanceBefore,
     recipientBalanceAfter,

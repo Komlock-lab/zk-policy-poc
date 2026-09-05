@@ -3,7 +3,7 @@ id: story-03-01
 type: story
 title: DeveloperがERC-4337対応Accountをデプロイする
 epic: epic-03
-status: approved
+status: done
 depends_on: []
 adrs: [adr-0008, adr-0009]
 created: 2026-09-05
@@ -62,14 +62,20 @@ Bundler経由の決済を実行する前に、既存Accountへ最小のERC-4337 
 
 | ID | Task | Status |
 | --- | --- | --- |
-| [task-03-01-01](../../tasks/story-03-01/task-03-01-01-erc4337-contract-dependencies.md) | ERC-4337 Contract依存とFoundry設定 | pending |
-| [task-03-01-02](../../tasks/story-03-01/task-03-01-02-userop-validation-and-prefund.md) | UserOperation認証とprefund | pending |
-| [task-03-01-03](../../tasks/story-03-01/task-03-01-03-entrypoint-policy-execution.md) | EntryPoint専用Policy決済 | pending |
-| [task-03-01-04](../../tasks/story-03-01/task-03-01-04-entrypoint-contract-integration.md) | EntryPoint統合とPhase 2回帰 | pending |
+| [task-03-01-01](../../tasks/story-03-01/task-03-01-01-erc4337-contract-dependencies.md) | ERC-4337 Contract依存とFoundry設定 | done |
+| [task-03-01-02](../../tasks/story-03-01/task-03-01-02-userop-validation-and-prefund.md) | UserOperation認証とprefund | done |
+| [task-03-01-03](../../tasks/story-03-01/task-03-01-03-entrypoint-policy-execution.md) | EntryPoint専用Policy決済 | done |
+| [task-03-01-04](../../tasks/story-03-01/task-03-01-04-entrypoint-contract-integration.md) | EntryPoint統合とPhase 2回帰 | done |
 
 ## 検証結果
 
-未実施。
+- `pnpm test`: build/typecheck、Circuit 4件、Contract 28件、unit 68件、E2E 8件が成功。
+- AC-1/AC-7: constructorの依存保持とcodeなしEntryPoint拒否をContract testで確認。
+- AC-2/AC-5/AC-6: Owner署名・prefund・caller制限・不正署名をContract testで確認。実handleOpsでも不正署名時の送金とnonce更新を拒否。
+- AC-3: Phase 2 E2Eで実Proof付き0.01 ETH直接決済を確認。
+- AC-4/AC-8: 実EntryPoint handleOpsの決済・Payment event・nonce更新と、非EntryPoint caller拒否を確認。
+- 新経路で実送金額改ざん、古いCommitment、送金失敗の拒否を確認。
+- ADR 0008/0009への適合と秘密値・公開chain経路の非追加を差分レビュー。CRITICAL/HIGH残件なし。
 
 ## Blocked
 
