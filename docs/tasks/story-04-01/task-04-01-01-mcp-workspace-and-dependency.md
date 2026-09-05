@@ -33,7 +33,7 @@ updated: 2026-09-05
 ## 検証結果
 
 - `pnpm typecheck`: 成功。
-- `pnpm vitest run apps/payment-mcp`: Server起動とworkspaceを含む13 tests成功。
+- `pnpm vitest run apps/payment-mcp`: Server起動とworkspaceを含む15 tests成功。
 
 ## Blocked
 

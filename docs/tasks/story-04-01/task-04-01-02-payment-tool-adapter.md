@@ -33,7 +33,7 @@ updated: 2026-09-05
 
 ## 検証結果
 
-- `pnpm vitest run apps/payment-mcp`: schema、adapter、structured outputを含む13 tests成功。
+- `pnpm vitest run apps/payment-mcp`: schema、adapter、structured outputを含む15 tests成功。
 
 ## Blocked
 
