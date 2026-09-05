@@ -130,4 +130,6 @@ Ownerがactive PolicyのProofを使って署名済みUserOperationを構築し�
 
 ## Delivery
 
-- Epic PR: 未作成
+- Epic PR: https://github.com/Komlock-lab/zk-policy-poc/pull/13
+- Story PR: #11、#12（Epicへ統合済み）
+- Audit: [ERC-4337 Epic audit](../audits/erc4337.md)、CRITICAL/HIGH残件0。
