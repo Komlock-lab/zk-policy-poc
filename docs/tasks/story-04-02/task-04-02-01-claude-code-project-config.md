@@ -3,7 +3,7 @@ id: task-04-02-01
 type: task
 title: Claude Code project設定と自動許可
 story: story-04-02
-status: pending
+status: done
 blocked_by: []
 created: 2026-09-05
 updated: 2026-09-05
@@ -33,7 +33,9 @@ Claude Codeが共有Serverの決済Toolだけを追加承認なしに利用で�
 
 ## 検証結果
 
-未実施。
+- `PATH="...node-v23.3.0..." pnpm vitest run apps/payment-mcp/src/claude-config.test.ts`: 1 file / 2 tests passed。project stdio entryが共有`apps/payment-mcp`を指し、credential値ではなく`${POLICY_*}`参照だけを持つこと、allow ruleが`mcp__zk-policy-payment__pay_native`だけであることを確認した。
+- `claude mcp get zk-policy-payment`（Claude Code 2.1.260、local placeholder設定）: `.mcp.json`のproject scope、stdio command、全環境変数参照を認識した。未trust workspaceでは期待どおり`Pending approval`となり、後続の実Agent E2Eでは同Serverへ接続してToolをdiscoverした。
+- `PATH="...node-v23.3.0..." pnpm typecheck`: passed。
 
 ## Blocked
 

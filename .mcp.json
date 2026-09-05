@@ -1,0 +1,24 @@
+{
+  "mcpServers": {
+    "zk-policy-payment": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "--import",
+        "tsx",
+        "apps/payment-mcp/src/index.ts"
+      ],
+      "env": {
+        "NODE_OPTIONS": "--experimental-sqlite",
+        "POLICY_API_URL": "${POLICY_API_URL}",
+        "POLICY_RPC_URL": "${POLICY_RPC_URL}",
+        "POLICY_BUNDLER_URL": "${POLICY_BUNDLER_URL}",
+        "POLICY_ENTRYPOINT_ADDRESS": "${POLICY_ENTRYPOINT_ADDRESS}",
+        "POLICY_ACCOUNT_ADDRESS": "${POLICY_ACCOUNT_ADDRESS}",
+        "POLICY_OWNER_PRIVATE_KEY": "${POLICY_OWNER_PRIVATE_KEY}",
+        "POLICY_ID": "${POLICY_ID}",
+        "POLICY_TOKEN": "${POLICY_TOKEN}"
+      }
+    }
+  }
+}
