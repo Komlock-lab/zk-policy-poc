@@ -88,14 +88,17 @@ describe("policy token rotation", () => {
     const transport = http(anvil.rpcUrl);
     const publicClient = createPublicClient({ chain: foundry, transport });
     const walletClient = createWalletClient({ account: owner, chain: foundry, transport });
+    const entryPointArtifact = await artifact("EntryPoint");
     const verifierArtifact = await artifact("HonkVerifier");
     const accountArtifact = await artifact("ZkPolicyAccount");
+    const entryPointHash = await walletClient.deployContract(entryPointArtifact);
+    const entryPointReceipt = await publicClient.waitForTransactionReceipt({ hash: entryPointHash });
     const verifierHash = await walletClient.deployContract(verifierArtifact);
     const verifierReceipt = await publicClient.waitForTransactionReceipt({ hash: verifierHash });
     expect(verifierReceipt.contractAddress).not.toBeNull();
     const accountHash = await walletClient.deployContract({
       ...accountArtifact,
-      args: [owner.address, verifierReceipt.contractAddress!],
+      args: [owner.address, verifierReceipt.contractAddress!, entryPointReceipt.contractAddress!],
     });
     const accountReceipt = await publicClient.waitForTransactionReceipt({ hash: accountHash });
     const accountAddress = accountReceipt.contractAddress as Address;
@@ -219,13 +222,16 @@ describe("policy token rotation", () => {
     const transport = http(anvil.rpcUrl);
     const publicClient = createPublicClient({ chain: foundry, transport });
     const walletClient = createWalletClient({ account: owner, chain: foundry, transport });
+    const entryPointArtifact = await artifact("EntryPoint");
     const verifierArtifact = await artifact("HonkVerifier");
     const accountArtifact = await artifact("ZkPolicyAccount");
+    const entryPointHash = await walletClient.deployContract(entryPointArtifact);
+    const entryPointReceipt = await publicClient.waitForTransactionReceipt({ hash: entryPointHash });
     const verifierHash = await walletClient.deployContract(verifierArtifact);
     const verifierReceipt = await publicClient.waitForTransactionReceipt({ hash: verifierHash });
     const accountHash = await walletClient.deployContract({
       ...accountArtifact,
-      args: [owner.address, verifierReceipt.contractAddress!],
+      args: [owner.address, verifierReceipt.contractAddress!, entryPointReceipt.contractAddress!],
     });
     const accountReceipt = await publicClient.waitForTransactionReceipt({ hash: accountHash });
     const accountAddress = accountReceipt.contractAddress as Address;
