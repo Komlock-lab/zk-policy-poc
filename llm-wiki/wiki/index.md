@@ -16,6 +16,9 @@ No papers ingested.
 - [[node-crypto-aead]]
 - [[erc-4337]]
 - [[erc-7769]]
+- [[claude-code-mcp]]
+- [[codex-mcp]]
+- [[mcp-typescript-sdk-v2]]
 
 ## Concepts
 
@@ -25,6 +28,7 @@ No papers ingested.
 - [[eip-712-policy-update-authorization]]
 - [[local-policy-secret-storage]]
 - [[erc-4337-zk-policy-payment]]
+- [[agent-policy-payment-boundary]]
 
 ## Queries
 
