@@ -3,7 +3,7 @@ id: task-03-01-01
 type: task
 title: ERC-4337 Contract依存とFoundry設定
 story: story-03-01
-status: pending
+status: done
 blocked_by: []
 created: 2026-09-05
 updated: 2026-09-05
@@ -34,7 +34,8 @@ ERC-4337 v0.8 interfaceとEntryPoint artifactを既存Contract buildとtestか�
 
 ## 検証結果
 
-未実施。
+- `pnpm test` 成功: build/typecheck、Circuit 4件、Contract 28件（fuzz・実EntryPoint統合を含む）、unit 68件、E2E 8件。
+- 既存Phase 2のPolicy登録・更新・Token再発行・Proof取得・直接決済が成功。
 
 ## Blocked
 
