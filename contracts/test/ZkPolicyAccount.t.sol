@@ -8,6 +8,7 @@ interface Vm {
     function assume(bool condition) external;
     function deal(address account, uint256 newBalance) external;
     function expectRevert(bytes calldata revertData) external;
+    function expectEmit(bool checkTopic1, bool checkTopic2, bool checkTopic3, bool checkData) external;
     function prank(address msgSender) external;
 }
 
@@ -41,12 +42,15 @@ contract ZkPolicyAccountTest {
     bytes32 private constant POLICY_COMMITMENT = bytes32(uint256(1234));
     bytes private constant PROOF = hex"1234";
 
+    event PolicyCommitmentUpdated(bytes32 previousCommitment, bytes32 newCommitment);
+
     MockSpendLimitVerifier private verifier;
     ZkPolicyAccount private account;
 
     function setUp() public {
         verifier = new MockSpendLimitVerifier();
-        account = new ZkPolicyAccount(address(this), verifier, POLICY_COMMITMENT);
+        account = new ZkPolicyAccount(address(this), verifier);
+        account.updatePolicyCommitment(POLICY_COMMITMENT);
     }
 
     function testExecuteTransfersNativeToken() public {
@@ -69,23 +73,58 @@ contract ZkPolicyAccountTest {
         account.execute(payable(address(0xBEEF)), 1, PROOF);
     }
 
-    function testConstructorRejectsCommitmentOutsideField() public {
+    function testUpdateRejectsCommitmentOutsideField() public {
         bytes32 invalidCommitment = bytes32(type(uint256).max);
         vm.expectRevert(abi.encodeWithSelector(ZkPolicyAccount.PolicyCommitmentOutOfRange.selector, invalidCommitment));
 
-        new ZkPolicyAccount(address(this), verifier, invalidCommitment);
+        account.updatePolicyCommitment(invalidCommitment);
     }
 
     function testConstructorRejectsZeroOwner() public {
         vm.expectRevert(abi.encodeWithSelector(ZkPolicyAccount.InvalidOwner.selector));
 
-        new ZkPolicyAccount(address(0), verifier, POLICY_COMMITMENT);
+        new ZkPolicyAccount(address(0), verifier);
     }
 
     function testConstructorRejectsVerifierWithoutCode() public {
         vm.expectRevert(abi.encodeWithSelector(ZkPolicyAccount.InvalidVerifier.selector));
 
-        new ZkPolicyAccount(address(this), ISpendLimitVerifier(address(0xBEEF)), POLICY_COMMITMENT);
+        new ZkPolicyAccount(address(this), ISpendLimitVerifier(address(0xBEEF)));
+    }
+
+    function testRejectsExecuteBeforePolicyConfigured() public {
+        ZkPolicyAccount unconfigured = new ZkPolicyAccount(address(this), verifier);
+        vm.expectRevert(abi.encodeWithSelector(ZkPolicyAccount.PolicyNotConfigured.selector));
+
+        unconfigured.execute(payable(address(0xBEEF)), 1, PROOF);
+    }
+
+    function testRejectsUnauthorizedPolicyUpdate() public {
+        address caller = address(0xBAD);
+        vm.expectRevert(abi.encodeWithSelector(ZkPolicyAccount.Unauthorized.selector, caller));
+        vm.prank(caller);
+
+        account.updatePolicyCommitment(bytes32(uint256(5678)));
+    }
+
+    function testUpdatesPolicyCommitment() public {
+        bytes32 newCommitment = bytes32(uint256(5678));
+
+        vm.expectEmit(false, false, false, true);
+        emit PolicyCommitmentUpdated(POLICY_COMMITMENT, newCommitment);
+
+        account.updatePolicyCommitment(newCommitment);
+
+        require(account.policyConfigured(), "policy should be configured");
+        require(account.policyCommitment() == newCommitment, "commitment mismatch");
+    }
+
+    function testFuzzAcceptsCommitmentInsideField(uint256 commitment) public {
+        vm.assume(commitment < 21888242871839275222246405745257275088548364400416034343698204186575808495617);
+
+        account.updatePolicyCommitment(bytes32(commitment));
+
+        require(account.policyCommitment() == bytes32(commitment), "commitment mismatch");
     }
 
     function testRejectsZeroRecipient() public {
@@ -122,12 +161,17 @@ contract ZkPolicyAccountTest {
         RejectEther recipient = new RejectEther();
         vm.deal(address(account), value);
         verifier.configure(true, bytes32(value), POLICY_COMMITMENT);
+        uint256 accountBalanceBefore = address(account).balance;
+        uint256 recipientBalanceBefore = address(recipient).balance;
         vm.expectRevert(abi.encodeWithSelector(ZkPolicyAccount.TransferFailed.selector));
 
         account.execute(payable(address(recipient)), value, PROOF);
+
+        require(address(account).balance == accountBalanceBefore, "account balance changed");
+        require(address(recipient).balance == recipientBalanceBefore, "recipient balance changed");
     }
 
-    function testFuzzExecuteUsesActualValue(uint96 value) public {
+    function testFuzzExecuteUsesActualValue(uint128 value) public {
         vm.assume(value > 0);
         address payable recipient = payable(address(0xCAFE));
         vm.deal(address(account), value);

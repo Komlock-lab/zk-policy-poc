@@ -9,11 +9,13 @@ contract ZkPolicyAccount {
     error InvalidProof();
     error InvalidRecipient();
     error InvalidVerifier();
+    error PolicyNotConfigured();
     error PolicyCommitmentOutOfRange(bytes32 policyCommitment);
     error TransferFailed();
     error Unauthorized(address caller);
 
     event PaymentExecuted(address indexed recipient, uint256 value);
+    event PolicyCommitmentUpdated(bytes32 previousCommitment, bytes32 newCommitment);
 
     uint256 private constant U128_MAX = type(uint128).max;
     uint256 private constant BN254_FIELD_MODULUS =
@@ -21,24 +23,35 @@ contract ZkPolicyAccount {
 
     address public immutable owner;
     ISpendLimitVerifier public immutable verifier;
-    bytes32 public immutable policyCommitment;
+    bytes32 public policyCommitment;
+    bool public policyConfigured;
 
-    constructor(address owner_, ISpendLimitVerifier verifier_, bytes32 policyCommitment_) {
+    constructor(address owner_, ISpendLimitVerifier verifier_) {
         if (owner_ == address(0)) revert InvalidOwner();
         if (address(verifier_).code.length == 0) revert InvalidVerifier();
-        if (uint256(policyCommitment_) >= BN254_FIELD_MODULUS) {
-            revert PolicyCommitmentOutOfRange(policyCommitment_);
-        }
 
         owner = owner_;
         verifier = verifier_;
-        policyCommitment = policyCommitment_;
     }
 
     receive() external payable {}
 
+    function updatePolicyCommitment(bytes32 newCommitment) external {
+        if (msg.sender != owner) revert Unauthorized(msg.sender);
+        if (uint256(newCommitment) >= BN254_FIELD_MODULUS) {
+            revert PolicyCommitmentOutOfRange(newCommitment);
+        }
+
+        bytes32 previousCommitment = policyCommitment;
+        policyCommitment = newCommitment;
+        policyConfigured = true;
+
+        emit PolicyCommitmentUpdated(previousCommitment, newCommitment);
+    }
+
     function execute(address payable recipient, uint256 value, bytes calldata proof) external {
         if (msg.sender != owner) revert Unauthorized(msg.sender);
+        if (!policyConfigured) revert PolicyNotConfigured();
         if (recipient == address(0)) revert InvalidRecipient();
         if (value > U128_MAX) revert AmountOutOfRange(value);
 

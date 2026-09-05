@@ -111,7 +111,7 @@ export async function runLocalPayment(input: LocalPaymentInput): Promise<LocalPa
   const accountDeploymentHash = await walletClient.deployContract({
     abi: accountArtifact.abi,
     bytecode: accountArtifact.bytecode,
-    args: [owner.address, verifierReceipt.contractAddress, proof.publicInputs[1]],
+    args: [owner.address, verifierReceipt.contractAddress],
   });
   const accountReceipt = await publicClient.waitForTransactionReceipt({
     hash: accountDeploymentHash,
@@ -119,6 +119,14 @@ export async function runLocalPayment(input: LocalPaymentInput): Promise<LocalPa
   if (accountReceipt.contractAddress == null) {
     throw new Error("account deployment did not return a contract address");
   }
+
+  const policyUpdateHash = await walletClient.writeContract({
+    abi: accountArtifact.abi,
+    address: accountReceipt.contractAddress,
+    functionName: "updatePolicyCommitment",
+    args: [proof.publicInputs[1]],
+  });
+  await publicClient.waitForTransactionReceipt({ hash: policyUpdateHash });
 
   const fundingHash = await walletClient.sendTransaction({
     to: accountReceipt.contractAddress,
