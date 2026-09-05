@@ -61,7 +61,7 @@ updated: 2026-09-05
 - AC-3: 同じ実Agent sessionで`not-an-address`をToolへ渡し、schema拒否後に残高とnonceが変化しないことを確認した。
 - AC-4: stream-json transcriptにOwner Key、Policy Token、Proof fieldがないことをcanary値との照合で確認した。
 - project設定: `pnpm vitest run apps/payment-mcp/src/claude-config.test.ts`は2 tests passed。`.mcp.json`がcredentialの環境変数参照だけを渡し、`.claude/settings.json`が`pay_native`だけをallowすることを確認した。
-- 静的検証: `pnpm build`、`pnpm typecheck`、`node scripts/validate-planning.mjs`、`git diff --check`はいずれもpassed。
+- 回帰・静的検証: 最新Epic統合後の`pnpm build`、`pnpm test:unit`（18 files / 90 tests）、`pnpm typecheck`、`node scripts/validate-planning.mjs`、`git diff --check`はいずれもpassed。
 
 ## Blocked
 

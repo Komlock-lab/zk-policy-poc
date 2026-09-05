@@ -33,10 +33,11 @@ updated: 2026-09-05
 
 ## 検証結果
 
-- `RUN_CLAUDE_CODE_E2E=1 NODE_OPTIONS=--experimental-sqlite pnpm vitest run e2e/claude-code-payment.test.ts`: 1 file / 1 test passed（Claude Code 2.1.260、20.10秒）。
+- `RUN_CLAUDE_CODE_E2E=1 NODE_OPTIONS=--experimental-sqlite pnpm vitest run e2e/claude-code-payment.test.ts`: 最新Epic統合後に1 file / 1 test passed（Claude Code 2.1.260、16.10秒）。
 - `--permission-mode dontAsk --permission-prompts none`かつproject allow ruleで実行し、承認promptなしにClaude Codeが自然言語から`pay_native`を3回選択した。入力は順に0.01 ETH、1 ETH、不正recipient `not-an-address`と一致した。
 - 0.01 ETHだけがreceipt `success`となり、recipient残高は0.01 ETH増加、EntryPoint nonceは1増加した。上限超過と不正recipient後には追加の残高・nonce変化がなかった。
 - stream-json transcriptを検査し、Owner Key、Policy Token、Proof fieldが含まれないことを確認した。
+- `pnpm test:unit`: 最新Epic統合後に18 files / 90 tests passed。
 
 ## Blocked
 
