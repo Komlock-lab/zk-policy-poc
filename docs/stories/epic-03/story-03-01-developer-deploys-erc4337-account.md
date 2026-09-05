@@ -3,7 +3,7 @@ id: story-03-01
 type: story
 title: DeveloperがERC-4337対応Accountをデプロイする
 epic: epic-03
-status: in-progress
+status: done
 depends_on: []
 adrs: [adr-0008, adr-0009]
 created: 2026-09-05
