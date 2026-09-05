@@ -8,7 +8,7 @@ AIエージェントが提案したトランザクションに対し、秘密の
 | --- | --- | --- |
 | 1 | [epic-01: 1回あたりの支出上限を使ったZK決済](epics/epic-01-zk-payment.md) | done |
 | 2 | [epic-02: Policy管理・Proof生成API](epics/epic-02-policy-management-proof-api.md) | review |
-| 3 | ERC-4337対応 | 未計画 |
+| 3 | [epic-03: ERC-4337対応](epics/epic-03-erc4337.md) | approved |
 | 4 | Claude Code・Codex接続 | 未計画 |
 | 5 | 攻撃・異常系の検証 | 未計画 |
 | 6 | 複数ポリシー対応 | 未計画 |
@@ -35,6 +35,8 @@ AIエージェントが提案したトランザクションに対し、秘密の
 - API経由で生成したProofを使ってローカル決済を実行する
 
 ## 3. ERC-4337対応
+
+詳細なスコープと設計判断は[epic-03](epics/epic-03-erc4337.md)を正本とする。
 
 - Proof付きUserOperationを構築する
 - Smart Accountが実際の支出額を使ってProofを検証する

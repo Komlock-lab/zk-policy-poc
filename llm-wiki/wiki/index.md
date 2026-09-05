@@ -14,6 +14,8 @@ No papers ingested.
 - [[eip-712]]
 - [[node-sqlite]]
 - [[node-crypto-aead]]
+- [[erc-4337]]
+- [[erc-7769]]
 
 ## Concepts
 
@@ -22,6 +24,7 @@ No papers ingested.
 - [[noir-integer-types]]
 - [[eip-712-policy-update-authorization]]
 - [[local-policy-secret-storage]]
+- [[erc-4337-zk-policy-payment]]
 
 ## Queries
 
