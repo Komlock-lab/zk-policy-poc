@@ -32,7 +32,7 @@ updated: 2026-09-05
 
 ## 検証結果
 
-- `pnpm vitest run apps/payment-mcp`: 実stdio processのTool discovery、正常呼出し、schema拒否を含む13 tests成功。
+- `pnpm vitest run apps/payment-mcp`: 実stdio processのTool discovery、正常呼出し、schema拒否、downstream error sanitizationを含む15 tests成功。
 - `pnpm typecheck`: 成功。
 
 ## Blocked

@@ -16,13 +16,13 @@ const env = {
   POLICY_TOKEN: `zkp_${"c".repeat(43)}`,
 };
 
-async function connect() {
+async function connect(overrides: Record<string, string> = {}) {
   const transport = new StdioClientTransport({
     command: process.execPath,
     args: ["--import", "tsx", "apps/payment-mcp/src/test-server.ts"],
     cwd: process.cwd(),
     env: Object.fromEntries(
-      Object.entries(env).filter((entry): entry is [string, string] =>
+      Object.entries({ ...env, ...overrides }).filter((entry): entry is [string, string] =>
         Boolean(entry[1]),
       ),
     ),
@@ -71,5 +71,25 @@ describe("payment MCP stdio protocol", () => {
       new RegExp(`${env.POLICY_OWNER_PRIVATE_KEY}|${env.POLICY_TOKEN}`),
     );
     expect(transport.stderr).not.toBeNull();
+  });
+
+  it("sanitizes a downstream error containing credentials and proof data", async () => {
+    const { client } = await connect({ PAYMENT_MCP_TEST_FAILURE: "secret" });
+    const result = await client.callTool({
+      name: "pay_native",
+      arguments: {
+        recipient: "0x0000000000000000000000000000000000000003",
+        valueWei: "1",
+      },
+    });
+    expect(result).toEqual({
+      content: [{ type: "text", text: "Payment failed: PAYMENT_REJECTED" }],
+      isError: true,
+    });
+    expect(JSON.stringify(result)).not.toMatch(
+      new RegExp(
+        `${env.POLICY_OWNER_PRIVATE_KEY}|${env.POLICY_TOKEN}|proof-secret-canary`,
+      ),
+    );
   });
 });
