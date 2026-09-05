@@ -122,7 +122,7 @@ Phase 3でOwnerはProof付きUserOperationを決定論的なClientからBundler�
 
 ## Delivery
 
-- Epic PR: 未作成
+- Epic PR: https://github.com/Komlock-lab/zk-policy-poc/pull/19
 - Story PR: #14、#16、#17、#18（Epicへ統合済み）、#15（監査是正）
 - Audit: [Phase 4 Agent integration audit](../audits/audit-04-agent-integration.md)、CRITICAL/HIGH/MEDIUM残件0、LOW残件1（Phase 5/6へ保持）。
 - Final quality gate: Circuit 4、Contract 28、unit 93、local E2E 22、実Claude Code 1、実Codex 4 tests passed。ACIR 12、Brillig 8、Proof 7,232 bytes。
