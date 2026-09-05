@@ -11,9 +11,13 @@ describe("Claude Code project payment configuration", () => {
         "zk-policy-payment": {
           type: "stdio",
           command: "node",
-          args: ["--import", "tsx", "apps/payment-mcp/src/index.ts"],
+          args: [
+            "--experimental-sqlite",
+            "--import",
+            "tsx",
+            "apps/payment-mcp/src/index.ts",
+          ],
           env: {
-            NODE_OPTIONS: "--experimental-sqlite",
             POLICY_API_URL: "${POLICY_API_URL}",
             POLICY_RPC_URL: "${POLICY_RPC_URL}",
             POLICY_BUNDLER_URL: "${POLICY_BUNDLER_URL}",
@@ -31,9 +35,10 @@ describe("Claude Code project payment configuration", () => {
   it("auto-allows only pay_native", async () => {
     const settings = JSON.parse(
       await readFile(".claude/settings.json", "utf8"),
-    ) as { permissions: { allow: string[] } };
+    ) as { permissions: { allow: string[]; deny: string[] } };
     expect(settings.permissions.allow).toEqual([
       "mcp__zk-policy-payment__pay_native",
     ]);
+    expect(settings.permissions.deny).toEqual(["Bash"]);
   });
 });

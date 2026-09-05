@@ -4,12 +4,12 @@
       "type": "stdio",
       "command": "node",
       "args": [
+        "--experimental-sqlite",
         "--import",
         "tsx",
         "apps/payment-mcp/src/index.ts"
       ],
       "env": {
-        "NODE_OPTIONS": "--experimental-sqlite",
         "POLICY_API_URL": "${POLICY_API_URL}",
         "POLICY_RPC_URL": "${POLICY_RPC_URL}",
         "POLICY_BUNDLER_URL": "${POLICY_BUNDLER_URL}",

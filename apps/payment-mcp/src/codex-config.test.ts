@@ -4,7 +4,10 @@ import { describe, expect, it } from "vitest";
 describe("Codex project payment configuration", () => {
   it("connects only pay_native and forwards credentials by environment name", async () => {
     const config = await readFile(".codex/config.toml", "utf8");
-    expect(config).toBe(`[mcp_servers.payment]
+    expect(config).toBe(`[features]
+shell_tool = false
+
+[mcp_servers.payment]
 command = "node"
 args = ["--experimental-sqlite", "--import", "tsx", "apps/payment-mcp/src/index.ts"]
 cwd = "."

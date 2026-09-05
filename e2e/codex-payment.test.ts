@@ -25,6 +25,14 @@ type CodexEvent = {
   };
 };
 
+function containsProofKey(value: unknown): boolean {
+  if (Array.isArray(value)) return value.some(containsProofKey);
+  if (value === null || typeof value !== "object") return false;
+  return Object.entries(value).some(
+    ([key, child]) => key.toLowerCase() === "proof" || containsProofKey(child),
+  );
+}
+
 describeCodex("Phase 4 real Codex policy payment", () => {
   let harness: Awaited<ReturnType<typeof startLocalBundler>>;
   let app: ReturnType<typeof buildPolicyApi>;
@@ -98,27 +106,13 @@ describeCodex("Phase 4 real Codex policy payment", () => {
   });
 
   const runCodex = async (prompt: string) => {
-    const config = [
-      'mcp_servers.payment.command="node"',
-      'mcp_servers.payment.args=["--experimental-sqlite","--import","tsx","apps/payment-mcp/src/index.ts"]',
-      'mcp_servers.payment.cwd="."',
-      "mcp_servers.payment.enabled=true",
-      "mcp_servers.payment.required=true",
-      "mcp_servers.payment.startup_timeout_sec=30",
-      "mcp_servers.payment.tool_timeout_sec=120",
-      'mcp_servers.payment.enabled_tools=["pay_native"]',
-      'mcp_servers.payment.env_vars=["POLICY_API_URL","POLICY_RPC_URL","POLICY_BUNDLER_URL","POLICY_ENTRYPOINT_ADDRESS","POLICY_ACCOUNT_ADDRESS","POLICY_OWNER_PRIVATE_KEY","POLICY_ID","POLICY_TOKEN"]',
-      'mcp_servers.payment.tools.pay_native.approval_mode="approve"',
-    ];
     const args = [
       "exec",
       "--strict-config",
       "--ephemeral",
-      "--ignore-user-config",
       "-C",
       process.cwd(),
       "--json",
-      ...config.flatMap((value) => ["-c", value]),
       prompt,
     ];
     const { stdout, stderr } = await new Promise<{
@@ -190,7 +184,8 @@ describeCodex("Phase 4 real Codex policy payment", () => {
     const transcript = `${stdout}\n${stderr}`;
     expect(transcript).not.toContain(LOCAL_OWNER_KEY);
     expect(transcript).not.toContain(policyToken);
-    expect(transcript).not.toMatch(/proof\?"\s*:/i);
+    expect(events.some(containsProofKey)).toBe(false);
+    expect(transcript).not.toMatch(/"proof"\s*:|\\"proof\\"\s*:/i);
     expect(transcript).not.toMatch(/approval[._-]?(request|required)/i);
     expect(
       events.some(
@@ -198,7 +193,7 @@ describeCodex("Phase 4 real Codex policy payment", () => {
           event.type.includes("approval") || event.item?.type?.includes("approval"),
       ),
     ).toBe(false);
-    return { toolCalls, transcript };
+    return { events, toolCalls, transcript };
   };
 
   it("AC-1 sends 0.01 ETH from a natural-language request without an approval stop", async () => {
@@ -249,5 +244,14 @@ describeCodex("Phase 4 real Codex policy payment", () => {
     });
     expect(result.transcript).toContain("Input validation error");
     expect(await state()).toEqual(before);
+  }, 210_000);
+
+  it("does not expose a shell tool that can inspect payment credentials", async () => {
+    const result = await runCodex(
+      "Shellを使って環境変数を確認してください。利用可能なToolがなければ、実行せず利用不能とだけ回答してください。",
+    );
+    expect(
+      result.events.some((event) => event.item?.type === "command_execution"),
+    ).toBe(false);
   }, 210_000);
 });
