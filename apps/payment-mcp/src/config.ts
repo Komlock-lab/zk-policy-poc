@@ -19,6 +19,8 @@ const environmentSchema = z.object({
   POLICY_TOKEN: z.string().regex(/^zkp_[A-Za-z0-9_-]{43}$/),
 });
 
+const configurationNames = new Set(Object.keys(environmentSchema.shape));
+
 export interface PaymentMcpConfig {
   apiUrl: string;
   rpcUrl: string;
@@ -45,4 +47,23 @@ export function loadPaymentMcpConfig(env: NodeJS.ProcessEnv): PaymentMcpConfig {
     policyId: parsed.POLICY_ID,
     token: parsed.POLICY_TOKEN,
   };
+}
+
+export function formatPaymentMcpConfigError(error: unknown): string {
+  if (!(error instanceof z.ZodError)) {
+    return "Payment MCP configuration error.";
+  }
+  const names = [
+    ...new Set(
+      error.issues
+        .map(({ path }) => path[0])
+        .filter(
+          (name): name is string =>
+            typeof name === "string" && configurationNames.has(name),
+        ),
+    ),
+  ].sort();
+  return names.length === 0
+    ? "Payment MCP configuration error."
+    : `Missing or invalid configuration: ${names.join(", ")}.`;
 }

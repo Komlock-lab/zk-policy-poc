@@ -33,7 +33,7 @@ updated: 2026-09-05
 
 ## 検証結果
 
-- `pnpm vitest run apps/payment-mcp`: remote URL、secret canary、sanitized errorを含む13 tests成功。
+- `pnpm vitest run apps/payment-mcp`: 実startup stderrと実stdio downstream errorのsecret canary監査を含む15 tests成功。
 
 ## Blocked
 

@@ -66,10 +66,11 @@ Agent固有処理を決済ロジックへ混ぜず、秘密を公開しない共
 - AC-1: stdio integration testで公開Toolが`pay_native`だけであることを確認。
 - AC-2: 実stdio MCP processからProof API、Alto、EntryPointまで通すE2Eで0.01 ETH決済と公開receiptだけの応答を確認。
 - AC-3、AC-4: schema testでzero/不正addressと不正decimal weiをexecutor呼出し前に拒否することを確認。
-- AC-5、AC-6: config testでcredential欠落とremote endpointをServer起動または接続前に拒否することを確認。
-- AC-7: protocol handlerがdownstream errorを固定`PAYMENT_REJECTED`へ変換し、secret canaryを返さないことを確認。
+- AC-5: 実Server processのstartup testで不正credentialの設定名だけをstderrへ出し、値とstdoutを公開しないことを確認。
+- AC-6: config testとPhase 3 Clientのchain検証でremote endpointまたはchain不一致を送信前に拒否することを確認。
+- AC-7: 実stdio processのexecutorへOwner Key、Policy Token、Proof canaryを含むerrorを発生させ、固定`PAYMENT_REJECTED`だけを返すことを確認。
 - `pnpm typecheck`: 成功。
-- `pnpm vitest run apps/payment-mcp`: 3 files、13 tests成功。
+- `pnpm vitest run apps/payment-mcp`: 4 files、15 tests成功。
 - `pnpm vitest run e2e/payment-mcp.test.ts`: 実local stackの2 tests成功。
 - `pnpm test:unit`: 16 files、86 tests成功。
 - `pnpm build`: Noir verifier生成、Forge build、TypeScript typecheck成功。

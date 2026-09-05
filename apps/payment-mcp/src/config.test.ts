@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { loadPaymentMcpConfig } from "./config.ts";
+import {
+  formatPaymentMcpConfigError,
+  loadPaymentMcpConfig,
+} from "./config.ts";
 
 const valid = {
   POLICY_API_URL: "http://127.0.0.1:3000",
@@ -30,10 +33,21 @@ describe("payment MCP configuration", () => {
   );
 
   it("does not include secret values in a sanitized startup failure", () => {
-    expect(() => loadPaymentMcpConfig({})).toThrow();
-    const publicMessage =
-      "Payment MCP configuration error; check required POLICY_* variables.";
+    let error: unknown;
+    try {
+      loadPaymentMcpConfig({
+        ...valid,
+        POLICY_OWNER_PRIVATE_KEY: "owner-secret-canary",
+        POLICY_TOKEN: "token-secret-canary",
+      });
+    } catch (caught) {
+      error = caught;
+    }
+    const publicMessage = formatPaymentMcpConfigError(error);
+    expect(publicMessage).toContain("POLICY_OWNER_PRIVATE_KEY");
+    expect(publicMessage).toContain("POLICY_TOKEN");
     expect(publicMessage).not.toContain(valid.POLICY_OWNER_PRIVATE_KEY);
     expect(publicMessage).not.toContain(valid.POLICY_TOKEN);
+    expect(publicMessage).not.toContain("secret-canary");
   });
 });
