@@ -93,7 +93,7 @@ Phase 3でOwnerはProof付きUserOperationを決定論的なClientからBundler�
 | --- | --- | --- | --- |
 | [story-04-01](../stories/epic-04/story-04-01-developer-starts-payment-mcp.md) | DeveloperがPolicy決済MCP Serverを起動する | なし | done |
 | [story-04-02](../stories/epic-04/story-04-02-user-pays-with-claude-code.md) | 利用者がClaude CodeからPolicy決済する | story-04-01 | done |
-| [story-04-03](../stories/epic-04/story-04-03-user-pays-with-codex.md) | 利用者がCodexからPolicy決済する | story-04-01 | approved |
+| [story-04-03](../stories/epic-04/story-04-03-user-pays-with-codex.md) | 利用者がCodexからPolicy決済する | story-04-01 | done |
 | [story-04-04](../stories/epic-04/story-04-04-developer-verifies-agent-compatibility.md) | Developerが両Agentの決済互換性を検証する | story-04-02, story-04-03 | approved |
 
 ## 依存グラフ

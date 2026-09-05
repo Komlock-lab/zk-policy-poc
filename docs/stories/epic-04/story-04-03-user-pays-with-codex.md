@@ -3,7 +3,7 @@ id: story-04-03
 type: story
 title: 利用者がCodexからPolicy決済する
 epic: epic-04
-status: in-progress
+status: done
 depends_on: [story-04-01]
 adrs: [adr-0010, adr-0011]
 created: 2026-09-05
