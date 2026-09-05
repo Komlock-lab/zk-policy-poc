@@ -18,6 +18,7 @@ try {
   process.stdout.write(
     `${JSON.stringify({
       verifierAddress: result.verifierAddress,
+      entryPointAddress: result.entryPointAddress,
       accountAddress: result.accountAddress,
       recipientAddress: result.recipientAddress,
       transactionHash: result.transactionHash,
