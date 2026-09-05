@@ -1,0 +1,22 @@
+[mcp_servers.payment]
+command = "node"
+args = ["--experimental-sqlite", "--import", "tsx", "apps/payment-mcp/src/index.ts"]
+cwd = "."
+enabled = true
+required = true
+startup_timeout_sec = 30
+tool_timeout_sec = 120
+enabled_tools = ["pay_native"]
+env_vars = [
+  "POLICY_API_URL",
+  "POLICY_RPC_URL",
+  "POLICY_BUNDLER_URL",
+  "POLICY_ENTRYPOINT_ADDRESS",
+  "POLICY_ACCOUNT_ADDRESS",
+  "POLICY_OWNER_PRIVATE_KEY",
+  "POLICY_ID",
+  "POLICY_TOKEN",
+]
+
+[mcp_servers.payment.tools.pay_native]
+approval_mode = "approve"
