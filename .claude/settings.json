@@ -2,6 +2,9 @@
   "permissions": {
     "allow": [
       "mcp__zk-policy-payment__pay_native"
+    ],
+    "deny": [
+      "Bash"
     ]
   }
 }

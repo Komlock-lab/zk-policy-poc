@@ -1,3 +1,6 @@
+[features]
+shell_tool = false
+
 [mcp_servers.payment]
 command = "node"
 args = ["--experimental-sqlite", "--import", "tsx", "apps/payment-mcp/src/index.ts"]

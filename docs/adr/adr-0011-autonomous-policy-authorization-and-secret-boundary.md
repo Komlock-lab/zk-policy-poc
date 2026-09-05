@@ -19,6 +19,7 @@ date: 2026-09-05
 - Claude CodeはTool限定allow rule、Codexは`enabled_tools = ["pay_native"]`とTool単位の`approval_mode = "approve"`を使用する。
 - project MCP Serverへの初回workspace trustはinstall境界として残し、個々の決済承認とは扱わない。
 - Owner KeyとPolicy TokenはHostからstdio Serverへ名前を限定した環境変数で渡し、決済Client内部だけで使用する。
+- credentialを持つHostではClaude CodeのBashをdenyし、Codexのshell Toolを無効化して、modelがHost環境を参照する能力を公開しない。
 - Tool input、MCP response、stdout、diagnostic log、Agent transcriptへ秘密値またはProofを含めない。
 - MCP Serverはraw signing、Proof取得、任意calldata、Policy更新のToolを公開しない。
 - Proof APIとAccountが拒否したIntentをMCPまたはHost設定で迂回しない。
@@ -34,6 +35,7 @@ date: 2026-09-05
 
 - Agentは人間を待たず、ZK Policyを満たす決済を完了できる。
 - MCP Server processはOwner Keyを扱う高権限境界となり、出力とerrorを厳格に制限する必要がある。
+- payment-enabled project設定ではClaude CodeのBashとCodexのshellを開発用途に使用できない。コード変更を行うsessionとはcredentialを持つ決済sessionを分離する。
 - 1回上限内の連続送金は可能であり、累積上限を導入するPhase 6まで残存リスクとなる。
 - Prompt Injectionを含む包括的な攻撃検証はPhase 5で行う。
 

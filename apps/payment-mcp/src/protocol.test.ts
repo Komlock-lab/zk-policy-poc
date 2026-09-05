@@ -29,9 +29,13 @@ async function connect(overrides: Record<string, string> = {}) {
     stderr: "pipe",
   });
   transports.push(transport);
+  let stderr = "";
+  transport.stderr?.on("data", (chunk: Buffer | string) => {
+    stderr += chunk.toString();
+  });
   const client = new Client({ name: "payment-mcp-test", version: "0.1.0" });
   await client.connect(transport);
-  return { client, transport };
+  return { client, transport, stderr: () => stderr };
 }
 
 afterEach(async () => {
@@ -74,7 +78,9 @@ describe("payment MCP stdio protocol", () => {
   });
 
   it("sanitizes a downstream error containing credentials and proof data", async () => {
-    const { client } = await connect({ PAYMENT_MCP_TEST_FAILURE: "secret" });
+    const { client, transport, stderr } = await connect({
+      PAYMENT_MCP_TEST_FAILURE: "secret",
+    });
     const result = await client.callTool({
       name: "pay_native",
       arguments: {
@@ -91,5 +97,9 @@ describe("payment MCP stdio protocol", () => {
         `${env.POLICY_OWNER_PRIVATE_KEY}|${env.POLICY_TOKEN}|proof-secret-canary`,
       ),
     );
+    await client.close();
+    await transport.close();
+    transports.splice(transports.indexOf(transport), 1);
+    expect(stderr()).toBe("");
   });
 });
