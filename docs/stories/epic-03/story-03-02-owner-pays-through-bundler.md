@@ -3,7 +3,7 @@ id: story-03-02
 type: story
 title: OwnerがBundler経由でPolicy決済する
 epic: epic-03
-status: in-progress
+status: done
 depends_on: [story-03-01]
 adrs: [adr-0008, adr-0009]
 created: 2026-09-05

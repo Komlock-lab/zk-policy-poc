@@ -2,7 +2,7 @@
 id: epic-03
 type: epic
 title: ERC-4337対応
-status: in-progress
+status: review
 created: 2026-09-05
 updated: 2026-09-05
 adrs: [adr-0008, adr-0009]
@@ -101,7 +101,7 @@ Ownerがactive PolicyのProofを使って署名済みUserOperationを構築し�
 | ID | Story | Depends on | Status |
 | --- | --- | --- | --- |
 | [story-03-01](../stories/epic-03/story-03-01-developer-deploys-erc4337-account.md) | DeveloperがERC-4337対応Accountをデプロイする | なし | done |
-| [story-03-02](../stories/epic-03/story-03-02-owner-pays-through-bundler.md) | OwnerがBundler経由でPolicy決済する | story-03-01 | approved |
+| [story-03-02](../stories/epic-03/story-03-02-owner-pays-through-bundler.md) | OwnerがBundler経由でPolicy決済する | story-03-01 | done |
 
 ## 依存グラフ
 
