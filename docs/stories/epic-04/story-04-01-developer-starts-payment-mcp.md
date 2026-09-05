@@ -3,7 +3,7 @@ id: story-04-01
 type: story
 title: DeveloperがPolicy決済MCP Serverを起動する
 epic: epic-04
-status: in-progress
+status: done
 depends_on: []
 adrs: [adr-0010, adr-0011]
 created: 2026-09-05
