@@ -3,7 +3,7 @@ id: task-04-01-03
 type: task
 title: 秘密情報とerror境界
 story: story-04-01
-status: pending
+status: done
 blocked_by: [task-04-01-02]
 created: 2026-09-05
 updated: 2026-09-05
@@ -33,7 +33,7 @@ updated: 2026-09-05
 
 ## 検証結果
 
-未実施。
+- `pnpm vitest run apps/payment-mcp`: remote URL、secret canary、sanitized errorを含む13 tests成功。
 
 ## Blocked
 

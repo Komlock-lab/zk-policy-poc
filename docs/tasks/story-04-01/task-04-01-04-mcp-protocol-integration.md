@@ -3,7 +3,7 @@ id: task-04-01-04
 type: task
 title: MCP protocol統合テスト
 story: story-04-01
-status: pending
+status: done
 blocked_by: [task-04-01-03]
 created: 2026-09-05
 updated: 2026-09-05
@@ -32,7 +32,8 @@ updated: 2026-09-05
 
 ## 検証結果
 
-未実施。
+- `pnpm vitest run apps/payment-mcp`: 実stdio processのTool discovery、正常呼出し、schema拒否を含む13 tests成功。
+- `pnpm typecheck`: 成功。
 
 ## Blocked
 
