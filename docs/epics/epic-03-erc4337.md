@@ -2,7 +2,7 @@
 id: epic-03
 type: epic
 title: ERC-4337対応
-status: approved
+status: in-progress
 created: 2026-09-05
 updated: 2026-09-05
 adrs: [adr-0008, adr-0009]
