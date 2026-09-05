@@ -3,7 +3,7 @@ id: task-04-01-01
 type: task
 title: MCP workspaceと依存関係
 story: story-04-01
-status: pending
+status: done
 blocked_by: []
 created: 2026-09-05
 updated: 2026-09-05
@@ -32,7 +32,8 @@ updated: 2026-09-05
 
 ## 検証結果
 
-未実施。
+- `pnpm typecheck`: 成功。
+- `pnpm vitest run apps/payment-mcp`: Server起動とworkspaceを含む15 tests成功。
 
 ## Blocked
 

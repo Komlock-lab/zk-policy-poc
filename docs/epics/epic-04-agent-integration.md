@@ -2,7 +2,7 @@
 id: epic-04
 type: epic
 title: Claude Code・Codex接続
-status: approved
+status: review
 created: 2026-09-05
 updated: 2026-09-05
 adrs: [adr-0010, adr-0011]
@@ -91,10 +91,10 @@ Phase 3でOwnerはProof付きUserOperationを決定論的なClientからBundler�
 
 | ID | Story | Depends on | Status |
 | --- | --- | --- | --- |
-| [story-04-01](../stories/epic-04/story-04-01-developer-starts-payment-mcp.md) | DeveloperがPolicy決済MCP Serverを起動する | なし | approved |
-| [story-04-02](../stories/epic-04/story-04-02-user-pays-with-claude-code.md) | 利用者がClaude CodeからPolicy決済する | story-04-01 | approved |
-| [story-04-03](../stories/epic-04/story-04-03-user-pays-with-codex.md) | 利用者がCodexからPolicy決済する | story-04-01 | approved |
-| [story-04-04](../stories/epic-04/story-04-04-developer-verifies-agent-compatibility.md) | Developerが両Agentの決済互換性を検証する | story-04-02, story-04-03 | approved |
+| [story-04-01](../stories/epic-04/story-04-01-developer-starts-payment-mcp.md) | DeveloperがPolicy決済MCP Serverを起動する | なし | done |
+| [story-04-02](../stories/epic-04/story-04-02-user-pays-with-claude-code.md) | 利用者がClaude CodeからPolicy決済する | story-04-01 | done |
+| [story-04-03](../stories/epic-04/story-04-03-user-pays-with-codex.md) | 利用者がCodexからPolicy決済する | story-04-01 | done |
+| [story-04-04](../stories/epic-04/story-04-04-developer-verifies-agent-compatibility.md) | Developerが両Agentの決済互換性を検証する | story-04-02, story-04-03 | done |
 
 ## 依存グラフ
 
@@ -122,4 +122,7 @@ Phase 3でOwnerはProof付きUserOperationを決定論的なClientからBundler�
 
 ## Delivery
 
-- Epic PR: 未作成
+- Epic PR: https://github.com/Komlock-lab/zk-policy-poc/pull/19
+- Story PR: #14、#16、#17、#18（Epicへ統合済み）、#15（監査是正）
+- Audit: [Phase 4 Agent integration audit](../audits/audit-04-agent-integration.md)、CRITICAL/HIGH/MEDIUM残件0、LOW残件1（Phase 5/6へ保持）。
+- Final quality gate: Circuit 4、Contract 28、unit 93、local E2E 22、実Claude Code 1、実Codex 4 tests passed。ACIR 12、Brillig 8、Proof 7,232 bytes。

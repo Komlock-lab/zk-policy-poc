@@ -3,7 +3,7 @@ id: story-04-01
 type: story
 title: DeveloperがPolicy決済MCP Serverを起動する
 epic: epic-04
-status: approved
+status: done
 depends_on: []
 adrs: [adr-0010, adr-0011]
 created: 2026-09-05
@@ -56,14 +56,24 @@ Agent固有処理を決済ロジックへ混ぜず、秘密を公開しない共
 
 | ID | Task | Status |
 | --- | --- | --- |
-| [task-04-01-01](../../tasks/story-04-01/task-04-01-01-mcp-workspace-and-dependency.md) | MCP workspaceと依存関係 | pending |
-| [task-04-01-02](../../tasks/story-04-01/task-04-01-02-payment-tool-adapter.md) | Policy決済Tool adapter | pending |
-| [task-04-01-03](../../tasks/story-04-01/task-04-01-03-secret-and-error-boundary.md) | 秘密情報とerror境界 | pending |
-| [task-04-01-04](../../tasks/story-04-01/task-04-01-04-mcp-protocol-integration.md) | MCP protocol統合テスト | pending |
+| [task-04-01-01](../../tasks/story-04-01/task-04-01-01-mcp-workspace-and-dependency.md) | MCP workspaceと依存関係 | done |
+| [task-04-01-02](../../tasks/story-04-01/task-04-01-02-payment-tool-adapter.md) | Policy決済Tool adapter | done |
+| [task-04-01-03](../../tasks/story-04-01/task-04-01-03-secret-and-error-boundary.md) | 秘密情報とerror境界 | done |
+| [task-04-01-04](../../tasks/story-04-01/task-04-01-04-mcp-protocol-integration.md) | MCP protocol統合テスト | done |
 
 ## 検証結果
 
-未実施。
+- AC-1: stdio integration testで公開Toolが`pay_native`だけであることを確認。
+- AC-2: 実stdio MCP processからProof API、Alto、EntryPointまで通すE2Eで0.01 ETH決済と公開receiptだけの応答を確認。
+- AC-3、AC-4: schema testでzero/不正addressと不正decimal weiをexecutor呼出し前に拒否することを確認。
+- AC-5: 実Server processのstartup testで不正credentialの設定名だけをstderrへ出し、値とstdoutを公開しないことを確認。
+- AC-6: config testとPhase 3 Clientのchain検証でremote endpointまたはchain不一致を送信前に拒否することを確認。
+- AC-7: 実stdio processのexecutorへOwner Key、Policy Token、Proof canaryを含むerrorを発生させ、固定`PAYMENT_REJECTED`だけを返すことを確認。
+- `pnpm typecheck`: 成功。
+- `pnpm vitest run apps/payment-mcp`: 4 files、15 tests成功。
+- `pnpm vitest run e2e/payment-mcp.test.ts`: 実local stackの2 tests成功。
+- `pnpm test:unit`: 16 files、86 tests成功。
+- `pnpm build`: Noir verifier生成、Forge build、TypeScript typecheck成功。
 
 ## Blocked
 
