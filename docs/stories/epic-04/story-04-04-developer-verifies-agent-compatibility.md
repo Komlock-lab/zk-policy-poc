@@ -3,7 +3,7 @@ id: story-04-04
 type: story
 title: Developerが両Agentの決済互換性を検証する
 epic: epic-04
-status: in-progress
+status: done
 depends_on: [story-04-02, story-04-03]
 adrs: [adr-0010, adr-0011]
 created: 2026-09-05
