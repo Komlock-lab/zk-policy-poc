@@ -3,7 +3,7 @@ id: task-03-02-05
 type: task
 title: Phase 3品質ゲート
 story: story-03-02
-status: pending
+status: done
 blocked_by: [task-03-02-04]
 created: 2026-09-05
 updated: 2026-09-05
@@ -36,7 +36,11 @@ Phase 3全体がarchitecture、security、acceptance criteriaを満たし、Phas
 
 ## 検証結果
 
-未実施。
+`pnpm test`成功: build/typecheck、Circuit 4件、Contract 28件（fuzz含む）、TypeScript unit 73件、E2E 18件。Phase 2のPolicy lifecycle・Token・Proof freshness・直接決済の回帰なし。
+
+`pnpm benchmark:circuit`成功: ACIR 12、Brillig 8、Proof 7,232 bytes、生成327 ms（この実行環境の単発値）。`node scripts/validate-planning.mjs`: audit追加後59文書valid。`git diff --check`成功。
+
+独立Contract/Alto監査とStory差分監査でCRITICAL/HIGH残件0。Alto patchはopcode/storage検査を維持し、禁止TIMESTAMP拒否を実行確認。Wikiは変更なし、rootの構造確認は18ページ・broken wikilink 0。Epic audit `docs/audits/erc4337.md`を作成した。最終統合後の再検証結果はrun-epic rootが追記する。
 
 ## Blocked
 

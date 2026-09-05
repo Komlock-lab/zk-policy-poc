@@ -3,7 +3,7 @@ id: story-03-02
 type: story
 title: OwnerがBundler経由でPolicy決済する
 epic: epic-03
-status: approved
+status: in-progress
 depends_on: [story-03-01]
 adrs: [adr-0008, adr-0009]
 created: 2026-09-05
@@ -61,15 +61,26 @@ ERC-4337対応Accountだけでは利用者の決済フローにならない。Pr
 
 | ID | Task | Status |
 | --- | --- | --- |
-| [task-03-02-01](../../tasks/story-03-02/task-03-02-01-local-alto-harness.md) | ローカルAlto harness | pending |
-| [task-03-02-02](../../tasks/story-03-02/task-03-02-02-proof-backed-userop-client.md) | Proof付きUserOperation Client | pending |
-| [task-03-02-03](../../tasks/story-03-02/task-03-02-03-userop-payment-cli.md) | UserOperation決済CLI | pending |
-| [task-03-02-04](../../tasks/story-03-02/task-03-02-04-bundler-payment-e2e.md) | Bundler決済E2E | pending |
-| [task-03-02-05](../../tasks/story-03-02/task-03-02-05-phase-3-quality-gate.md) | Phase 3品質ゲート | pending |
+| [task-03-02-01](../../tasks/story-03-02/task-03-02-01-local-alto-harness.md) | ローカルAlto harness | done |
+| [task-03-02-02](../../tasks/story-03-02/task-03-02-02-proof-backed-userop-client.md) | Proof付きUserOperation Client | done |
+| [task-03-02-03](../../tasks/story-03-02/task-03-02-03-userop-payment-cli.md) | UserOperation決済CLI | done |
+| [task-03-02-04](../../tasks/story-03-02/task-03-02-04-bundler-payment-e2e.md) | Bundler決済E2E | done |
+| [task-03-02-05](../../tasks/story-03-02/task-03-02-05-phase-3-quality-gate.md) | Phase 3品質ゲート | done |
 
 ## 検証結果
 
-未実施。
+- AC-1: 実CLI subprocess→Alto safe-mode→EntryPoint v0.8で0.01 ETH決済成功。receipt成功、受取人残高+0.01 ETH、Owner EOA nonce不変。
+- AC-2: 1 ETHはProof API 422で拒否、EntryPoint nonce/残高不変。
+- AC-3: 別鍵のraw userOpHash署名を実Altoがsignatureエラーで拒否、nonce/残高不変。
+- AC-4: 0.01 ETH Proofを使った0.02 ETH calldataは実Bundler gas estimateで拒否、nonce/残高不変。
+- AC-5: Accountと指定EntryPoint不一致を送信前に拒否、nonce/残高不変。
+- AC-6: API/RPC/Bundlerの非loopback URLを接続前に拒否。
+- 追加: 現在Commitment改ざんのsimulation失敗と、禁止TIMESTAMP opcodeのsafe-mode拒否を確認。
+- `pnpm test`: Circuit 4 / Contract 28 / TypeScript unit 73 / E2E 18件成功。
+- `pnpm benchmark:circuit`: ACIR 12、Brillig 8、Proof 7,232 bytes、327 ms。
+- `pnpm typecheck`、`node scripts/validate-planning.mjs`（audit追加後59文書）、`git diff --check`成功。
+
+Alto 0.0.21のpnpm patchはloopback bind、ローカルEntryPointの明示version対応、tracerのtop-level出力、同梱simulation ABIとの整合に限定する。safe-mode、署名、opcode/storage検査は維持した。viem root依存は2.37.3のまま。
 
 ## Blocked
 

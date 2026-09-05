@@ -59,7 +59,7 @@ export function assertLocalAnvilRpc(rpcUrl: string): void {
   }
 }
 
-async function findArtifact(contractName: string): Promise<{ abi: Abi; bytecode: Hex }> {
+export async function findArtifact(contractName: string): Promise<{ abi: Abi; bytecode: Hex }> {
   const outDirectory = resolve(process.cwd(), "contracts/out");
   const directories = await readdir(outDirectory, { withFileTypes: true });
 

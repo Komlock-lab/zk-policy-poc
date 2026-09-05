@@ -17,7 +17,7 @@ import { zkPolicyAccountAbi } from "../../policy-api/src/chain.ts";
 
 const policyIdSchema = z.string().uuid();
 const tokenSchema = z.string().regex(/^zkp_[A-Za-z0-9_-]{43}$/);
-const addressSchema = z
+export const paymentAddressSchema = z
   .string()
   .regex(/^0x[0-9a-fA-F]{40}$/)
   .transform((value) => getAddress(value))
@@ -35,8 +35,14 @@ const proofResponseSchema = z
       .regex(/^0x(?:[0-9a-fA-F]{2})+$/)
       .transform((value) => value as Hex),
     publicInputs: z.tuple([
-      z.string().regex(/^0x[0-9a-fA-F]{64}$/).transform((value) => value as Hex),
-      z.string().regex(/^0x[0-9a-fA-F]{64}$/).transform((value) => value as Hex),
+      z
+        .string()
+        .regex(/^0x[0-9a-fA-F]{64}$/)
+        .transform((value) => value as Hex),
+      z
+        .string()
+        .regex(/^0x[0-9a-fA-F]{64}$/)
+        .transform((value) => value as Hex),
     ]),
   })
   .strict();
@@ -50,7 +56,14 @@ export interface PolicyPaymentProof {
 
 export function assertLocalPaymentUrl(value: string, label: string): void {
   const url = new URL(value);
-  if (url.protocol !== "http:" || url.hostname !== "127.0.0.1") {
+  if (
+    url.protocol !== "http:" ||
+    url.hostname !== "127.0.0.1" ||
+    url.username ||
+    url.password ||
+    url.search ||
+    url.hash
+  ) {
     throw new Error(`${label} must use local HTTP address 127.0.0.1`);
   }
 }
@@ -67,7 +80,10 @@ export function validatePolicyPaymentProof(
   if (proof.publicInputs[0].toLowerCase() !== expectedValue.toLowerCase()) {
     throw new Error("policy proof value does not match the requested payment");
   }
-  if (proof.publicInputs[1].toLowerCase() !== expected.policyCommitment.toLowerCase()) {
+  if (
+    proof.publicInputs[1].toLowerCase() !==
+    expected.policyCommitment.toLowerCase()
+  ) {
     throw new Error("policy proof commitment does not match the account");
   }
   return proof;
@@ -76,12 +92,14 @@ export function validatePolicyPaymentProof(
 async function proofResponse(response: Response): Promise<unknown> {
   const body = (await response.json()) as unknown;
   if (!response.ok) {
-    throw new Error(`policy API proof request failed with status ${response.status}`);
+    throw new Error(
+      `policy API proof request failed with status ${response.status}`,
+    );
   }
   return body;
 }
 
-export async function payWithPolicyProof(input: {
+export interface PolicyPaymentInput {
   apiUrl: string;
   rpcUrl: string;
   accountAddress: Address;
@@ -90,32 +108,37 @@ export async function payWithPolicyProof(input: {
   token: string;
   recipient: Address;
   valueWei: bigint;
-}): Promise<{ policyId: string; policyVersion: number; transactionHash: Hex }> {
+}
+
+export async function preparePolicyPayment(input: PolicyPaymentInput) {
   assertLocalPaymentUrl(input.apiUrl, "apiUrl");
   assertLocalPaymentUrl(input.rpcUrl, "rpcUrl");
   const policyId = policyIdSchema.parse(input.policyId);
   const token = tokenSchema.parse(input.token);
-  const accountAddress = addressSchema.parse(input.accountAddress);
-  const recipient = addressSchema.parse(input.recipient);
+  const accountAddress = paymentAddressSchema.parse(input.accountAddress);
+  const recipient = paymentAddressSchema.parse(input.recipient);
   const ownerPrivateKey = privateKeySchema.parse(input.ownerPrivateKey);
   const valueWei = parseCircuitAmount(input.valueWei);
   const owner = privateKeyToAccount(ownerPrivateKey);
-  const transport = http(input.rpcUrl);
+  const transport = http(input.rpcUrl, { fetchOptions: { redirect: "error" } });
   const publicClient = createPublicClient({ chain: foundry, transport });
-  const walletClient = createWalletClient({ account: owner, chain: foundry, transport });
 
   if ((await publicClient.getChainId()) !== 31_337) {
     throw new Error("local chain id must be 31337");
   }
 
-  const response = await fetch(`${input.apiUrl}/v1/policies/${policyId}/proofs`, {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${token}`,
-      "content-type": "application/json",
+  const response = await fetch(
+    `${input.apiUrl}/v1/policies/${policyId}/proofs`,
+    {
+      redirect: "error",
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${token}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ valueWei: valueWei.toString() }),
     },
-    body: JSON.stringify({ valueWei: valueWei.toString() }),
-  });
+  );
   const responseBody = await proofResponse(response);
 
   const [accountOwner, configured, policyCommitment] = await Promise.all([
@@ -145,14 +168,36 @@ export async function payWithPolicyProof(input: {
     valueWei,
     policyCommitment,
   });
+  return { owner, publicClient, accountAddress, recipient, valueWei, proof };
+}
+
+export async function payWithPolicyProof(input: PolicyPaymentInput): Promise<{
+  policyId: string;
+  policyVersion: number;
+  transactionHash: Hex;
+}> {
+  const { owner, publicClient, accountAddress, recipient, valueWei, proof } =
+    await preparePolicyPayment(input);
+  const walletClient = createWalletClient({
+    account: owner,
+    chain: foundry,
+    transport: http(input.rpcUrl, { fetchOptions: { redirect: "error" } }),
+  });
   const transactionHash = await walletClient.writeContract({
     address: accountAddress,
     abi: zkPolicyAccountAbi,
     functionName: "execute",
     args: [recipient, valueWei, proof.proof],
   });
-  const receipt = await publicClient.waitForTransactionReceipt({ hash: transactionHash });
-  if (receipt.status !== "success") throw new Error("policy payment transaction reverted");
+  const receipt = await publicClient.waitForTransactionReceipt({
+    hash: transactionHash,
+  });
+  if (receipt.status !== "success")
+    throw new Error("policy payment transaction reverted");
 
-  return { policyId, policyVersion: proof.policyVersion, transactionHash };
+  return {
+    policyId: proof.policyId,
+    policyVersion: proof.policyVersion,
+    transactionHash,
+  };
 }

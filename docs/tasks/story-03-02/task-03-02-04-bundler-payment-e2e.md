@@ -3,7 +3,7 @@ id: task-03-02-04
 type: task
 title: Bundler決済E2E
 story: story-03-02
-status: pending
+status: done
 blocked_by: [task-03-02-03]
 created: 2026-09-05
 updated: 2026-09-05
@@ -32,7 +32,11 @@ Policy作成からProof付きUserOperationのBundler実行までを非fork Anvil
 
 ## 検証結果
 
-未実施。
+`pnpm exec vitest run e2e/bundler-payment.test.ts`: 10件成功。
+
+- AC-1〜AC-6はStoryの検証結果に対応付けた。実Alto、EntryPoint、Verifier、Account、API、SQLite、CLIを接続。
+- Commitment改ざんsimulation失敗と、safe-modeで禁止TIMESTAMP opcodeを拒否する追加検証も成功。
+- 各異常系でEntryPoint nonceと受取人残高の不変を確認。amount改ざんtestは独立してProofとUserOperationを準備する。
 
 ## Blocked
 

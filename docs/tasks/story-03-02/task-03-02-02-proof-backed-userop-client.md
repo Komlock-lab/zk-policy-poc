@@ -3,7 +3,7 @@ id: task-03-02-02
 type: task
 title: Proof付きUserOperation Client
 story: story-03-02
-status: pending
+status: done
 blocked_by: [task-03-02-01]
 created: 2026-09-05
 updated: 2026-09-05
@@ -36,7 +36,11 @@ Phase 2のProof取得・検証後に、Owner署名済みUserOperationを構築�
 
 ## 検証結果
 
-未実施。
+`pnpm test`: TypeScript unit 73件とE2E 18件成功。`pnpm typecheck`成功。
+
+- 共有`preparePolicyPayment`でstrict Proof response、Owner、現在Commitment、実送金額を検証。
+- v0.8 raw userOpHash署名、key 0 nonce、gas estimate、stub署名の本署名への置換、receipt成功を実Altoで確認。
+- loopback以外、EntryPoint不一致、Proof不正、不正署名を拒否。HTTP redirectも拒否する。
 
 ## Blocked
 

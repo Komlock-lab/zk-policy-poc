@@ -1,0 +1,91 @@
+diff --git a/esm/rpc/server.js b/esm/rpc/server.js
+--- a/esm/rpc/server.js
++++ b/esm/rpc/server.js
+@@ -105,7 +105,7 @@
+         this.metrics = metrics;
+     }
+     start() {
+-        this.fastify.listen({ port: this.config.port, host: "0.0.0.0" });
++        this.fastify.listen({ port: this.config.port, host: "127.0.0.1" });
+     }
+     async stop() {
+         await this.fastify.close();
+diff --git a/esm/utils/userop.js b/esm/utils/userop.js
+--- a/esm/utils/userop.js
++++ b/esm/utils/userop.js
+@@ -13,7 +13,8 @@
+ }
+ // Type predicate to check if the UserOperation is v0.8
+ export function isVersion08(operation, entryPointAddress) {
+-    return entryPointAddress.startsWith("0x433708");
++    return entryPointAddress.startsWith("0x433708") ||
++        entryPointAddress.toLowerCase() === process.env.ALTO_LOCAL_ENTRYPOINT_V08?.toLowerCase();
+ }
+ // Type predicate to check if the UserOperation is v0.9
+ export function isVersion09(operation, entryPointAddress) {
+diff --git a/esm/rpc/validation/BundlerCollectorTracerV07.js b/esm/rpc/validation/BundlerCollectorTracerV07.js
+--- a/esm/rpc/validation/BundlerCollectorTracerV07.js
++++ b/esm/rpc/validation/BundlerCollectorTracerV07.js
+@@ -37,6 +37,11 @@
+             }));
+         },
+         result(_ctx, _db) {
++            this.calls.push({
++                type: _ctx.error ? "REVERT" : "RETURN",
++                gasUsed: _ctx.gasUsed,
++                data: toHex(_ctx.output)
++            });
+             return {
+                 callsFromEntryPoint: this.callsFromEntryPoint,
+                 keccak: this.keccak,
+diff --git a/esm/rpc/validation/SafeValidator.js b/esm/rpc/validation/SafeValidator.js
+--- a/esm/rpc/validation/SafeValidator.js
++++ b/esm/rpc/validation/SafeValidator.js
+@@ -1,6 +1,7 @@
+ import { CodeHashGetterAbi, CodeHashGetterBytecode, ERC7769Errors, EntryPointV06Abi, RpcError, pimlicoSimulationsAbi } from "../../types/index.js";
+ import { getAddressFromInitCodeOrPaymasterAndData, getAuthorizationStateOverrides, getEntryPointSimulationsAddress, getViemEntryPointVersion, jsonStringifyWithBigint, toPackedUserOp } from "../../utils/index.js";
+-import { decodeErrorResult, encodeDeployData, encodeFunctionData, zeroAddress } from "viem";
++import { decodeErrorResult, decodeFunctionResult, encodeDeployData, encodeFunctionData, zeroAddress } from "viem";
++import { simulationErrors, toErc7769Code } from "../estimation/utils.js";
+ import { bundlerCollectorTracer } from "./BundlerCollectorTracerV07.js";
+ import { tracerResultParserV06 } from "./TracerResultParserV06.js";
+ import { tracerResultParserV07 } from "./TracerResultParserV07.js";
+@@ -263,27 +264,17 @@
+         });
+         this.logger.info(`tracerResult: ${jsonStringifyWithBigint(tracerResult)}`);
+         const lastResult = tracerResult.calls.slice(-1)[0];
+-        if (lastResult.type !== "REVERT") {
+-            throw new Error("Invalid response. simulateCall must revert");
+-        }
+-        const resultData = lastResult.data;
+-        // Decode the validation result from the revert data
+-        const { errorName, args } = decodeErrorResult({
+-            abi: pimlicoSimulationsAbi,
+-            data: resultData
+-        });
+-        if (errorName !== "ValidationResult") {
+-            let errorCode = ERC7769Errors.SimulateValidation;
+-            const errorMessage = errorName || "Unknown validation error";
+-            if (errorMessage.includes("AA24")) {
+-                errorCode = ERC7769Errors.InvalidSignature;
+-            }
+-            if (errorMessage.includes("AA31")) {
+-                errorCode = ERC7769Errors.PaymasterDepositTooLow;
+-            }
+-            throw new RpcError(errorMessage, errorCode);
+-        }
+-        const validationResult = args[0];
++        if (lastResult?.type === "REVERT") {
++            const { errorName, args } = decodeErrorResult({ abi: simulationErrors, data: lastResult.data });
++            const reason = args?.find((arg) => typeof arg === "string") || errorName;
++            throw new RpcError(reason, toErc7769Code(reason));
++        }
++        if (lastResult?.type !== "RETURN") throw new Error("Missing top-level simulation result");
++        const validationResult = decodeFunctionResult({
++            abi: pimlicoSimulationsAbi,
++            functionName: "simulateValidation",
++            data: lastResult.data
++        });
+         const mergedValidation = this.mergeValidationDataValues(validationResult.returnInfo.accountValidationData, validationResult.returnInfo.paymasterValidationData);
+         const res = {
+             returnInfo: {
