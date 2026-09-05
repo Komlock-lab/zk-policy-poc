@@ -2,7 +2,7 @@
 id: epic-04
 type: epic
 title: Claude Code・Codex接続
-status: approved
+status: in-progress
 created: 2026-09-05
 updated: 2026-09-05
 adrs: [adr-0010, adr-0011]
