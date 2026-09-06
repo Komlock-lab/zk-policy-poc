@@ -3,7 +3,7 @@ id: task-06-03-02
 type: task
 title: Accountの標準ERC-20送金
 story: story-06-03
-status: pending
+status: done
 blocked_by: [task-06-03-01]
 created: 2026-09-06
 updated: 2026-09-06
@@ -31,8 +31,10 @@ pnpm test:contracts; pnpm build
 
 ## 検証結果
 
-未実施。
+2026-09-06: `pnpm test`内の`pnpm build`と`pnpm test:contracts`成功。Contract 32 tests（既存29件とERC-20直接実行・EntryPoint実行・uint128 fuzz各256 runs）で両Token残高、15公開入力、asset別累積とnative状態の維持を確認。`forge fmt --check contracts/src/ZkPolicyAccount.sol contracts/src/fixtures/PolicyToken.sol contracts/test/ZkPolicyAccount.t.sol`成功。
+
+AccountはSafeERC20.safeTransferに固定し、実token/recipient/amountから公開入力を構築。検証と累積更新後に外部Token呼出しを行う。`e2e/erc20-payment.test.ts`で直接実行・実AltoのreceiptとERC20PaymentExecutedイベントも確認。ログ: `/private/tmp/story03-full-test.log`。
 
 ## Blocked
 
-実装開始はEpicのPreflight解消後。
+なし。

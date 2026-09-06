@@ -18,3 +18,12 @@ it("serializes the ADR's 15 public inputs in order", () => {
     amount: 10n, target: recipient, invoiceId: `0x${"00".repeat(32)}`, issuedAt: 100n, validUntil: 400n, dayId: 0n, spentBefore: 0n }).map(BigInt))
     .toEqual([2n,31337n,2n,3n,0n,2n,0n,10n,2n,0n,0n,100n,400n,0n,0n]);
 });
+
+it("binds ERC-20 target and asset with the token's exact amount", () => {
+  const recipient = "0x0000000000000000000000000000000000002222";
+  const token = "0x0000000000000000000000000000000000001111";
+  const inputs = paymentPublicInputs({ kind: 1, chainId: 31337n, account: recipient, policyCommitment: 3n,
+    recipient, asset: token, amount: 123n, target: token, invoiceId: `0x${"00".repeat(32)}`,
+    issuedAt: 100n, validUntil: 400n, dayId: 0n, spentBefore: 0n }).map(BigInt);
+  expect(inputs.slice(4, 9)).toEqual([1n, BigInt(recipient), BigInt(token), 123n, BigInt(token)]);
+});

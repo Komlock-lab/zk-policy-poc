@@ -57,14 +57,19 @@ export function policyFields(input: Policy): bigint[] {
     BigInt(p.dailyEnabled), p.salt];
 }
 
-export const paymentIntentSchema = z.object({
-  kind: z.literal(0), recipient: addressSchema.refine((v) => v !== zeroAddress),
-  asset: z.literal(zeroAddress), amount: amountSchema, target: addressSchema,
+const paymentIntentFields = {
+  recipient: addressSchema.refine((v) => v !== zeroAddress), amount: amountSchema,
+  target: addressSchema,
   invoiceId: z.string().regex(/^0x[0-9a-fA-F]{64}$/).transform((v) => v as Hex),
   issuedAt: u64Schema, validUntil: u64Schema,
-}).strict().refine((v) => v.target === v.recipient && BigInt(v.invoiceId) === 0n && v.validUntil >= v.issuedAt, "invalid native payment context");
+};
+export const paymentIntentSchema = z.discriminatedUnion("kind", [
+  z.object({ ...paymentIntentFields, kind: z.literal(0), asset: z.literal(zeroAddress) }).strict(),
+  z.object({ ...paymentIntentFields, kind: z.literal(1), asset: addressSchema.refine((v) => v !== zeroAddress) }).strict(),
+]).refine((v) => v.target === (v.kind === 0 ? v.recipient : v.asset)
+  && BigInt(v.invoiceId) === 0n && v.validUntil >= v.issuedAt, "invalid payment context");
 export type PaymentIntent = z.output<typeof paymentIntentSchema>;
-export interface PaymentContext extends PaymentIntent { chainId: bigint; account: string; policyCommitment: bigint; dayId: bigint; spentBefore: bigint }
+export type PaymentContext = Omit<PaymentIntent, never> & { chainId: bigint; account: string; policyCommitment: bigint; dayId: bigint; spentBefore: bigint }
 export const publicInputsSchema = z.array(z.string().regex(/^0x[0-9a-fA-F]{64}$/).transform((v) => v as Hex)).length(15);
 export function paymentPublicInputs(context: PaymentContext): Hex[] {
   const c = paymentIntentSchema.parse(contextIntent(context));
@@ -73,7 +78,7 @@ export function paymentPublicInputs(context: PaymentContext): Hex[] {
     BigInt(c.kind), BigInt(c.recipient), BigInt(c.asset), c.amount, BigInt(c.target), invoice >> 128n, invoice & U128_MAX,
     c.issuedAt, c.validUntil, u64Schema.parse(context.dayId), amountSchema.parse(context.spentBefore)].map((v) => toHex(v, { size: 32 }));
 }
-function contextIntent({ kind, recipient, asset, amount, target, invoiceId, issuedAt, validUntil }: PaymentIntent): PaymentIntent {
+function contextIntent({ kind, recipient, asset, amount, target, invoiceId, issuedAt, validUntil }: Omit<PaymentIntent, never>) {
   return { kind, recipient, asset, amount, target, invoiceId, issuedAt, validUntil };
 }
 export function serializePolicy(policy: Policy): unknown {

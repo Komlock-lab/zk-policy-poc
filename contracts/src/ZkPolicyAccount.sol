@@ -5,12 +5,16 @@ import {IAccount} from "@account-abstraction/contracts/interfaces/IAccount.sol";
 import {IEntryPoint} from "@account-abstraction/contracts/interfaces/IEntryPoint.sol";
 import {PackedUserOperation} from "@account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 import {SIG_VALIDATION_FAILED, SIG_VALIDATION_SUCCESS} from "@account-abstraction/contracts/core/Helpers.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {ISpendLimitVerifier} from "./interfaces/ISpendLimitVerifier.sol";
 
 contract ZkPolicyAccount is IAccount {
+    using SafeERC20 for IERC20;
     error AmountOutOfRange(uint256 value);
     error InvalidOwner();
+    error InvalidToken();
     error InvalidPaymentTime();
     error InvalidProof();
     error InvalidRecipient();
@@ -21,6 +25,7 @@ contract ZkPolicyAccount is IAccount {
     error TransferFailed();
     error Unauthorized(address caller);
 
+    event ERC20PaymentExecuted(address indexed token, address indexed recipient, uint256 amount);
     event PaymentExecuted(address indexed recipient, uint256 value);
     event PolicyCommitmentUpdated(bytes32 previousCommitment, bytes32 newCommitment);
 
@@ -75,7 +80,7 @@ contract ZkPolicyAccount is IAccount {
         external
     {
         if (msg.sender != owner) revert Unauthorized(msg.sender);
-        _executePolicyPayment(recipient, value, issuedAt, validUntil, proof);
+        _executePolicyPayment(0, address(0), recipient, value, issuedAt, validUntil, proof);
     }
 
     function executeUserOp(
@@ -86,7 +91,31 @@ contract ZkPolicyAccount is IAccount {
         bytes calldata proof
     ) external {
         if (msg.sender != address(entryPoint)) revert Unauthorized(msg.sender);
-        _executePolicyPayment(recipient, value, issuedAt, validUntil, proof);
+        _executePolicyPayment(0, address(0), recipient, value, issuedAt, validUntil, proof);
+    }
+
+    function executeERC20(
+        address token,
+        address recipient,
+        uint256 amount,
+        uint64 issuedAt,
+        uint64 validUntil,
+        bytes calldata proof
+    ) external {
+        if (msg.sender != owner) revert Unauthorized(msg.sender);
+        _executePolicyPayment(1, token, payable(recipient), amount, issuedAt, validUntil, proof);
+    }
+
+    function executeERC20UserOp(
+        address token,
+        address recipient,
+        uint256 amount,
+        uint64 issuedAt,
+        uint64 validUntil,
+        bytes calldata proof
+    ) external {
+        if (msg.sender != address(entryPoint)) revert Unauthorized(msg.sender);
+        _executePolicyPayment(1, token, payable(recipient), amount, issuedAt, validUntil, proof);
     }
 
     function validateUserOp(PackedUserOperation calldata userOp, bytes32 userOpHash, uint256 missingAccountFunds)
@@ -111,6 +140,8 @@ contract ZkPolicyAccount is IAccount {
     }
 
     function _executePolicyPayment(
+        uint8 kind,
+        address asset,
         address payable recipient,
         uint256 value,
         uint64 issuedAt,
@@ -119,28 +150,35 @@ contract ZkPolicyAccount is IAccount {
     ) internal {
         if (!policyConfigured) revert PolicyNotConfigured();
         if (recipient == address(0)) revert InvalidRecipient();
+        if (kind == 1 && asset.code.length == 0) revert InvalidToken();
         if (value > U128_MAX) revert AmountOutOfRange(value);
 
         if (block.timestamp < issuedAt || block.timestamp > validUntil) revert InvalidPaymentTime();
-        (uint64 dayId, uint128 spentBefore) = getDailySpend(address(0));
+        (uint64 dayId, uint128 spentBefore) = getDailySpend(asset);
         bytes32[] memory publicInputs = new bytes32[](15);
         publicInputs[0] = bytes32(uint256(2));
         publicInputs[1] = bytes32(block.chainid);
         publicInputs[2] = bytes32(uint256(uint160(address(this))));
         publicInputs[3] = policyCommitment;
+        publicInputs[4] = bytes32(uint256(kind));
+        publicInputs[6] = bytes32(uint256(uint160(asset)));
         publicInputs[5] = bytes32(uint256(uint160(address(recipient))));
         publicInputs[7] = bytes32(value);
-        publicInputs[8] = bytes32(uint256(uint160(address(recipient))));
+        publicInputs[8] = bytes32(uint256(uint160(kind == 1 ? asset : address(recipient))));
         publicInputs[11] = bytes32(uint256(issuedAt));
         publicInputs[12] = bytes32(uint256(validUntil));
         publicInputs[13] = bytes32(uint256(dayId));
         publicInputs[14] = bytes32(uint256(spentBefore));
         if (!verifier.verify(proof, publicInputs)) revert InvalidProof();
-        dailySpend[address(0)] = DailySpend(dayId, spentBefore + uint128(value));
+        dailySpend[asset] = DailySpend(dayId, spentBefore + uint128(value));
 
-        (bool success,) = recipient.call{value: value}("");
-        if (!success) revert TransferFailed();
-
-        emit PaymentExecuted(recipient, value);
+        if (kind == 1) {
+            IERC20(asset).safeTransfer(recipient, value);
+            emit ERC20PaymentExecuted(asset, recipient, value);
+        } else {
+            (bool success,) = recipient.call{value: value}("");
+            if (!success) revert TransferFailed();
+            emit PaymentExecuted(recipient, value);
+        }
     }
 }
