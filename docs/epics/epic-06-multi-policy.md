@@ -2,7 +2,7 @@
 id: epic-06
 type: epic
 title: 複数ポリシー対応
-status: approved
+status: in-progress
 error_acceptance: deferred
 error_acceptance_reason: Phase 5を飛ばし正常系の複数条件決済を優先する
 error_acceptance_authorization: 2026-09-06 ユーザー指定「異常系は今考えなくていい」「いまの案でプランニング、実装して」
@@ -139,27 +139,22 @@ chain ID 31337、非forkのローカル環境、fixture資産を使用する。�
 
 ## Preflight
 
-2026-09-06に実施し、明示的run-epic指定後にも再確認。ユーザーの通常ターミナルではGitHub接続・認証が正常。このセッション内のGit書込制限で停止している。製品実装は未開始。
+2026-09-06のrun-epic再開でGit権限制限を権限昇格により解消。
 
-- ローカルmain HEAD: 29ab9e3（Phase 4 Epic PR #19のmerge）。
-- bash scripts/check-toolchain.sh: 成功。
-- .git書込確認: fs.access(W_OK)がEPERM。現在の環境ではGitメタデータが読み取り専用。
-- ユーザーの通常ターミナルでgit ls-remote origin refs/heads/main成功。remote mainは29ab9e31f3c915472d0a7c9a83d1790f32d09c1eでローカルHEADと一致する。
-- ユーザーの通常ターミナルでgh auth status成功（takupeso）。このセッション内の認証エラーからトークン失効とは判断しない。
-- 実操作git branch epic/epic-06-multi-policy mainは失敗。refs/heads/epic/epic-06-multi-policy.lock作成がOperation not permitted。ブランチは作成されていない。
-- このセッションで利用可能な実行ツールにはGit操作の権限昇格を要求する引数がない。
-- 既存ユーザー変更: .codex/config.toml、apps/payment-mcp/src/codex-config.test.ts。変更・破棄していない。
-- 作業ツリーに計画変更があり、clean preflightは未達。Git書込回復後、計画変更だけをcommitし、既存ユーザー変更を保持した別worktreeで実装する。
-- Git/ネットワーク事前条件で停止したため、localhostサービス起動・全テスト・push/PR作成は未確認。
-
-再開条件: Git書込とGitHub通信・認証が利用可能な環境で、計画を保存し最新mainを確認してから、run-epicの残りのPreflightを行う。権限を回避する目的のコード変更は行わない。
-
-再開時の実行指定: `run-epic docs/epics/epic-06-multi-policy.md`。
+- 元worktreeの未コミット変更はすべて保持。承認済み計画40ファイルをEpic専用worktreeへコピーしcommit。
+- 最新mainはlocal/remoteとも29ab9e31f3c915472d0a7c9a83d1790f32d09c1e。
+- Epic branch/worktree/commit/push成功。GitHub認証正常。
+- 作業場所: /private/tmp/zk-policy-epic-06。計画保存後のworktreeはclean。
+- Node 23.3.0をPATHで明示し、bash scripts/check-toolchain.sh成功。pnpm install --frozen-lockfile成功。
+- Nargo依存キャッシュ書込は権限昇格で許可。pnpm test成功: Circuit 4、Contract 28、unit 93、E2E 22。実Agent E2E 5件は通常コマンドでskip、成功には含めない。
+- localhostのPolicy API・非fork Anvil（chain ID 31337）・実Altoで既存E2E成功。
+- baselineログ: /private/tmp/epic-06-preflight-tests.log。
+- 実Agent検証は既存テストのCLI pin（Claude Code 2.1.260、Codex 0.153.2）を専用PATHで使用する。
 
 ## Delivery
 
 - Epic PR: 未作成
-- 計画確定。製品コードは未変更。実装はPreflight解消待ち。
+- Preflight解消済み。Story依存順に実装中。
 - 計画検証: node scripts/validate-planning.mjs成功（112 documents）。
 - 計画検証ルールのテスト: node --test scripts/validate-planning.test.mjs成功（9 tests）。
 - Phase 6の36文書の相対リンク確認成功。git diff --check成功。
