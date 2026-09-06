@@ -160,4 +160,4 @@ chain ID 31337、非forkのローカル環境、fixture資産を使用する。�
 - planning validator 113 documents、validator test 9件、相対リンク33文書、対象Solidity format、diff check成功。
 - 元worktreeの未コミット計画40ファイルとCodex既存2変更を保持。mainは29ab9e3のまま。
 - 保持worktree: `/private/tmp/zk-policy-epic-06`、`/private/tmp/zk-policy-story-06-*`。support用detached worktreeも保持。
-- 最終Epic PRはこのreview commitをpush後に作成し、mainへはmergeしない。
+- 最終Epic PR: [#30](https://github.com/Komlock-lab/zk-policy-poc/pull/30)（base main、未merge）。
