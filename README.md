@@ -68,7 +68,7 @@ Smart Accountの実装方針は次のとおりです。
 - Contract呼び出しは専用packageにせず、viemを使った`Payment Script`から始める
 - Phase 3では、ERC-4337 Accountを自作するか既存AccountへValidatorを追加するかをADRで決定する
 - ZK CircuitとSolidity VerifierはERC-4337固有の実装へ依存させない
-- Safe Moduleではなく自作 Smart Account を選んだのは、Account の理解と将来の AI エージェントウォレットへの組み込みを見据えたためである。先行実装 [zk-bound](https://github.com/br-to/zk-bound) との関係は [ADR-0016](docs/adr/adr-0016-custom-smart-account-over-safe-module.md) を参照する
+- Safe Moduleではなく自作 Smart Account を選んだのは、Account の理解と将来の AI エージェントウォレットへの組み込みを見据えたためである。Safe Module 経路の別リポジトリ [zk-bound](https://github.com/br-to/zk-bound) との関係は [ADR-0016](docs/adr/adr-0016-custom-smart-account-over-safe-module.md) を参照する
 
 ## ディレクトリ構成
 
