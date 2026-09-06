@@ -12,9 +12,21 @@ fn main(public_inputs: pub [Field; 15], policy_fields: [Field; 65]) {
     for i in [7, 9, 10, 14] { assert(p[i] == (p[i] as u128) as Field); }
     for i in [11, 12, 13] { assert(p[i] == (p[i] as u64) as Field); }
     assert(s[1] == (s[1] as u64) as Field);
-    assert((s[2] == 0) & (s[3] == 0));
+    assert((s[2] == 0) | (s[2] == 1));
+    let recipient_count = s[3] as u8;
+    assert((s[3] == recipient_count as Field) & (recipient_count <= 16));
+    if s[2] == 0 { assert(recipient_count == 0); }
+    let mut recipient_allowed = false;
+    for i in 0..16 {
+        let recipient = s[4 + i];
+        recipient.assert_max_bit_size::<160>();
+        if i < recipient_count as u32 {
+            if i > 0 { assert(s[3 + i].lt(recipient)); }
+            recipient_allowed = recipient_allowed | (recipient == p[5]);
+        } else { assert(recipient == 0); }
+    }
+    assert((s[2] == 0) | recipient_allowed, "recipient is not allowed");
     assert((s[45] == 0) & (s[46] == 0) & (s[63] == 0));
-    for i in 4..20 { assert(s[i] == 0); }
     for i in 47..63 { assert(s[i] == 0); }
     let asset_count = s[20] as u8;
     assert((s[20] == asset_count as Field) & (asset_count > 0) & (asset_count <= 8));
@@ -55,3 +67,19 @@ fn accepts_value_equal_to_limit() { let (p, s) = fixture(100, 100, 987654321); m
 fn rejects_value_above_limit() { let (p, s) = fixture(101, 100, 123456789); main(p, s); }
 #[test(should_fail_with = "policy commitment mismatch")]
 fn rejects_wrong_commitment() { let (mut p, s) = fixture(10, 100, 123456789); p[3] = 42; main(p, s); }
+
+#[test]
+fn accepts_recipient_added_to_allowlist() {
+    let (mut p, mut s) = fixture(10, 100, 123456789);
+    s[2] = 1; s[3] = 2; s[4] = 1; s[5] = 2;
+    p[3] = Poseidon2::hash(s, 65);
+    main(p, s);
+}
+#[test]
+fn accepts_last_recipient_in_full_allowlist() {
+    let (mut p, mut s) = fixture(10, 100, 123456789);
+    s[2] = 1; s[3] = 16;
+    for i in 0..16 { s[4 + i] = (i + 1) as Field; }
+    p[5] = 16; p[8] = 16; p[3] = Poseidon2::hash(s, 65);
+    main(p, s);
+}
