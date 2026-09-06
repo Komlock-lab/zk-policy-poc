@@ -3,7 +3,7 @@ id: story-06-01
 type: story
 title: Ownerが有効期限付きPolicyを登録して決済する
 epic: epic-06
-status: in-progress
+status: done
 depends_on: []
 adrs: [adr-0012]
 created: 2026-09-06
@@ -77,3 +77,5 @@ Ownerが有効期限付きPolicyを登録して決済する。
 ## Blocked
 
 なし。Story PR作成後のEpicへのmergeとdone遷移はrun-epicが担当する。
+
+統合: Story PR #21をEpicへmerge。Epic上の`pnpm test`も成功（Circuit 4 / Contract 29 / unit 95 / E2E 22）。ログ: `/private/tmp/epic-06-layer0-tests.log`。
