@@ -1,14 +1,14 @@
 # zk-bound からの選択的取り込み
 
 - Date: 2026-09-07
-- Source: [zk-bound](https://github.com/br-to/zk-bound)（前身 [zk-agent-guard](https://github.com/br-to/zk-agent-guard)）
+- Source: [zk-bound](https://github.com/br-to/zk-bound)
 - 除外: Safe Module とその ADR、計画、実行境界
 - 実行境界の選択理由: [ADR-0016](../adr/adr-0016-custom-smart-account-over-safe-module.md)
 
-`zk-bound` は Toi Kobara (`br-to`) が `zk-agent-guard` の暗号層を引き継ぎ、
-Safe + `ZkPolicySafeModule` へ実行境界を移した後継リポジトリである。
-本リポジトリは Safe を使わず、Smart Account と ERC-4337 を自分で追うために
-`ZkPolicyAccount` を選んだ。回路や Safe 実行層は持ち込まない。
+`zk-bound` は Toi Kobara (`br-to`) の Safe + `ZkPolicySafeModule` 経路のリポジトリである。
+本リポジトリは Safe を使わず、Smart Account の理解と将来の
+AI エージェントウォレットへの組み込みを見据えて `ZkPolicyAccount` を選んだ。
+回路や Safe 実行層は持ち込まない。
 持ち込んだのは、このリポジトリに欠けていた **security-sensitive な運用面** である。
 
 ## すでに本リポジトリが持っているもの
@@ -26,7 +26,7 @@ Safe + `ZkPolicySafeModule` へ実行境界を移した後継リポジトリで�
 ## 持ち込まないもの（Safe Module および衝突する設計）
 
 - `ZkPolicySafeModule`、Safe `v1.4.1` pin、Safe 向け ADR / plan / architecture
-- Safe 固定の 8 public input と domain tag `zk-agent-guard.policy.v1`
+- Safe 固定の 8 public input と zk-bound の domain tag
 - 独自 Poseidon2 実装と `@zk-bound/policy-sdk`
 - prompt-injection demo（`apps/demo`）。本リポジトリの Phase 5 はスキップ済み
 - ESLint / Prettier 一式。本リポジトリは現状 formatter を導入していない
