@@ -254,7 +254,15 @@ export function validatePlanning(root = process.cwd()) {
       if (!/AC-\d+\s+\[正常系\]/.test(story.content)) {
         errors.push(`${label}: approved story requires a normal acceptance criterion`);
       }
-      if (!/AC-\d+\s+\[異常系\]/.test(story.content)) {
+      const parentEpic = documentsById.get(story.metadata.epic);
+      const errorAcceptanceDeferred =
+        parentEpic?.expectedType === "epic" &&
+        parentEpic.metadata.error_acceptance === "deferred" &&
+        typeof parentEpic.metadata.error_acceptance_reason === "string" &&
+        parentEpic.metadata.error_acceptance_reason.trim() !== "" &&
+        typeof parentEpic.metadata.error_acceptance_authorization === "string" &&
+        parentEpic.metadata.error_acceptance_authorization.trim() !== "";
+      if (!/AC-\d+\s+\[異常系\]/.test(story.content) && !errorAcceptanceDeferred) {
         errors.push(`${label}: approved story requires an error acceptance criterion`);
       }
       const storyTasks = tasks.filter((task) => task.metadata.story === story.metadata.id);
@@ -311,6 +319,20 @@ export function validatePlanning(root = process.cwd()) {
 
   for (const epic of epics) {
     const label = documentLabel(epic, root);
+    if (epic.metadata.error_acceptance !== undefined) {
+      if (epic.metadata.error_acceptance !== "deferred") {
+        errors.push(`${label}: error_acceptance must be deferred when specified`);
+      }
+      for (const field of ["error_acceptance_reason", "error_acceptance_authorization"]) {
+        if (
+          typeof epic.metadata[field] !== "string" ||
+          epic.metadata[field].trim() === "" ||
+          PLACEHOLDER_PATTERN.test(epic.metadata[field])
+        ) {
+          errors.push(`${label}: deferred error acceptance requires ${field}`);
+        }
+      }
+    }
     assertReference(errors, epic, "adrs", "adr", documentsById, root);
     const epicStories = stories.filter((story) => story.metadata.epic === epic.metadata.id);
     if (ACTIVE_EPIC_STATUSES.has(epic.metadata.status)) {
