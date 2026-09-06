@@ -26,8 +26,21 @@ fn main(public_inputs: pub [Field; 15], policy_fields: [Field; 65]) {
         } else { assert(recipient == 0); }
     }
     assert((s[2] == 0) | recipient_allowed, "recipient is not allowed");
-    assert((s[45] == 0) & (s[46] == 0) & (s[63] == 0));
-    for i in 47..63 { assert(s[i] == 0); }
+    assert(s[63] == 0);
+    assert((s[45] == 0) | (s[45] == 1));
+    let contract_count = s[46] as u8;
+    assert((s[46] == contract_count as Field) & (contract_count <= 16));
+    if s[45] == 0 { assert(contract_count == 0); }
+    let mut contract_allowed = false;
+    for i in 0..16 {
+        let target = s[47 + i];
+        target.assert_max_bit_size::<160>();
+        if i < contract_count as u32 {
+            if i > 0 { assert(s[46 + i].lt(target)); }
+            contract_allowed = contract_allowed | (target == p[8]);
+        } else { assert(target == 0); }
+    }
+    if p[4] == 2 { assert((s[45] == 0) | contract_allowed, "contract is not allowed"); }
     let asset_count = s[20] as u8;
     assert((s[20] == asset_count as Field) & (asset_count > 0) & (asset_count <= 8));
     let mut allowed = false;
@@ -43,10 +56,10 @@ fn main(public_inputs: pub [Field; 15], policy_fields: [Field; 65]) {
         } else { assert((asset == 0) & (limit == 0)); }
     }
     assert(allowed, "value exceeds max amount");
-    assert((p[4] == 0) | (p[4] == 1));
-    if p[4] == 0 { assert((p[6] == 0) & (p[8] == p[5])); }
+    assert((p[4] == 0) | (p[4] == 1) | (p[4] == 2));
+    if p[4] != 1 { assert((p[6] == 0) & (p[8] == p[5])); }
     else { assert((p[6] != 0) & (p[8] == p[6])); }
-    assert((p[9] == 0) & (p[10] == 0));
+    if p[4] != 2 { assert((p[9] == 0) & (p[10] == 0)); }
     let issued_at = p[11] as u64;
     let valid_until = p[12] as u64;
     assert(valid_until >= issued_at);
@@ -93,6 +106,23 @@ fn accepts_erc20_with_its_own_asset_limit() {
     s[20] = 2; s[24] = 1234; s[25] = 100;
     s[2] = 1; s[3] = 1; s[4] = p[5];
     p[4] = 1; p[6] = 1234; p[8] = 1234;
+    p[3] = Poseidon2::hash(s, 65);
+    main(p, s);
+}
+
+#[test]
+fn accepts_allowed_contract_with_invoice() {
+    let (mut p, mut s) = fixture(10, 100, 123456789);
+    s[2] = 1; s[3] = 1; s[4] = p[5];
+    s[45] = 1; s[46] = 1; s[47] = p[5];
+    p[4] = 2; p[9] = 123; p[10] = 456;
+    p[3] = Poseidon2::hash(s, 65);
+    main(p, s);
+}
+#[test]
+fn accepts_native_with_contract_condition_enabled() {
+    let (mut p, mut s) = fixture(10, 100, 123456789);
+    s[45] = 1; s[46] = 1; s[47] = 1234;
     p[3] = Poseidon2::hash(s, 65);
     main(p, s);
 }

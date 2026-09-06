@@ -43,10 +43,10 @@ afterEach(async () => {
 });
 
 describe("payment MCP stdio protocol", () => {
-  it("discovers native and ERC-20 tools and returns public output", async () => {
+  it("discovers all typed payment tools and returns public output", async () => {
     const { client } = await connect();
     const listed = await client.listTools();
-    expect(listed.tools.map(({ name }) => name)).toEqual(["pay_native", "pay_erc20"]);
+    expect(listed.tools.map(({ name }) => name)).toEqual(["pay_native", "pay_erc20", "pay_contract"]);
     const result = await client.callTool({
       name: "pay_native",
       arguments: {

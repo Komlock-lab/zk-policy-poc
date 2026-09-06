@@ -8,6 +8,7 @@ import {SIG_VALIDATION_FAILED, SIG_VALIDATION_SUCCESS} from "@account-abstractio
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {IPolicyPaymentReceiver} from "./interfaces/IPolicyPaymentReceiver.sol";
 import {ISpendLimitVerifier} from "./interfaces/ISpendLimitVerifier.sol";
 
 contract ZkPolicyAccount is IAccount {
@@ -25,6 +26,7 @@ contract ZkPolicyAccount is IAccount {
     error TransferFailed();
     error Unauthorized(address caller);
 
+    event ContractPaymentExecuted(address indexed recipient, bytes32 indexed invoiceId, uint256 value);
     event ERC20PaymentExecuted(address indexed token, address indexed recipient, uint256 amount);
     event PaymentExecuted(address indexed recipient, uint256 value);
     event PolicyCommitmentUpdated(bytes32 previousCommitment, bytes32 newCommitment);
@@ -80,7 +82,7 @@ contract ZkPolicyAccount is IAccount {
         external
     {
         if (msg.sender != owner) revert Unauthorized(msg.sender);
-        _executePolicyPayment(0, address(0), recipient, value, issuedAt, validUntil, proof);
+        _executePolicyPayment(0, address(0), recipient, value, issuedAt, validUntil, bytes32(0), proof);
     }
 
     function executeUserOp(
@@ -91,7 +93,7 @@ contract ZkPolicyAccount is IAccount {
         bytes calldata proof
     ) external {
         if (msg.sender != address(entryPoint)) revert Unauthorized(msg.sender);
-        _executePolicyPayment(0, address(0), recipient, value, issuedAt, validUntil, proof);
+        _executePolicyPayment(0, address(0), recipient, value, issuedAt, validUntil, bytes32(0), proof);
     }
 
     function executeERC20(
@@ -103,7 +105,7 @@ contract ZkPolicyAccount is IAccount {
         bytes calldata proof
     ) external {
         if (msg.sender != owner) revert Unauthorized(msg.sender);
-        _executePolicyPayment(1, token, payable(recipient), amount, issuedAt, validUntil, proof);
+        _executePolicyPayment(1, token, payable(recipient), amount, issuedAt, validUntil, bytes32(0), proof);
     }
 
     function executeERC20UserOp(
@@ -115,7 +117,31 @@ contract ZkPolicyAccount is IAccount {
         bytes calldata proof
     ) external {
         if (msg.sender != address(entryPoint)) revert Unauthorized(msg.sender);
-        _executePolicyPayment(1, token, payable(recipient), amount, issuedAt, validUntil, proof);
+        _executePolicyPayment(1, token, payable(recipient), amount, issuedAt, validUntil, bytes32(0), proof);
+    }
+
+    function executeContract(
+        address recipient,
+        bytes32 invoiceId,
+        uint256 value,
+        uint64 issuedAt,
+        uint64 validUntil,
+        bytes calldata proof
+    ) external {
+        if (msg.sender != owner) revert Unauthorized(msg.sender);
+        _executePolicyPayment(2, address(0), payable(recipient), value, issuedAt, validUntil, invoiceId, proof);
+    }
+
+    function executeContractUserOp(
+        address recipient,
+        bytes32 invoiceId,
+        uint256 value,
+        uint64 issuedAt,
+        uint64 validUntil,
+        bytes calldata proof
+    ) external {
+        if (msg.sender != address(entryPoint)) revert Unauthorized(msg.sender);
+        _executePolicyPayment(2, address(0), payable(recipient), value, issuedAt, validUntil, invoiceId, proof);
     }
 
     function validateUserOp(PackedUserOperation calldata userOp, bytes32 userOpHash, uint256 missingAccountFunds)
@@ -146,10 +172,11 @@ contract ZkPolicyAccount is IAccount {
         uint256 value,
         uint64 issuedAt,
         uint64 validUntil,
+        bytes32 invoiceId,
         bytes calldata proof
     ) internal {
         if (!policyConfigured) revert PolicyNotConfigured();
-        if (recipient == address(0)) revert InvalidRecipient();
+        if (recipient == address(0) || (kind == 2 && recipient.code.length == 0)) revert InvalidRecipient();
         if (kind == 1 && asset.code.length == 0) revert InvalidToken();
         if (value > U128_MAX) revert AmountOutOfRange(value);
 
@@ -165,6 +192,8 @@ contract ZkPolicyAccount is IAccount {
         publicInputs[5] = bytes32(uint256(uint160(address(recipient))));
         publicInputs[7] = bytes32(value);
         publicInputs[8] = bytes32(uint256(uint160(kind == 1 ? asset : address(recipient))));
+        publicInputs[9] = bytes32(uint256(invoiceId) >> 128);
+        publicInputs[10] = bytes32(uint256(uint128(uint256(invoiceId))));
         publicInputs[11] = bytes32(uint256(issuedAt));
         publicInputs[12] = bytes32(uint256(validUntil));
         publicInputs[13] = bytes32(uint256(dayId));
@@ -175,6 +204,10 @@ contract ZkPolicyAccount is IAccount {
         if (kind == 1) {
             IERC20(asset).safeTransfer(recipient, value);
             emit ERC20PaymentExecuted(asset, recipient, value);
+        } else if (kind == 2) {
+            (bool success,) = recipient.call{value: value}(abi.encodeCall(IPolicyPaymentReceiver.pay, (invoiceId)));
+            if (!success) revert TransferFailed();
+            emit ContractPaymentExecuted(recipient, invoiceId, value);
         } else {
             (bool success,) = recipient.call{value: value}("");
             if (!success) revert TransferFailed();

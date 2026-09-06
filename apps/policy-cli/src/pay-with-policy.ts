@@ -110,7 +110,12 @@ export interface ERC20PolicyPaymentInput extends Omit<PolicyPaymentInput, "kind"
   tokenAddress: Address;
   amount: bigint;
 }
-export type TypedPolicyPaymentInput = PolicyPaymentInput | ERC20PolicyPaymentInput;
+export interface ContractPolicyPaymentInput extends Omit<PolicyPaymentInput, "kind" | "recipient"> {
+  kind: 2;
+  contractAddress: Address;
+  invoiceId: Hex;
+}
+export type TypedPolicyPaymentInput = PolicyPaymentInput | ERC20PolicyPaymentInput | ContractPolicyPaymentInput;
 
 export async function preparePolicyPayment(input: TypedPolicyPaymentInput) {
   assertLocalPaymentUrl(input.apiUrl, "apiUrl");
@@ -118,7 +123,7 @@ export async function preparePolicyPayment(input: TypedPolicyPaymentInput) {
   const policyId = policyIdSchema.parse(input.policyId);
   const token = tokenSchema.parse(input.token);
   const accountAddress = paymentAddressSchema.parse(input.accountAddress);
-  const recipient = paymentAddressSchema.parse(input.recipient);
+  const recipient = paymentAddressSchema.parse(input.kind === 2 ? input.contractAddress : input.recipient);
   const ownerPrivateKey = privateKeySchema.parse(input.ownerPrivateKey);
   const valueWei = parseCircuitAmount(input.kind === 1 ? input.amount : input.valueWei);
   const asset = input.kind === 1 ? paymentAddressSchema.parse(input.tokenAddress) : zeroAddress;
@@ -132,7 +137,7 @@ export async function preparePolicyPayment(input: TypedPolicyPaymentInput) {
 
   const block = await publicClient.getBlock();
   const intent = paymentIntentSchema.parse({ kind: input.kind ?? 0, recipient, asset, amount: valueWei, target: input.kind === 1 ? asset : recipient,
-    invoiceId: toHex(0n, { size: 32 }), issuedAt: block.timestamp, validUntil: input.validUntil ?? block.timestamp + 300n });
+    invoiceId: input.kind === 2 ? input.invoiceId : toHex(0n, { size: 32 }), issuedAt: block.timestamp, validUntil: input.validUntil ?? block.timestamp + 300n });
 
   const response = await fetch(
     `${input.apiUrl}/v1/policies/${policyId}/proofs`,
@@ -196,8 +201,10 @@ export async function payWithPolicyProof(input: TypedPolicyPaymentInput): Promis
   const transactionHash = intent.kind === 0
     ? await walletClient.writeContract({ address: accountAddress, abi: zkPolicyAccountAbi, functionName: "execute",
       args: [recipient, valueWei, intent.issuedAt, intent.validUntil, proof.proof] })
-    : await walletClient.writeContract({ address: accountAddress, abi: zkPolicyAccountAbi, functionName: "executeERC20",
-      args: [intent.asset, recipient, valueWei, intent.issuedAt, intent.validUntil, proof.proof] });
+    : intent.kind === 1 ? await walletClient.writeContract({ address: accountAddress, abi: zkPolicyAccountAbi, functionName: "executeERC20",
+      args: [intent.asset, recipient, valueWei, intent.issuedAt, intent.validUntil, proof.proof] })
+    : await walletClient.writeContract({ address: accountAddress, abi: zkPolicyAccountAbi, functionName: "executeContract",
+      args: [recipient, intent.invoiceId, valueWei, intent.issuedAt, intent.validUntil, proof.proof] });
   const receipt = await publicClient.waitForTransactionReceipt({
     hash: transactionHash,
   });

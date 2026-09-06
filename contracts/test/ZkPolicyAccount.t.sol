@@ -3,6 +3,7 @@ pragma solidity 0.8.30;
 
 import {EntryPoint} from "@account-abstraction/contracts/core/EntryPoint.sol";
 import {PackedUserOperation} from "@account-abstraction/contracts/interfaces/PackedUserOperation.sol";
+import {PolicyPaymentReceiver} from "../src/fixtures/PolicyPaymentReceiver.sol";
 import {PolicyToken} from "../src/fixtures/PolicyToken.sol";
 import {ZkPolicyAccount} from "../src/ZkPolicyAccount.sol";
 import {ISpendLimitVerifier} from "../src/interfaces/ISpendLimitVerifier.sol";
@@ -63,6 +64,7 @@ contract ZkPolicyAccountTest {
     bytes32 private constant POLICY_COMMITMENT = bytes32(uint256(1234));
     bytes private constant PROOF = hex"1234";
 
+    event InvoicePaid(bytes32 indexed invoiceId, address indexed payer, uint256 value);
     event PaymentExecuted(address indexed recipient, uint256 value);
     event PolicyCommitmentUpdated(bytes32 previousCommitment, bytes32 newCommitment);
 
@@ -462,6 +464,55 @@ contract ZkPolicyAccountTest {
         require(spent == amount, "token spend mismatch");
         (, uint128 nativeSpent) = account.getDailySpend(address(0));
         require(nativeSpent == 0, "native spend changed");
+    }
+
+    function testExecuteContractPaysBoundInvoice() public {
+        _checkContractPayment(0.01 ether, keccak256("invoice-owner"), owner);
+    }
+
+    function testExecuteContractUserOpPaysBoundInvoice() public {
+        _checkContractPayment(0.01 ether, keccak256("invoice-entrypoint"), address(entryPoint));
+    }
+
+    function testFuzzContractPaysActualInvoiceAndValue(uint128 value, bytes32 invoiceId, bool viaEntryPoint) public {
+        _checkContractPayment(value, invoiceId, viaEntryPoint ? address(entryPoint) : owner);
+    }
+
+    function _checkContractPayment(uint128 value, bytes32 invoiceId, address caller) private {
+        PolicyPaymentReceiver receiver = new PolicyPaymentReceiver();
+        vm.deal(address(account), uint256(value) + 7);
+        verifier.configure(true, bytes32(uint256(value)), POLICY_COMMITMENT);
+        bytes32[] memory inputs = new bytes32[](15);
+        inputs[0] = bytes32(uint256(2));
+        inputs[1] = bytes32(block.chainid);
+        inputs[2] = bytes32(uint256(uint160(address(account))));
+        inputs[3] = POLICY_COMMITMENT;
+        inputs[4] = bytes32(uint256(2));
+        inputs[5] = bytes32(uint256(uint160(address(receiver))));
+        inputs[7] = bytes32(uint256(value));
+        inputs[8] = bytes32(uint256(uint160(address(receiver))));
+        inputs[9] = bytes32(uint256(invoiceId) >> 128);
+        inputs[10] = bytes32(uint256(uint128(uint256(invoiceId))));
+        inputs[11] = bytes32(block.timestamp);
+        inputs[12] = bytes32(block.timestamp + 300);
+        inputs[13] = bytes32(block.timestamp / 86400);
+        verifier.configureInputs(inputs);
+        vm.expectEmit(true, true, false, true);
+        emit InvoicePaid(invoiceId, address(account), value);
+        vm.prank(caller);
+        if (caller == owner) {
+            account.executeContract(
+                address(receiver), invoiceId, value, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF
+            );
+        } else {
+            account.executeContractUserOp(
+                address(receiver), invoiceId, value, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF
+            );
+        }
+        require(address(receiver).balance == value, "invoice receiver balance mismatch");
+        require(address(account).balance == 7, "invoice account balance mismatch");
+        (, uint128 spent) = account.getDailySpend(address(0));
+        require(spent == value, "invoice native spend mismatch");
     }
 
     function _userOp(bytes memory callData) private view returns (PackedUserOperation memory) {
