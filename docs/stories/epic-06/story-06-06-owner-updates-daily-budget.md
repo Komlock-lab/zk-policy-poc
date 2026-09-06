@@ -3,7 +3,7 @@ id: story-06-06
 type: story
 title: Ownerが当日の支出を維持して日次上限を更新する
 epic: epic-06
-status: approved
+status: in-progress
 depends_on: [story-06-05]
 adrs: [adr-0012, adr-0014]
 created: 2026-09-06
@@ -56,13 +56,20 @@ Ownerが当日の支出を維持して日次上限を更新する。
 
 | ID | Task | Status |
 | --- | --- | --- |
-| [task-06-06-01](../../tasks/story-06-06/task-06-06-01-budget-update-preservation.md) | Policy更新と支出状態の独立性を実装・確認 | pending |
-| [task-06-06-02](../../tasks/story-06-06/task-06-06-02-budget-update-e2e.md) | 更新・asset再登録後の累積引継ぎE2E | pending |
+| [task-06-06-01](../../tasks/story-06-06/task-06-06-01-budget-update-preservation.md) | Policy更新と支出状態の独立性を実装・確認 | done |
+| [task-06-06-02](../../tasks/story-06-06/task-06-06-02-budget-update-e2e.md) | 更新・asset再登録後の累積引継ぎE2E | done |
 
 ## 検証結果
 
-未実施。
+- AC-1: `e2e/daily-policy-update.test.ts`で当日native累積0.05 ETHから、実Owner CLIのJSON入力で日次上限0.1→0.2へ更新・active化。v2の実Proof公開spentBefore0.05と支払い結果version2、receipt後の累積0.07 ETHを確認。
+- AC-2: 同E2Eでnativeを除外v3→再登録v4して0.01 ETH追加、累積0.08 ETHを確認。Tokenは初期10支出から除外v5→再登録v6して20追加、累積30とnative不変。recipientのETH増分0.08、Token残高30・AccountToken残高970を照合。
+- 全更新で旧versionのsuperseded、新activeのCommitmentとAccount値の一致を確認。CLI出力にTokenが露出しないことも確認。
+- 既存Owner CLI/APIのasset別dailyLimit更新とAccountの独立したdailySpend保存が要件を満たすため製品コード変更は不要。正常系の単体・Contract・実Alto E2Eと証跡を追加した。
+- `pnpm test`: build/typecheck、Circuit11、Contract39（fuzz各256 runs）、unit103、E2E27成功。実Agent固有5件は既定でskipされ成功に数えない。
+- `forge fmt --check contracts/test/ZkPolicyAccount.t.sol`、`git diff --check`、`node scripts/validate-planning.mjs`: 成功。
+- 自己・独立レビューで重大指摘なし。Owner署名・activation認可、秘密保持、Accountとasset単位の累積、最新contextと実行値の全15入力照合を維持。新規異常系はユーザー承認済みスコープに従い延期、既存異常系は維持。
+- 新しい設計判断や外部知識はなく、ADR/Wiki変更は不要。
 
 ## Blocked
 
-実装前条件はEpicのPreflightを参照。計画は承認済みだが実装開始前。
+なし。Story PRのmergeとdone遷移はrun-epicが担当。

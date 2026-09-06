@@ -22,3 +22,21 @@ it("reads Owner policy JSON with recipient membership enabled", async () => {
     } });
   } finally { await rm(directory, { recursive: true, force: true }); }
 });
+
+it("reads updated per-asset daily budgets from Owner JSON", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "owner-daily-policy-"));
+  try {
+    const path = join(directory, "policy.json");
+    const token = "0x0000000000000000000000000000000000001111";
+    await writeFile(path, JSON.stringify({ dailyEnabled: true, assetRules: [
+      { asset: token, maxAmount: "100", dailyLimit: "500" },
+      { asset: zeroAddress, maxAmount: "100", dailyLimit: "200" },
+    ] }), { mode: 0o600 });
+    expect(await readOwnerPolicyArguments(["--policy-file", path])).toMatchObject({ policy: {
+      dailyEnabled: true, assetRules: [
+        { asset: token, maxAmount: 100n, dailyLimit: 500n },
+        { asset: zeroAddress, maxAmount: 100n, dailyLimit: 200n },
+      ],
+    } });
+  } finally { await rm(directory, { recursive: true, force: true }); }
+});
