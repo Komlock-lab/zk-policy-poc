@@ -149,7 +149,7 @@ chain ID 31337、非forkのローカル環境、fixture資産を使用する。�
 - Nargo依存キャッシュ書込は権限昇格で許可。pnpm test成功: Circuit 4、Contract 28、unit 93、E2E 22。実Agent E2E 5件は通常コマンドでskip、成功には含めない。
 - localhostのPolicy API・非fork Anvil（chain ID 31337）・実Altoで既存E2E成功。
 - baselineログ: /private/tmp/epic-06-preflight-tests.log。
-- 実Agent検証は既存テストのCLI pin（Claude Code 2.1.260、Codex 0.153.2）を専用PATHで使用する。
+- 固定CLI（Claude Code 2.1.260、Codex 0.153.2）を専用PATHで使用し、RUN_CLAUDE_CODE_E2E=1 RUN_CODEX_E2E=1 NODE_OPTIONS=--experimental-sqlite pnpm exec vitest run e2e/claude-code-payment.test.ts e2e/codex-payment.test.ts成功（既存5 tests、skipなし）。ログ: /private/tmp/epic-06-baseline-agent-tests.log。
 
 ## Delivery
 
