@@ -1,6 +1,7 @@
 # Codex Project Instructions
 
 - すべての変更前に`guidelines/common.md`を読む
+- security-sensitive な報告は公開 issue ではなく [SECURITY.md](SECURITY.md) に従う
 - `apps/`とTypeScriptコードを変更するときは`guidelines/apps.md`を読む
 - `circuits/`を変更するときは`guidelines/circuits.md`を読む
 - `contracts/`を変更するときは`guidelines/contracts.md`を読む
