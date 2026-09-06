@@ -3,7 +3,7 @@ id: story-06-06
 type: story
 title: Ownerが当日の支出を維持して日次上限を更新する
 epic: epic-06
-status: in-progress
+status: done
 depends_on: [story-06-05]
 adrs: [adr-0012, adr-0014]
 created: 2026-09-06
@@ -73,3 +73,5 @@ Ownerが当日の支出を維持して日次上限を更新する。
 ## Blocked
 
 なし。Story PRのmergeとdone遷移はrun-epicが担当。
+
+統合: Story PR #26をEpicへmerge。Epic上の影響範囲検証も成功（Contract 39 / unit 103 / E2E 27）。`forge test --root contracts`、`pnpm test:unit && pnpm test:e2e`を実行。

@@ -105,7 +105,7 @@ AgentへPolicy本文、Owner Key、API Token、Proofを公開しない。MCPの�
 | [story-06-03](../stories/epic-06/story-06-03-user-pays-allowed-erc20.md) | 利用者が許可ERC-20を送金する | story-06-02 | done |
 | [story-06-04](../stories/epic-06/story-06-04-user-pays-allowed-contract.md) | 利用者が許可Contractへ請求ID付きで支払う | story-06-03 | done |
 | [story-06-05](../stories/epic-06/story-06-05-user-pays-with-daily-budget.md) | 利用者が日次予算内で続けて支払う | story-06-04 | done |
-| [story-06-06](../stories/epic-06/story-06-06-owner-updates-daily-budget.md) | Ownerが当日の支出を維持して日次上限を更新する | story-06-05 | approved |
+| [story-06-06](../stories/epic-06/story-06-06-owner-updates-daily-budget.md) | Ownerが当日の支出を維持して日次上限を更新する | story-06-05 | done |
 | [story-06-09](../stories/epic-06/story-06-09-user-pays-with-claude-code.md) | 利用者がClaude Codeから複合Policyで支払う | story-06-06 | approved |
 | [story-06-10](../stories/epic-06/story-06-10-user-pays-with-codex.md) | 利用者がCodexから複合Policyで支払う | story-06-06 | approved |
 | [story-06-11](../stories/epic-06/story-06-11-developer-verifies-multi-policy.md) | Developerがフェーズ6全体の正常系を再現する | story-06-09, story-06-10 | approved |
