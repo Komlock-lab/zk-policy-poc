@@ -97,7 +97,11 @@ Smart Accountの実装方針は次のとおりです。
 │   ├── stories/                   # ユーザーアクションと受け入れ条件
 │   ├── tasks/                     # Storyを構成する実装作業
 │   ├── adr/                       # 合意済みの設計判断
-│   └── audits/                    # Epic完了時の監査結果
+│   ├── audits/                    # Epic完了時の監査結果
+│   ├── security/                  # 脅威モデル
+│   └── reviews/                   # 外部リポジトリからの選択的取り込み記録
+├── CONTRIBUTING.md
+├── SECURITY.md
 ├── llm-wiki/
 │   ├── raw/                       # 人間が追加する不変の一次資料
 │   └── wiki/                      # LLMが管理する再利用可能な知識
@@ -196,7 +200,7 @@ CircomとsnarkjsもSolidity Verifierを生成でき、Groth16、PLONK、FFLONK�
 - Solidity VerifierはCircuitで定義した制約の成立だけを検証する
 - Claude CodeとCodexに秘密のPolicyやOwner Keyを渡さない
 
-開発ルールは[guidelines](guidelines/common.md)で管理します。
+開発ルールは[guidelines](guidelines/common.md)で管理します。貢献手順は[CONTRIBUTING.md](CONTRIBUTING.md)、脆弱性報告は[SECURITY.md](SECURITY.md)、脅威モデルは[docs/security/threat-model.md](docs/security/threat-model.md)を参照してください。
 
 ## Phase 1のローカル実行
 
