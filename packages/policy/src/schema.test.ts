@@ -37,3 +37,12 @@ it("splits all 32 invoice bytes into the ordered u128 public inputs", () => {
   expect(inputs.slice(4, 11)).toEqual([2n, BigInt(recipient), 0n, 123n, BigInt(recipient),
     BigInt(`0x${"ab".repeat(16)}`), BigInt(`0x${"cd".repeat(16)}`)]);
 });
+
+it("commits enabled daily budgets independently for each asset", () => {
+  const token = "0x0000000000000000000000000000000000001111";
+  const policy = normalizePolicy({ dailyEnabled: true, salt: 1n,
+    assetRules: [{ asset: token, maxAmount: 10n, dailyLimit: 30n }, { asset: zeroAddress, maxAmount: 1n, dailyLimit: 3n }] });
+  const fields = policyFields(policy);
+  expect(fields.slice(20, 27)).toEqual([2n, 0n, 1n, 3n, BigInt(token), 10n, 30n]);
+  expect(fields[63]).toBe(1n);
+});

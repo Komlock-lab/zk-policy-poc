@@ -26,7 +26,7 @@ fn main(public_inputs: pub [Field; 15], policy_fields: [Field; 65]) {
         } else { assert(recipient == 0); }
     }
     assert((s[2] == 0) | recipient_allowed, "recipient is not allowed");
-    assert(s[63] == 0);
+    assert((s[63] == 0) | (s[63] == 1));
     assert((s[45] == 0) | (s[45] == 1));
     let contract_count = s[46] as u8;
     assert((s[46] == contract_count as Field) & (contract_count <= 16));
@@ -43,17 +43,21 @@ fn main(public_inputs: pub [Field; 15], policy_fields: [Field; 65]) {
     if p[4] == 2 { assert((s[45] == 0) | contract_allowed, "contract is not allowed"); }
     let asset_count = s[20] as u8;
     assert((s[20] == asset_count as Field) & (asset_count > 0) & (asset_count <= 8));
+    let spent_after = (p[14] as u128) + (p[7] as u128);
     let mut allowed = false;
     for i in 0..8 {
         let asset = s[21 + i * 3];
         let limit = s[22 + i * 3];
         asset.assert_max_bit_size::<160>();
         assert(limit == (limit as u128) as Field);
-        assert(s[23 + i * 3] == 0);
+        let daily_limit = s[23 + i * 3];
+        assert(daily_limit == (daily_limit as u128) as Field);
+        if s[63] == 0 { assert(daily_limit == 0); }
         if i < asset_count as u32 {
             if i > 0 { assert(s[21 + (i - 1) * 3].lt(asset)); }
-            allowed = allowed | ((asset == p[6]) & (p[7] as u128 <= limit as u128));
-        } else { assert((asset == 0) & (limit == 0)); }
+            allowed = allowed | ((asset == p[6]) & (p[7] as u128 <= limit as u128)
+                & ((s[63] == 0) | (spent_after <= daily_limit as u128)));
+        } else { assert((asset == 0) & (limit == 0) & (daily_limit == 0)); }
     }
     assert(allowed, "value exceeds max amount");
     assert((p[4] == 0) | (p[4] == 1) | (p[4] == 2));
@@ -123,6 +127,23 @@ fn accepts_allowed_contract_with_invoice() {
 fn accepts_native_with_contract_condition_enabled() {
     let (mut p, mut s) = fixture(10, 100, 123456789);
     s[45] = 1; s[46] = 1; s[47] = 1234;
+    p[3] = Poseidon2::hash(s, 65);
+    main(p, s);
+}
+
+#[test]
+fn accepts_daily_budget_at_limit() {
+    let (mut p, mut s) = fixture(10, 100, 123456789);
+    s[63] = 1; s[23] = 50; p[14] = 40;
+    p[3] = Poseidon2::hash(s, 65);
+    main(p, s);
+}
+#[test]
+fn accepts_selected_token_daily_budget() {
+    let (mut p, mut s) = fixture(10, 1, 123456789);
+    s[63] = 1; s[23] = 1;
+    s[20] = 2; s[24] = 1234; s[25] = 100; s[26] = 100;
+    p[4] = 1; p[6] = 1234; p[8] = 1234; p[14] = 90;
     p[3] = Poseidon2::hash(s, 65);
     main(p, s);
 }
