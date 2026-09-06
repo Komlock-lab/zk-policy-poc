@@ -47,3 +47,17 @@ fn rejects_value_above_limit() {
 fn rejects_wrong_commitment() {
     main(10_000_000_000_000_000, 42, 100_000_000_000_000_000, 123456789);
 }
+
+#[test]
+fn matches_ts_sdk_commitment_vector() {
+    // Locked against `packages/policy/src/commitment.ts`, which computes the same
+    // hash via `@aztec/bb.js` `poseidon2Hash` outside the circuit. A change to the
+    // `poseidon` dependency or its call shape that breaks this also breaks every
+    // policyCommitment the TS SDK already computed for onchain registration.
+    let max_amount: u128 = 100_000_000_000_000_000;
+    let salt: Field = 123456789;
+    assert(
+        compute_policy_commitment(max_amount, salt)
+            == 0x0c2f1344913f23e28cbc4aec7d5bb46b6261934bd8829c5043b07f3c5de92c34,
+    );
+}
