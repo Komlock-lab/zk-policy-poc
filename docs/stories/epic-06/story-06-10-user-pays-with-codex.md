@@ -3,7 +3,7 @@ id: story-06-10
 type: story
 title: 利用者がCodexから複合Policyで支払う
 epic: epic-06
-status: in-progress
+status: done
 depends_on: [story-06-06]
 adrs: [adr-0012, adr-0013, adr-0014]
 created: 2026-09-06
@@ -74,3 +74,5 @@ updated: 2026-09-06
 ## Blocked
 
 なし。Epic宛Story PRのレビュー待ち。mainにはmergeしない。
+
+統合後確認: `63d0383`で実Claude 2件・実Codex 5件・MCP unit 22件成功（skipなし）。ログ `/private/tmp/epic06-layer6-tests.log`。
