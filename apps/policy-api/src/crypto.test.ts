@@ -1,3 +1,4 @@
+import { normalizePolicy } from "../../../packages/policy/src/index.ts";
 import { describe, expect, it } from "vitest";
 import {
   decryptPolicySecret,
@@ -12,7 +13,7 @@ describe("policy cryptography", () => {
 
   it("round trips secrets and binds AAD", () => {
     const encrypted = encryptPolicySecret({ maxAmountWei: "100", salt: "200" }, key, "p", 1);
-    expect(decryptPolicySecret(encrypted, key, "p", 1)).toEqual({ maxAmountWei: "100", salt: "200" });
+    expect(decryptPolicySecret(encrypted, key, "p", 1)).toEqual(normalizePolicy({ maxAmountWei: "100", salt: "200" }));
     expect(() => decryptPolicySecret(encrypted, key, "other", 1)).toThrow();
   });
 

@@ -13,7 +13,7 @@ const credentialNames = [
 ] as const;
 
 describe("Claude Code and Codex payment compatibility", () => {
-  it("uses the same server entrypoint and only auto-approves pay_native", async () => {
+  it("uses the same server entrypoint and only auto-approves payment tools", async () => {
     const claude = JSON.parse(await readFile(".mcp.json", "utf8")) as {
       mcpServers: Record<
         string,
@@ -42,12 +42,17 @@ describe("Claude Code and Codex payment compatibility", () => {
     );
     expect(claudeSettings.permissions.allow).toEqual([
       "mcp__zk-policy-payment__pay_native",
+      "mcp__zk-policy-payment__pay_erc20",
+      "mcp__zk-policy-payment__pay_contract",
     ]);
     expect(claudeSettings.permissions.deny).toEqual(["Bash"]);
-    expect(codex).toContain('enabled_tools = ["pay_native"]');
+    expect(codex).toContain('enabled_tools = ["pay_native", "pay_erc20", "pay_contract"]');
     expect(codex).toContain(
       '[mcp_servers.payment.tools.pay_native]\napproval_mode = "approve"',
     );
+    for (const tool of ["pay_erc20", "pay_contract"]) {
+      expect(codex).toContain(`[mcp_servers.payment.tools.${tool}]\napproval_mode = "approve"`);
+    }
     expect(codex).toContain("shell_tool = false");
   });
 

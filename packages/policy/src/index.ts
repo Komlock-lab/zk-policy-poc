@@ -9,3 +9,5 @@ export {
   fieldElementSchema,
   generateSalt,
 } from "./commitment.ts";
+
+export * from "./schema.ts";

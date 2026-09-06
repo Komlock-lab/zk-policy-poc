@@ -16,12 +16,14 @@ import {
   assertLocalPaymentUrl,
   paymentAddressSchema,
   preparePolicyPayment,
-  type PolicyPaymentInput,
+  type PolicyPaymentInput, type ERC20PolicyPaymentInput, type ContractPolicyPaymentInput,
 } from "./pay-with-policy.ts";
 
 export const userOpAccountAbi = parseAbi([
   "function entryPoint() view returns (address)",
-  "function executeUserOp(address recipient,uint256 value,bytes proof)",
+  "function executeContractUserOp(address recipient,bytes32 invoiceId,uint256 value,uint64 issuedAt,uint64 validUntil,bytes proof)",
+  "function executeERC20UserOp(address token,address recipient,uint256 amount,uint64 issuedAt,uint64 validUntil,bytes proof)",
+  "function executeUserOp(address recipient,uint256 value,uint64 issuedAt,uint64 validUntil,bytes proof)",
 ]);
 
 export interface UserOpPaymentInput extends PolicyPaymentInput {
@@ -29,13 +31,17 @@ export interface UserOpPaymentInput extends PolicyPaymentInput {
   entryPointAddress: Address;
 }
 
-export async function preparePolicyUserOperation(input: UserOpPaymentInput) {
+export type ERC20UserOpPaymentInput = ERC20PolicyPaymentInput & Pick<UserOpPaymentInput, "bundlerUrl" | "entryPointAddress">;
+export type ContractUserOpPaymentInput = ContractPolicyPaymentInput & Pick<UserOpPaymentInput, "bundlerUrl" | "entryPointAddress">;
+export type TypedUserOpPaymentInput = UserOpPaymentInput | ERC20UserOpPaymentInput | ContractUserOpPaymentInput;
+
+export async function preparePolicyUserOperation(input: TypedUserOpPaymentInput) {
   assertLocalPaymentUrl(input.apiUrl, "apiUrl");
   assertLocalPaymentUrl(input.rpcUrl, "rpcUrl");
   assertLocalPaymentUrl(input.bundlerUrl, "bundlerUrl");
   const entryPointAddress = paymentAddressSchema.parse(input.entryPointAddress);
   const payment = await preparePolicyPayment(input);
-  const { publicClient, owner, accountAddress, recipient, valueWei, proof } =
+  const { publicClient, owner, accountAddress, recipient, valueWei, proof, intent } =
     payment;
   const bundler = createBundlerClient({
     client: publicClient,
@@ -97,11 +103,13 @@ export async function preparePolicyUserOperation(input: UserOpPaymentInput) {
         }),
       }),
   });
-  const callData = encodeFunctionData({
-    abi: userOpAccountAbi,
-    functionName: "executeUserOp",
-    args: [recipient, valueWei, proof.proof],
-  });
+  const callData = intent.kind === 0
+    ? encodeFunctionData({ abi: userOpAccountAbi, functionName: "executeUserOp",
+      args: [recipient, valueWei, intent.issuedAt, intent.validUntil, proof.proof] })
+    : intent.kind === 1 ? encodeFunctionData({ abi: userOpAccountAbi, functionName: "executeERC20UserOp",
+      args: [intent.asset, recipient, valueWei, intent.issuedAt, intent.validUntil, proof.proof] })
+    : encodeFunctionData({ abi: userOpAccountAbi, functionName: "executeContractUserOp",
+      args: [recipient, intent.invoiceId, valueWei, intent.issuedAt, intent.validUntil, proof.proof] });
   const userOperation = await bundler.prepareUserOperation({
     account,
     callData,
@@ -109,7 +117,7 @@ export async function preparePolicyUserOperation(input: UserOpPaymentInput) {
   return { ...payment, account, bundler, userOperation };
 }
 
-export async function payWithPolicyUserOperation(input: UserOpPaymentInput) {
+export async function payWithPolicyUserOperation(input: TypedUserOpPaymentInput) {
   const { account, bundler, userOperation, proof } =
     await preparePolicyUserOperation(input);
   const signature = await account.signUserOperation(userOperation);

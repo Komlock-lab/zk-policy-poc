@@ -1,3 +1,5 @@
+import { fixturePaymentContext } from "../../../scripts/lib/payment-fixture.ts";
+import { paymentPublicInputs } from "../../../packages/policy/src/index.ts";
 import { describe, expect, it } from "vitest";
 import { type Address, type Hex, toHex, zeroAddress } from "viem";
 import {
@@ -16,7 +18,7 @@ const validResponse = {
   policyId,
   policyVersion: 2,
   proof: "0x1234",
-  publicInputs: [toHex(valueWei, { size: 32 }), commitment],
+  publicInputs: paymentPublicInputs({ ...fixturePaymentContext(), amount: valueWei, policyCommitment: BigInt(commitment) }),
 };
 
 describe("API-backed payment client", () => {
@@ -53,19 +55,19 @@ describe("API-backed payment client", () => {
       validatePolicyPaymentProof(validResponse, {
         policyId,
         valueWei,
-        policyCommitment: commitment,
+        context: fixturePaymentContext(), policyCommitment: commitment,
       }),
     ).toEqual(validResponse);
     expect(() =>
       validatePolicyPaymentProof(
         { ...validResponse, extra: true },
-        { policyId, valueWei, policyCommitment: commitment },
+        { policyId, valueWei, context: fixturePaymentContext(), policyCommitment: commitment },
       ),
     ).toThrow();
     expect(() =>
       validatePolicyPaymentProof(
         { ...validResponse, proof: "0x1" },
-        { policyId, valueWei, policyCommitment: commitment },
+        { policyId, valueWei, context: fixturePaymentContext(), policyCommitment: commitment },
       ),
     ).toThrow();
   });
@@ -75,21 +77,21 @@ describe("API-backed payment client", () => {
       validatePolicyPaymentProof(validResponse, {
         policyId: otherPolicyId,
         valueWei,
-        policyCommitment: commitment,
+        context: fixturePaymentContext(), policyCommitment: commitment,
       }),
     ).toThrow("unexpected policy");
     expect(() =>
       validatePolicyPaymentProof(validResponse, {
         policyId,
         valueWei: valueWei + 1n,
-        policyCommitment: commitment,
+        context: fixturePaymentContext(), policyCommitment: commitment,
       }),
     ).toThrow("does not match the requested payment");
     expect(() =>
       validatePolicyPaymentProof(validResponse, {
         policyId,
         valueWei,
-        policyCommitment: toHex(21n, { size: 32 }),
+        context: fixturePaymentContext(), policyCommitment: toHex(21n, { size: 32 }),
       }),
     ).toThrow("does not match the account");
   });

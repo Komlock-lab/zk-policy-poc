@@ -1,3 +1,5 @@
+import { fixturePaymentRequest, fixturePaymentContext } from "../scripts/lib/payment-fixture.ts";
+import { paymentPublicInputs } from "../packages/policy/src/index.ts";
 import { afterEach, describe, expect, it } from "vitest";
 import { parseEther, toHex, type Address, type Hex } from "viem";
 import { z } from "zod";
@@ -17,10 +19,7 @@ const proofResponseSchema = z
     policyId: z.string().uuid(),
     policyVersion: z.number().int().positive(),
     proof: z.string().regex(/^0x[0-9a-f]+$/i),
-    publicInputs: z.tuple([
-      z.string().regex(/^0x[0-9a-f]{64}$/i),
-      z.string().regex(/^0x[0-9a-f]{64}$/i),
-    ]),
+    publicInputs: z.array(z.string().regex(/^0x[0-9a-f]{64}$/i)).length(15),
   })
   .strict();
 
@@ -54,6 +53,7 @@ describe("policy proof API", () => {
     });
     repository.activate(policyId, 1, repository.getPolicy(policyId)!.tokenHash);
     const chain = {
+      getPaymentState: async () => ({ dayId: 0n, spentBefore: 0n, blockNumber: 1n }),
       getOwner: async () => account,
       getPolicyState: async () => ({ configured: true, commitment: commitmentHex }),
       getTransaction: async () => {
@@ -66,19 +66,19 @@ describe("policy proof API", () => {
       method: "POST",
       url: `/v1/policies/${policyId}/proofs`,
       headers: { authorization: `Bearer ${token}` },
-      payload: { valueWei: value.toString() },
+      payload: fixturePaymentRequest(value),
     });
     expect(response.statusCode).toBe(200);
     const body = proofResponseSchema.parse(response.json()) as {
       policyId: string;
       policyVersion: number;
       proof: Hex;
-      publicInputs: [Hex, Hex];
+      publicInputs: Hex[];
     };
     expect(body.policyId).toBe(policyId);
     expect(body.policyVersion).toBe(1);
     expect(body.proof.length).toBeGreaterThan(2);
-    expect(body.publicInputs).toEqual([toHex(value, { size: 32 }), commitmentHex]);
+    expect(body.publicInputs).toEqual(paymentPublicInputs({ ...fixturePaymentContext(), amount: value, policyCommitment: commitment }));
 
     await app.close();
   }, 120_000);
