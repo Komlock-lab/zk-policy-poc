@@ -3,7 +3,7 @@ id: story-06-04
 type: story
 title: 利用者が許可Contractへ請求ID付きで支払う
 epic: epic-06
-status: in-progress
+status: done
 depends_on: [story-06-03]
 adrs: [adr-0012, adr-0013]
 created: 2026-09-06
@@ -76,3 +76,5 @@ updated: 2026-09-06
 ## Blocked
 
 なし。Story PRのmergeとdone遷移はrun-epicが担当。
+
+統合: Story PR #24をEpicへmerge。Epic上の`pnpm test`も成功（Circuit 9 / Contract 35 / unit 101 / E2E 25）。ログ: `/private/tmp/epic-06-layer3-tests.log`。
