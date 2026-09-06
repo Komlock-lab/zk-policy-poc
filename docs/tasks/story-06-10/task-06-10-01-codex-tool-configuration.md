@@ -3,7 +3,7 @@ id: task-06-10-01
 type: task
 title: Codexの3決済Tool設定
 story: story-06-10
-status: pending
+status: done
 blocked_by: []
 created: 2026-09-06
 updated: 2026-09-06
@@ -31,8 +31,8 @@ pnpm test:unit
 
 ## 検証結果
 
-未実施。
+`pnpm test:unit`成功（22 files / 103 tests）。3 Toolのenabled_tools・各approval_mode、shell_tool=false、環境変数名のみのcredential forwardingを確認。ユーザーのrequired=false変更を専用worktreeで保持。実Codex E2E 5件でも全3 Toolへの接続・schema利用・追加承認なしを確認。
 
 ## Blocked
 
-実装開始はEpicのPreflight解消後。
+なし。

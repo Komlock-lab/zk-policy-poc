@@ -46,10 +46,13 @@ describe("Claude Code and Codex payment compatibility", () => {
       "mcp__zk-policy-payment__pay_contract",
     ]);
     expect(claudeSettings.permissions.deny).toEqual(["Bash"]);
-    expect(codex).toContain('enabled_tools = ["pay_native"]');
+    expect(codex).toContain('enabled_tools = ["pay_native", "pay_erc20", "pay_contract"]');
     expect(codex).toContain(
       '[mcp_servers.payment.tools.pay_native]\napproval_mode = "approve"',
     );
+    for (const tool of ["pay_erc20", "pay_contract"]) {
+      expect(codex).toContain(`[mcp_servers.payment.tools.${tool}]\napproval_mode = "approve"`);
+    }
     expect(codex).toContain("shell_tool = false");
   });
 
