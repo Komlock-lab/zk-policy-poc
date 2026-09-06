@@ -3,7 +3,7 @@ id: story-06-05
 type: story
 title: 利用者が日次予算内で続けて支払う
 epic: epic-06
-status: in-progress
+status: done
 depends_on: [story-06-04]
 adrs: [adr-0012, adr-0013, adr-0014]
 created: 2026-09-06
@@ -80,3 +80,5 @@ updated: 2026-09-06
 ## Blocked
 
 なし。Story PRをEpicへ統合する判断とdone遷移はrun-epicが担当する。
+
+統合: Story PR #25をEpicへmerge。Epic上の`pnpm test`も成功（Circuit 11 / Contract 37 / unit 102 / E2E 26）。ログ: `/private/tmp/epic-06-layer4-tests.log`。
