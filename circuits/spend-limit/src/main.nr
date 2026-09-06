@@ -43,7 +43,10 @@ fn main(public_inputs: pub [Field; 15], policy_fields: [Field; 65]) {
         } else { assert((asset == 0) & (limit == 0)); }
     }
     assert(allowed, "value exceeds max amount");
-    assert((p[4] == 0) & (p[6] == 0) & (p[8] == p[5]) & (p[9] == 0) & (p[10] == 0));
+    assert((p[4] == 0) | (p[4] == 1));
+    if p[4] == 0 { assert((p[6] == 0) & (p[8] == p[5])); }
+    else { assert((p[6] != 0) & (p[8] == p[6])); }
+    assert((p[9] == 0) & (p[10] == 0));
     let issued_at = p[11] as u64;
     let valid_until = p[12] as u64;
     assert(valid_until >= issued_at);
@@ -81,5 +84,15 @@ fn accepts_last_recipient_in_full_allowlist() {
     s[2] = 1; s[3] = 16;
     for i in 0..16 { s[4 + i] = (i + 1) as Field; }
     p[5] = 16; p[8] = 16; p[3] = Poseidon2::hash(s, 65);
+    main(p, s);
+}
+
+#[test]
+fn accepts_erc20_with_its_own_asset_limit() {
+    let (mut p, mut s) = fixture(10, 1, 123456789);
+    s[20] = 2; s[24] = 1234; s[25] = 100;
+    s[2] = 1; s[3] = 1; s[4] = p[5];
+    p[4] = 1; p[6] = 1234; p[8] = 1234;
+    p[3] = Poseidon2::hash(s, 65);
     main(p, s);
 }

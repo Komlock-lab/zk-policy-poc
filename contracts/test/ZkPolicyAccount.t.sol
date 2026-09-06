@@ -3,6 +3,7 @@ pragma solidity 0.8.30;
 
 import {EntryPoint} from "@account-abstraction/contracts/core/EntryPoint.sol";
 import {PackedUserOperation} from "@account-abstraction/contracts/interfaces/PackedUserOperation.sol";
+import {PolicyToken} from "../src/fixtures/PolicyToken.sol";
 import {ZkPolicyAccount} from "../src/ZkPolicyAccount.sol";
 import {ISpendLimitVerifier} from "../src/interfaces/ISpendLimitVerifier.sol";
 
@@ -412,6 +413,55 @@ contract ZkPolicyAccountTest {
         account.execute(recipient, value, issuedAt, validUntil, PROOF);
 
         require(recipient.balance == value, "deadline payment balance mismatch");
+    }
+
+    function testExecuteERC20TransfersAndBindsTokenInputs() public {
+        _checkERC20Transfer(100, owner);
+    }
+
+    function testExecuteERC20UserOpTransfersAndBindsTokenInputs() public {
+        _checkERC20Transfer(100, address(entryPoint));
+    }
+
+    function testFuzzERC20TransfersActualAmount(uint128 amount, bool viaEntryPoint) public {
+        _checkERC20Transfer(amount, viaEntryPoint ? address(entryPoint) : owner);
+    }
+
+    function _checkERC20Transfer(uint128 amount, address caller) private {
+        PolicyToken token = new PolicyToken();
+        address recipient = address(0xCAFE);
+        token.mint(address(account), uint256(amount) + 7);
+        verifier.configure(true, bytes32(uint256(amount)), POLICY_COMMITMENT);
+        bytes32[] memory inputs = new bytes32[](15);
+        inputs[0] = bytes32(uint256(2));
+        inputs[1] = bytes32(block.chainid);
+        inputs[2] = bytes32(uint256(uint160(address(account))));
+        inputs[3] = POLICY_COMMITMENT;
+        inputs[4] = bytes32(uint256(1));
+        inputs[5] = bytes32(uint256(uint160(recipient)));
+        inputs[6] = bytes32(uint256(uint160(address(token))));
+        inputs[7] = bytes32(uint256(amount));
+        inputs[8] = bytes32(uint256(uint160(address(token))));
+        inputs[11] = bytes32(block.timestamp);
+        inputs[12] = bytes32(block.timestamp + 300);
+        inputs[13] = bytes32(block.timestamp / 86400);
+        verifier.configureInputs(inputs);
+        vm.prank(caller);
+        if (caller == owner) {
+            account.executeERC20(
+                address(token), recipient, amount, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF
+            );
+        } else {
+            account.executeERC20UserOp(
+                address(token), recipient, amount, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF
+            );
+        }
+        require(token.balanceOf(address(account)) == 7, "account token balance mismatch");
+        require(token.balanceOf(recipient) == amount, "recipient token balance mismatch");
+        (, uint128 spent) = account.getDailySpend(address(token));
+        require(spent == amount, "token spend mismatch");
+        (, uint128 nativeSpent) = account.getDailySpend(address(0));
+        require(nativeSpent == 0, "native spend changed");
     }
 
     function _userOp(bytes memory callData) private view returns (PackedUserOperation memory) {

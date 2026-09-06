@@ -4,7 +4,7 @@ import { z } from "zod";
 import type { Address, Hex } from "viem";
 import { payWithPolicyUserOperation } from "./pay-with-userop.ts";
 
-const environmentSchema = z.object({
+export const environmentSchema = z.object({
   POLICY_API_URL: z.string().url(),
   POLICY_RPC_URL: z.string().url(),
   POLICY_BUNDLER_URL: z.string().url(),

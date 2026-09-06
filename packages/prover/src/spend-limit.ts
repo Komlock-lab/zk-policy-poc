@@ -48,11 +48,10 @@ export async function generateSpendLimitProof(
   const maxAmount = parseCircuitAmount(input.maxAmount);
   const salt = fieldElementSchema.parse(input.salt);
 
-  if (value > maxAmount) {
-    throw new Error("value exceeds max amount");
-  }
-
   const policy = normalizePolicy(input.policy ?? { maxAmountWei: maxAmount, salt });
+  const rule = policy.assetRules.find((rule) => rule.asset.toLowerCase() === input.context.asset.toLowerCase());
+  if (!rule) throw new Error("asset is not allowed");
+  if (value > rule.maxAmount) throw new Error("value exceeds max amount");
   const computedCommitment = await computePolicyCommitment(policy);
   const policyCommitment = fieldElementSchema.parse(
     input.policyCommitment ?? computedCommitment,

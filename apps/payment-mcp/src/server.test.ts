@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { PaymentMcpConfig } from "./config.ts";
-import { executePaymentTool, paymentIntentSchema } from "./server.ts";
+import { executePaymentTool, executeERC20PaymentTool, paymentIntentSchema } from "./server.ts";
 
 const config: PaymentMcpConfig = {
   apiUrl: "http://127.0.0.1:3000",
@@ -76,4 +76,14 @@ describe("public tool schema", () => {
       }),
     ).toThrow();
   });
+});
+
+it("passes the exact ERC-20 amount and token to the shared client", async () => {
+  const execute = vi.fn().mockResolvedValue({ policyId: config.policyId, policyVersion: 1,
+    userOperationHash: `0x${"11".repeat(32)}`, transactionHash: `0x${"22".repeat(32)}` });
+  await executeERC20PaymentTool({ token: "0x0000000000000000000000000000000000001111",
+    recipient: "0x0000000000000000000000000000000000002222", amount: "123", validUntil: "400" }, config, execute);
+  expect(execute).toHaveBeenCalledWith({ ...config, kind: 1,
+    tokenAddress: "0x0000000000000000000000000000000000001111",
+    recipient: "0x0000000000000000000000000000000000002222", amount: 123n, validUntil: 400n });
 });

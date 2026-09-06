@@ -29,7 +29,8 @@
     "test:contracts": "forge test --root contracts",
     "test:e2e": "NODE_OPTIONS=--experimental-sqlite vitest run e2e",
     "test:unit": "NODE_OPTIONS=--experimental-sqlite vitest run apps packages scripts/lib",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "policy:pay-erc20": "NODE_OPTIONS=--experimental-sqlite tsx apps/policy-cli/src/pay-erc20.ts"
   },
   "dependencies": {
     "@aztec/bb.js": "5.2.0",

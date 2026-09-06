@@ -93,6 +93,7 @@ async function proofResponse(response: Response): Promise<unknown> {
 }
 
 export interface PolicyPaymentInput {
+  kind?: 0;
   apiUrl: string;
   rpcUrl: string;
   accountAddress: Address;
@@ -104,7 +105,14 @@ export interface PolicyPaymentInput {
   validUntil?: bigint;
 }
 
-export async function preparePolicyPayment(input: PolicyPaymentInput) {
+export interface ERC20PolicyPaymentInput extends Omit<PolicyPaymentInput, "kind" | "valueWei"> {
+  kind: 1;
+  tokenAddress: Address;
+  amount: bigint;
+}
+export type TypedPolicyPaymentInput = PolicyPaymentInput | ERC20PolicyPaymentInput;
+
+export async function preparePolicyPayment(input: TypedPolicyPaymentInput) {
   assertLocalPaymentUrl(input.apiUrl, "apiUrl");
   assertLocalPaymentUrl(input.rpcUrl, "rpcUrl");
   const policyId = policyIdSchema.parse(input.policyId);
@@ -112,7 +120,8 @@ export async function preparePolicyPayment(input: PolicyPaymentInput) {
   const accountAddress = paymentAddressSchema.parse(input.accountAddress);
   const recipient = paymentAddressSchema.parse(input.recipient);
   const ownerPrivateKey = privateKeySchema.parse(input.ownerPrivateKey);
-  const valueWei = parseCircuitAmount(input.valueWei);
+  const valueWei = parseCircuitAmount(input.kind === 1 ? input.amount : input.valueWei);
+  const asset = input.kind === 1 ? paymentAddressSchema.parse(input.tokenAddress) : zeroAddress;
   const owner = privateKeyToAccount(ownerPrivateKey);
   const transport = http(input.rpcUrl, { fetchOptions: { redirect: "error" } });
   const publicClient = createPublicClient({ chain: foundry, transport });
@@ -122,7 +131,7 @@ export async function preparePolicyPayment(input: PolicyPaymentInput) {
   }
 
   const block = await publicClient.getBlock();
-  const intent = paymentIntentSchema.parse({ kind: 0, recipient, asset: zeroAddress, amount: valueWei, target: recipient,
+  const intent = paymentIntentSchema.parse({ kind: input.kind ?? 0, recipient, asset, amount: valueWei, target: input.kind === 1 ? asset : recipient,
     invoiceId: toHex(0n, { size: 32 }), issuedAt: block.timestamp, validUntil: input.validUntil ?? block.timestamp + 300n });
 
   const response = await fetch(
@@ -161,7 +170,7 @@ export async function preparePolicyPayment(input: PolicyPaymentInput) {
   }
   if (!configured) throw new Error("account policy is not configured");
 
-  const [dayId, spentBefore] = await publicClient.readContract({ address: accountAddress, abi: zkPolicyAccountAbi, functionName: "getDailySpend", args: [zeroAddress], blockNumber: block.number });
+  const [dayId, spentBefore] = await publicClient.readContract({ address: accountAddress, abi: zkPolicyAccountAbi, functionName: "getDailySpend", args: [asset], blockNumber: block.number });
   const context = { ...intent, chainId: 31337n, account: accountAddress, dayId, spentBefore };
   const proof = validatePolicyPaymentProof(responseBody, {
     policyId,
@@ -172,7 +181,7 @@ export async function preparePolicyPayment(input: PolicyPaymentInput) {
   return { owner, publicClient, accountAddress, recipient, valueWei, proof, intent };
 }
 
-export async function payWithPolicyProof(input: PolicyPaymentInput): Promise<{
+export async function payWithPolicyProof(input: TypedPolicyPaymentInput): Promise<{
   policyId: string;
   policyVersion: number;
   transactionHash: Hex;
@@ -184,12 +193,11 @@ export async function payWithPolicyProof(input: PolicyPaymentInput): Promise<{
     chain: foundry,
     transport: http(input.rpcUrl, { fetchOptions: { redirect: "error" } }),
   });
-  const transactionHash = await walletClient.writeContract({
-    address: accountAddress,
-    abi: zkPolicyAccountAbi,
-    functionName: "execute",
-    args: [recipient, valueWei, intent.issuedAt, intent.validUntil, proof.proof],
-  });
+  const transactionHash = intent.kind === 0
+    ? await walletClient.writeContract({ address: accountAddress, abi: zkPolicyAccountAbi, functionName: "execute",
+      args: [recipient, valueWei, intent.issuedAt, intent.validUntil, proof.proof] })
+    : await walletClient.writeContract({ address: accountAddress, abi: zkPolicyAccountAbi, functionName: "executeERC20",
+      args: [intent.asset, recipient, valueWei, intent.issuedAt, intent.validUntil, proof.proof] });
   const receipt = await publicClient.waitForTransactionReceipt({
     hash: transactionHash,
   });
