@@ -3,7 +3,7 @@ id: story-06-02
 type: story
 title: Ownerが許可送金先を更新して決済する
 epic: epic-06
-status: in-progress
+status: done
 depends_on: [story-06-01]
 adrs: [adr-0012]
 created: 2026-09-06
@@ -71,3 +71,5 @@ Ownerが許可送金先を更新して決済する。
 ## Blocked
 
 なし。Story PRのmergeとdone遷移はrun-epicが担当。
+
+統合: Story PR #22をEpicへmerge。Epic上の`pnpm test`も成功（Circuit 6 / Contract 29 / unit 97 / E2E 23）。ログ: `/private/tmp/epic-06-layer1-tests.log`。
