@@ -19,8 +19,7 @@ import {
   updateAndActivatePolicy,
 } from "../apps/policy-cli/src/create-policy.ts";
 import {
-  payWithPolicyProof,
-  validatePolicyPaymentProof,
+  payWithPolicyProof, preparePolicyPayment,
 } from "../apps/policy-cli/src/pay-with-policy.ts";
 import { rotatePolicyToken } from "../apps/policy-cli/src/rotate-policy-token.ts";
 import { createPolicyChainGateway, zkPolicyAccountAbi } from "../apps/policy-api/src/chain.ts";
@@ -152,25 +151,10 @@ describe("Phase 2 API-backed policy payment", () => {
         nonceBeforeOverLimit,
       );
 
-      const oldCommitment = await publicClient.readContract({
-        address: accountAddress,
-        abi: zkPolicyAccountAbi,
-        functionName: "policyCommitment",
-      });
-      const oldProofResponse = await fetch(`${apiUrl}/v1/policies/${initial.policyId}/proofs`, {
-        method: "POST",
-        headers: {
-          authorization: `Bearer ${rotated.token}`,
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({ valueWei: paymentValue.toString() }),
-      });
-      expect(oldProofResponse.status).toBe(200);
-      const oldProof = validatePolicyPaymentProof(await oldProofResponse.json(), {
-        policyId: initial.policyId,
-        valueWei: paymentValue,
-        policyCommitment: oldCommitment,
-      });
+      const prepared = await preparePolicyPayment({ apiUrl, rpcUrl: anvil.rpcUrl, accountAddress,
+        ownerPrivateKey: OWNER_PRIVATE_KEY, policyId: initial.policyId, token: rotated.token,
+        recipient: recipient.address, valueWei: paymentValue });
+      const oldProof = prepared.proof;
       const secondUpdate = await updateAndActivatePolicy({
         apiUrl,
         rpcUrl: anvil.rpcUrl,
@@ -188,7 +172,7 @@ describe("Phase 2 API-backed policy payment", () => {
         address: accountAddress,
         abi: zkPolicyAccountAbi,
         functionName: "execute",
-        args: [recipient.address, paymentValue, oldProof.proof],
+        args: [recipient.address, paymentValue, prepared.intent.issuedAt, prepared.intent.validUntil, oldProof.proof],
         gas: 10_000_000n,
       });
       const staleProofReceipt = await publicClient.waitForTransactionReceipt({

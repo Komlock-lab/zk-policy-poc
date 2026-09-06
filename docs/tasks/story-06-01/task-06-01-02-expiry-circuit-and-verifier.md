@@ -3,7 +3,7 @@ id: task-06-01-02
 type: task
 title: 有効期間を証明する回路・Prover・Verifier
 story: story-06-01
-status: pending
+status: done
 blocked_by: [task-06-01-01]
 created: 2026-09-06
 updated: 2026-09-06
@@ -31,8 +31,8 @@ pnpm test:circuit; pnpm generate:verifier; pnpm benchmark:circuit
 
 ## 検証結果
 
-未実施。
+2026-09-06: `pnpm test:circuit`成功（既存4 tests、固定65 FieldのTS/Noir既知ベクトル照合を含む）。`pnpm generate:verifier`成功、生成Solidityは手動編集なし。`pnpm benchmark:circuit`成功: 1,119 ACIR opcodes、main Brillig 87、Proof 7,616 bytes、実Proof生成とローカル検証585 ms。`forge inspect --root contracts HonkVerifier deployedBytecode`のbyte数は15,728。`pnpm test`内の再生成・build・回路テストも成功。ログ: `/private/tmp/story01-benchmark.log`、`/private/tmp/story01-full-test.log`。
 
 ## Blocked
 
-実装開始はEpicのPreflight解消後。
+なし。

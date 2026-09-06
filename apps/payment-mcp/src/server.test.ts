@@ -25,6 +25,7 @@ describe("payment MCP tool", () => {
       {
         recipient: "0x0000000000000000000000000000000000000003",
         valueWei: "10000000000000000",
+        validUntil: "400",
       },
       config,
       execute,
@@ -33,6 +34,7 @@ describe("payment MCP tool", () => {
       ...config,
       recipient: "0x0000000000000000000000000000000000000003",
       valueWei: 10_000_000_000_000_000n,
+      validUntil: 400n,
     });
     expect(result).toEqual({
       policyId: config.policyId,
@@ -61,7 +63,7 @@ function zeroAddress() {
 }
 
 describe("public tool schema", () => {
-  it("contains only recipient and valueWei", () => {
+  it("contains the native intent and optional expiry", () => {
     const parsed = paymentIntentSchema.parse({
       recipient: "0x0000000000000000000000000000000000000003",
       valueWei: "1",

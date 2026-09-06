@@ -1,3 +1,4 @@
+import { fixturePaymentRequest } from "../scripts/lib/payment-fixture.ts";
 import { readdir, readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -56,10 +57,7 @@ const proofResponseSchema = z.object({
   policyId: z.string().uuid(),
   policyVersion: z.number().int().positive(),
   proof: z.string().regex(/^0x[0-9a-fA-F]+$/),
-  publicInputs: z.tuple([
-    z.string().regex(/^0x[0-9a-fA-F]{64}$/),
-    z.string().regex(/^0x[0-9a-fA-F]{64}$/),
-  ]),
+  publicInputs: z.array(z.string().regex(/^0x[0-9a-fA-F]{64}$/)).length(15),
 });
 
 async function artifact(contractName: string): Promise<{ abi: Abi; bytecode: Hex }> {
@@ -193,7 +191,7 @@ describe("policy token rotation", () => {
         const rejected = await fetch(`${apiUrl}/v1/policies/${initial.policyId}/proofs`, {
           method: "POST",
           headers: { authorization: `Bearer ${oldToken}`, "content-type": "application/json" },
-          body: JSON.stringify({ valueWei: parseEther("0.01").toString() }),
+          body: JSON.stringify(fixturePaymentRequest(parseEther("0.01"))),
         });
         expect(rejected.status).toBe(401);
         expect(await rejected.json()).toEqual({ error: "INVALID_POLICY_TOKEN" });
@@ -205,7 +203,7 @@ describe("policy token rotation", () => {
           authorization: `Bearer ${cliRotation.token}`,
           "content-type": "application/json",
         },
-        body: JSON.stringify({ valueWei: parseEther("0.01").toString() }),
+        body: JSON.stringify(fixturePaymentRequest(parseEther("0.01"))),
       });
       expect(proofResponse.status).toBe(200);
       const proof = proofResponseSchema.parse(await proofResponse.json());

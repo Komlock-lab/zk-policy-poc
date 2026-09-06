@@ -1,3 +1,4 @@
+import { u64Schema } from "../../../packages/policy/src/index.ts";
 import { z } from "zod";
 import type { Address, Hex } from "viem";
 import { payWithPolicyProof } from "./pay-with-policy.ts";
@@ -24,6 +25,7 @@ const result = await payWithPolicyProof({
   token: input.POLICY_TOKEN,
   recipient: recipient as Address,
   valueWei: BigInt(valueWei),
+  ...(process.argv[4] === undefined ? {} : { validUntil: u64Schema.parse(process.argv[4]) }),
 });
 
 process.stdout.write(`${JSON.stringify(result)}\n`);

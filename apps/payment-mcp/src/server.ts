@@ -18,6 +18,7 @@ export const paymentIntentSchema = z
       .transform((value) => getAddress(value))
       .refine((address) => address !== zeroAddress, "recipient must not be zero"),
     valueWei: z.string().regex(/^(0|[1-9][0-9]*)$/),
+    validUntil: z.string().regex(/^(0|[1-9][0-9]*)$/).refine((v) => BigInt(v) < (1n << 64n)).optional(),
   })
   .strict();
 
@@ -50,6 +51,7 @@ export async function executePaymentTool(
     ...config,
     recipient: intent.recipient as Address,
     valueWei: parseCircuitAmount(BigInt(intent.valueWei)),
+    ...(intent.validUntil === undefined ? {} : { validUntil: BigInt(intent.validUntil) }),
   });
   return paymentResultSchema.parse({ ...result, status: "success" });
 }

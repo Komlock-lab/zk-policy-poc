@@ -1,3 +1,4 @@
+import { fixturePaymentContext } from "./lib/payment-fixture.ts";
 import { z } from "zod";
 
 import {
@@ -17,7 +18,7 @@ const value = parseCircuitAmount(BigInt(valueText));
 const maxAmount = parseCircuitAmount(BigInt(maxAmountText));
 const salt = generateSalt();
 const policyCommitment = await computePolicyCommitment(maxAmount, salt);
-const result = await generateSpendLimitProof({ value, maxAmount, salt, policyCommitment });
+const result = await generateSpendLimitProof({ context: fixturePaymentContext(), value, maxAmount, salt, policyCommitment });
 
 process.stdout.write(
   `${JSON.stringify({ proof: result.proof, publicInputs: result.publicInputs })}\n`,

@@ -121,6 +121,7 @@ describe.sequential("Phase 3 real Alto policy payment", () => {
         "apps/policy-cli/src/pay-userop.ts",
         input.recipient,
         input.valueWei.toString(),
+        ((await harness.publicClient.getBlock()).timestamp + 120n).toString(),
       ],
       {
         env: {
@@ -195,7 +196,7 @@ describe.sequential("Phase 3 real Alto policy payment", () => {
     const callData = encodeFunctionData({
       abi: userOpAccountAbi,
       functionName: "executeUserOp",
-      args: [input.recipient, parseEther("0.02"), prepared.proof.proof],
+      args: [input.recipient, parseEther("0.02"), prepared.intent.issuedAt, prepared.intent.validUntil, prepared.proof.proof],
     });
     await expect(
       prepared.bundler.estimateUserOperationGas({

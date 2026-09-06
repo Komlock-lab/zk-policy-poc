@@ -3,7 +3,7 @@ id: story-06-01
 type: story
 title: Ownerが有効期限付きPolicyを登録して決済する
 epic: epic-06
-status: approved
+status: in-progress
 depends_on: []
 adrs: [adr-0012]
 created: 2026-09-06
@@ -56,14 +56,24 @@ Ownerが有効期限付きPolicyを登録して決済する。
 
 | ID | Task | Status |
 | --- | --- | --- |
-| [task-06-01-01](../../tasks/story-06-01/task-06-01-01-policy-schema-and-inputs.md) | 複合Policyと公開入力の共通定義 | pending |
-| [task-06-01-02](../../tasks/story-06-01/task-06-01-02-expiry-circuit-and-verifier.md) | 有効期間を証明する回路・Prover・Verifier | pending |
-| [task-06-01-03](../../tasks/story-06-01/task-06-01-03-expiry-account-api-cli.md) | Account・Policy API・CLIの期限付き決済 | pending |
+| [task-06-01-01](../../tasks/story-06-01/task-06-01-01-policy-schema-and-inputs.md) | 複合Policyと公開入力の共通定義 | done |
+| [task-06-01-02](../../tasks/story-06-01/task-06-01-02-expiry-circuit-and-verifier.md) | 有効期間を証明する回路・Prover・Verifier | done |
+| [task-06-01-03](../../tasks/story-06-01/task-06-01-03-expiry-account-api-cli.md) | Account・Policy API・CLIの期限付き決済 | done |
 
 ## 検証結果
 
-未実施。
+2026-09-06: 実装・ship-story検証完了。StoryはEpic統合待ちのためin-progressを維持する。
+
+- AC-1: `e2e/policy-registration.test.ts`が新DB・新Accountに対して実CLI `index.ts 100000000000000000 300`を実行。暗号化されたv2 Policyのnative上限0.1 ETH、有効期間300秒、active version 1とAccount Commitment一致を確認。
+- AC-2: `e2e/policy-payment.test.ts`と`e2e/zk-payment.test.ts`で直接実行のrecipient残高+0.01 ETH、`e2e/bundler-payment.test.ts`で実AltoとCLIによるrecipient残高+0.01 ETHを確認。API・Clientは15公開入力を照合し、Accountが実行引数とオンチェーン状態から再構築した同じ公開入力で実Proofを検証。`e2e/payment-mcp.test.ts`のnative経路も成功。
+- 共通定義: 65 Fieldの既知CommitmentをTypeScriptとNoirで照合。公開入力15要素の順序をunit testで確認。
+- `pnpm test`成功: build/Verifier再生成/typecheck、Circuit 4、Contract 29（既存fuzz各256 runs）、unit 95、E2E 22。実Agent 5件のskipは成功に数えない。
+- `pnpm benchmark:circuit`成功: 1,119 ACIR opcodes、Proof 7,616 bytes、実Proof生成とローカル検証585 ms。Verifier runtime 15,728 bytes。
+- `forge fmt --check contracts/src/ZkPolicyAccount.sol contracts/test/ZkPolicyAccount.t.sol`、`git diff --check`、`node scripts/validate-planning.mjs`成功。
+- Account/API/Clientと独立したCircuit/ProverレビューでCRITICAL/HIGH残件なし。Owner署名・activation・Token再確認・秘密隔離を維持。新規異常系、recipient/contract/daily条件の有効化は本Storyでは実装・検証しない。
+- ログ: `/private/tmp/story01-full-test.log`、`/private/tmp/story01-benchmark.log`。
+- Knowledge feedback: 新しい設計判断・外部資料由来の知識はなく、Wiki/ADR変更なし。
 
 ## Blocked
 
-実装前条件はEpicのPreflightを参照。計画は承認済みだが実装開始前。
+なし。Story PR作成後のEpicへのmergeとdone遷移はrun-epicが担当する。

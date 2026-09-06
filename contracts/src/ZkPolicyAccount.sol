@@ -3,19 +3,15 @@ pragma solidity 0.8.30;
 
 import {IAccount} from "@account-abstraction/contracts/interfaces/IAccount.sol";
 import {IEntryPoint} from "@account-abstraction/contracts/interfaces/IEntryPoint.sol";
-import {
-    PackedUserOperation
-} from "@account-abstraction/contracts/interfaces/PackedUserOperation.sol";
-import {
-    SIG_VALIDATION_FAILED,
-    SIG_VALIDATION_SUCCESS
-} from "@account-abstraction/contracts/core/Helpers.sol";
+import {PackedUserOperation} from "@account-abstraction/contracts/interfaces/PackedUserOperation.sol";
+import {SIG_VALIDATION_FAILED, SIG_VALIDATION_SUCCESS} from "@account-abstraction/contracts/core/Helpers.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {ISpendLimitVerifier} from "./interfaces/ISpendLimitVerifier.sol";
 
 contract ZkPolicyAccount is IAccount {
     error AmountOutOfRange(uint256 value);
     error InvalidOwner();
+    error InvalidPaymentTime();
     error InvalidProof();
     error InvalidRecipient();
     error InvalidEntryPoint();
@@ -37,6 +33,18 @@ contract ZkPolicyAccount is IAccount {
     IEntryPoint public immutable entryPoint;
     bytes32 public policyCommitment;
     bool public policyConfigured;
+
+    struct DailySpend {
+        uint64 lastDay;
+        uint128 spent;
+    }
+    mapping(address asset => DailySpend) private dailySpend;
+
+    function getDailySpend(address asset) public view returns (uint64 dayId, uint128 spentBefore) {
+        dayId = uint64(block.timestamp / 86400);
+        DailySpend memory previous = dailySpend[asset];
+        spentBefore = previous.lastDay == dayId ? previous.spent : 0;
+    }
 
     constructor(address owner_, ISpendLimitVerifier verifier_, IEntryPoint entryPoint_) {
         if (owner_ == address(0)) revert InvalidOwner();
@@ -63,29 +71,34 @@ contract ZkPolicyAccount is IAccount {
         emit PolicyCommitmentUpdated(previousCommitment, newCommitment);
     }
 
-    function execute(address payable recipient, uint256 value, bytes calldata proof) external {
-        if (msg.sender != owner) revert Unauthorized(msg.sender);
-        _executePolicyPayment(recipient, value, proof);
-    }
-
-    function executeUserOp(address payable recipient, uint256 value, bytes calldata proof)
+    function execute(address payable recipient, uint256 value, uint64 issuedAt, uint64 validUntil, bytes calldata proof)
         external
     {
-        if (msg.sender != address(entryPoint)) revert Unauthorized(msg.sender);
-        _executePolicyPayment(recipient, value, proof);
+        if (msg.sender != owner) revert Unauthorized(msg.sender);
+        _executePolicyPayment(recipient, value, issuedAt, validUntil, proof);
     }
 
-    function validateUserOp(
-        PackedUserOperation calldata userOp,
-        bytes32 userOpHash,
-        uint256 missingAccountFunds
-    ) external override returns (uint256 validationData) {
+    function executeUserOp(
+        address payable recipient,
+        uint256 value,
+        uint64 issuedAt,
+        uint64 validUntil,
+        bytes calldata proof
+    ) external {
+        if (msg.sender != address(entryPoint)) revert Unauthorized(msg.sender);
+        _executePolicyPayment(recipient, value, issuedAt, validUntil, proof);
+    }
+
+    function validateUserOp(PackedUserOperation calldata userOp, bytes32 userOpHash, uint256 missingAccountFunds)
+        external
+        override
+        returns (uint256 validationData)
+    {
         if (msg.sender != address(entryPoint)) {
             revert Unauthorized(msg.sender);
         }
 
-        (address recovered, ECDSA.RecoverError recoverError,) =
-            ECDSA.tryRecover(userOpHash, userOp.signature);
+        (address recovered, ECDSA.RecoverError recoverError,) = ECDSA.tryRecover(userOpHash, userOp.signature);
         validationData = recoverError == ECDSA.RecoverError.NoError && recovered == owner
             ? SIG_VALIDATION_SUCCESS
             : SIG_VALIDATION_FAILED;
@@ -97,18 +110,33 @@ contract ZkPolicyAccount is IAccount {
         }
     }
 
-    function _executePolicyPayment(address payable recipient, uint256 value, bytes calldata proof)
-        internal
-    {
+    function _executePolicyPayment(
+        address payable recipient,
+        uint256 value,
+        uint64 issuedAt,
+        uint64 validUntil,
+        bytes calldata proof
+    ) internal {
         if (!policyConfigured) revert PolicyNotConfigured();
         if (recipient == address(0)) revert InvalidRecipient();
         if (value > U128_MAX) revert AmountOutOfRange(value);
 
-        bytes32[] memory publicInputs = new bytes32[](2);
-        publicInputs[0] = bytes32(value);
-        publicInputs[1] = policyCommitment;
-
+        if (block.timestamp < issuedAt || block.timestamp > validUntil) revert InvalidPaymentTime();
+        (uint64 dayId, uint128 spentBefore) = getDailySpend(address(0));
+        bytes32[] memory publicInputs = new bytes32[](15);
+        publicInputs[0] = bytes32(uint256(2));
+        publicInputs[1] = bytes32(block.chainid);
+        publicInputs[2] = bytes32(uint256(uint160(address(this))));
+        publicInputs[3] = policyCommitment;
+        publicInputs[5] = bytes32(uint256(uint160(address(recipient))));
+        publicInputs[7] = bytes32(value);
+        publicInputs[8] = bytes32(uint256(uint160(address(recipient))));
+        publicInputs[11] = bytes32(uint256(issuedAt));
+        publicInputs[12] = bytes32(uint256(validUntil));
+        publicInputs[13] = bytes32(uint256(dayId));
+        publicInputs[14] = bytes32(uint256(spentBefore));
         if (!verifier.verify(proof, publicInputs)) revert InvalidProof();
+        dailySpend[address(0)] = DailySpend(dayId, spentBefore + uint128(value));
 
         (bool success,) = recipient.call{value: value}("");
         if (!success) revert TransferFailed();
