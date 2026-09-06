@@ -11,7 +11,7 @@ AIエージェントが提案したトランザクションに対し、秘密の
 | 3 | [epic-03: ERC-4337対応](epics/epic-03-erc4337.md) | review |
 | 4 | [epic-04: Claude Code・Codex接続](epics/epic-04-agent-integration.md) | approved |
 | 5 | 攻撃・異常系の検証 | 未計画 |
-| 6 | 複数ポリシー対応 | 未計画 |
+| 6 | [epic-05: 送金先Addressのallowlistを使ったZK決済](epics/epic-05-target-allowlist-payment.md)、複数ポリシー対応の他項目 | epic-05は承認済み、他は未計画 |
 
 ## 1. 単一条件のZK PoC
 
@@ -68,6 +68,8 @@ AIエージェントが提案したトランザクションに対し、秘密の
 3. TokenおよびContractのallowlist
 4. 一定期間あたりの累積支出上限
 5. Risk Score
+
+送金先Addressのallowlist(項目2)は有効期限(項目1)と依存関係がなく、既存Phase 1-4の正常系を壊さずに追加できるため、[epic-05](epics/epic-05-target-allowlist-payment.md)として先行して着手する。理由は[adr-0012](adr/adr-0012-policy-commitment-and-target-public-input.md)を参照。
 
 ## 開発方針
 
