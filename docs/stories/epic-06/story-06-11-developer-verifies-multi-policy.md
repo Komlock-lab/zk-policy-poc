@@ -3,7 +3,7 @@ id: story-06-11
 type: story
 title: Developerがフェーズ6全体の正常系を再現する
 epic: epic-06
-status: approved
+status: in-progress
 depends_on: [story-06-09, story-06-10]
 adrs: [adr-0012, adr-0013, adr-0014]
 created: 2026-09-06
@@ -56,13 +56,22 @@ Developerがフェーズ6全体の正常系を再現する。
 
 | ID | Task | Status |
 | --- | --- | --- |
-| [task-06-11-01](../../tasks/story-06-11/task-06-11-01-integrated-quality-gate.md) | 統合quality gateと実測 | pending |
-| [task-06-11-02](../../tasks/story-06-11/task-06-11-02-audit-and-delivery.md) | 設計適合確認とEpic PR | pending |
+| [task-06-11-01](../../tasks/story-06-11/task-06-11-01-integrated-quality-gate.md) | 統合quality gateと実測 | done |
+| [task-06-11-02](../../tasks/story-06-11/task-06-11-02-audit-and-delivery.md) | 設計適合確認とEpic PR | done |
 
 ## 検証結果
 
-未実施。
+AC-1: 以下の結果と監査文書の全Story/AC表で確認。
+
+- `pnpm test`成功: build/typecheck、Circuit 11、Contract 39（正常値fuzz各256 runs）、unit/API/Client/MCP 103、local E2E 27。通常コマンドの実Agent 7件skipは成功に含めない。ログ `/private/tmp/story11-full-test.log`。
+- 同一実装`63d0383`で `RUN_CLAUDE_CODE_E2E=1 RUN_CODEX_E2E=1 NODE_OPTIONS=--experimental-sqlite pnpm exec vitest run apps/payment-mcp/src e2e/claude-code-payment.test.ts e2e/codex-payment.test.ts`成功: Claude 2、Codex 5、MCP unit 22（全29件、skipなし）。ログ `/private/tmp/epic06-layer6-tests.log`。以後の変更は計画・監査文書のみ。
+- `pnpm benchmark:circuit`成功: main ACIR 4314、Brillig 87、Proof 8000 bytes、生成940 ms（単発実測）。ログ `/private/tmp/story11-benchmark.log`。
+- 固定版: Node 23.3.0、pnpm 10.18.1、nargo 1.0.0-beta.26、bb 5.2.0、forge 1.5.1、Claude Code 2.1.260、Codex 0.153.2。専用PATHで実行。
+- 非fork Anvil chain ID 31337、実Alto、新規fixture資産でreceipt・残高・invoiceイベント・日次累積を確認。AC対応は[監査準備](../../audits/epic-06-multi-policy.md)に集約。
+
 
 ## Blocked
 
-実装前条件はEpicのPreflightを参照。計画は承認済みだが実装開始前。
+なし。
+
+ship-story確認: 全Task done、4分野レビュー指摘なし、監査準備とEpic PR引渡し内容を作成。Account/testのformatのみ調整し、全Story統合後にrun-epicが監査を確定する。
