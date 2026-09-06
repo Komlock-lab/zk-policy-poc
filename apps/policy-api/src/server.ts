@@ -1,7 +1,7 @@
 import Fastify, { type FastifyInstance } from "fastify";
 import { z } from "zod";
 import { getAddress, isAddress, type Address, type Hex } from "viem";
-import { U128_MAX } from "../../../packages/policy/src/index.ts";
+import { policySchema, paymentIntentSchema } from "../../../packages/policy/src/index.ts";
 import { PolicyApiError, PolicyService } from "./service.ts";
 
 const addressSchema = z
@@ -22,9 +22,6 @@ const MAX_UINT256 = (1n << 256n) - 1n;
 const uint256DecimalSchema = z
   .string()
   .refine((value) => /^(0|[1-9][0-9]*)$/.test(value) && BigInt(value) < MAX_UINT256);
-const circuitAmountDecimalSchema = z
-  .string()
-  .refine((value) => /^(0|[1-9][0-9]*)$/.test(value) && BigInt(value) <= U128_MAX);
 
 function bearerToken(header: string | undefined): string {
   const match = /^Bearer (zkp_[A-Za-z0-9_-]{43})$/.exec(header ?? "");
@@ -57,7 +54,9 @@ export function buildPolicyApi(service: PolicyService): FastifyInstance {
     const body = z
       .object({
         account: addressSchema,
-        maxAmountWei: z.string().regex(/^(0|[1-9][0-9]*)$/),
+        maxAmountWei: z.string().regex(/^(0|[1-9][0-9]*)$/).optional(),
+        maxValiditySeconds: z.string().regex(/^(0|[1-9][0-9]*)$/).optional(),
+        policy: policySchema.optional(),
         salt: z.string().regex(/^(0|[1-9][0-9]*)$/),
         policyCommitment: bytes32Schema,
         nonce: uint256DecimalSchema,
@@ -80,10 +79,10 @@ export function buildPolicyApi(service: PolicyService): FastifyInstance {
 
   app.post("/v1/policies/:policyId/proofs", async (request) => {
     const { policyId } = z.object({ policyId: uuidSchema }).parse(request.params);
-    const { valueWei } = z.object({ valueWei: circuitAmountDecimalSchema }).strict().parse(request.body);
+    const intent = paymentIntentSchema.parse(request.body);
     return service.createProof({
       policyId,
-      valueWei,
+      intent,
       token: bearerToken(request.headers.authorization),
     });
   });

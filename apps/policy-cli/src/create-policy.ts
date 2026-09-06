@@ -11,7 +11,7 @@ import {
 import { privateKeyToAccount } from "viem/accounts";
 import { foundry } from "viem/chains";
 import { z } from "zod";
-import { computePolicyCommitment, generateSalt, parseCircuitAmount } from "../../../packages/policy/src/index.ts";
+import { computePolicyCommitment, generateSalt, parseCircuitAmount, normalizePolicy, serializePolicy, type PolicyInput } from "../../../packages/policy/src/index.ts";
 import { policyDomain, policyUpdateTypes } from "../../policy-api/src/eip712.ts";
 import { zkPolicyAccountAbi } from "../../policy-api/src/chain.ts";
 
@@ -94,6 +94,8 @@ export async function createAndActivatePolicy(input: {
   accountAddress: Address;
   ownerPrivateKey: Hex;
   maxAmountWei: bigint;
+  maxValiditySeconds?: bigint;
+  policy?: Omit<PolicyInput, "salt">;
   deadline: number;
 }): Promise<{ policyId: string; policyVersion: number; token: string; txHash: Hex }> {
   assertLocalUrl(input.apiUrl, "apiUrl");
@@ -111,7 +113,8 @@ export async function createAndActivatePolicy(input: {
     contextResponseSchema,
   );
   const salt = generateSalt();
-  const commitment = toHex(await computePolicyCommitment(maxAmount, salt), { size: 32 });
+  const policy = normalizePolicy(input.policy ? { ...input.policy, salt } : { maxAmountWei: maxAmount, salt, maxValiditySeconds: input.maxValiditySeconds });
+  const commitment = toHex(await computePolicyCommitment(policy), { size: 32 });
   const message = {
     policyId: context.policyId,
     account: accountAddress,
@@ -131,7 +134,7 @@ export async function createAndActivatePolicy(input: {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         account: accountAddress,
-        maxAmountWei: maxAmount.toString(),
+        policy: serializePolicy(policy),
         salt: salt.toString(),
         policyCommitment: commitment,
         nonce: context.nonce,
@@ -179,6 +182,8 @@ export async function updateAndActivatePolicy(input: {
   policyId: string;
   token: string;
   maxAmountWei: bigint;
+  maxValiditySeconds?: bigint;
+  policy?: Omit<PolicyInput, "salt">;
   deadline: number;
 }): Promise<{ policyId: string; policyVersion: number; txHash: Hex }> {
   assertLocalUrl(input.apiUrl, "apiUrl");
@@ -199,7 +204,8 @@ export async function updateAndActivatePolicy(input: {
   );
   if (context.policyId !== policyId) throw new Error("policy context does not match the requested policy");
   const salt = generateSalt();
-  const commitment = toHex(await computePolicyCommitment(maxAmount, salt), { size: 32 });
+  const policy = normalizePolicy(input.policy ? { ...input.policy, salt } : { maxAmountWei: maxAmount, salt, maxValiditySeconds: input.maxValiditySeconds });
+  const commitment = toHex(await computePolicyCommitment(policy), { size: 32 });
   const signature = await owner.signTypedData({
     domain: policyDomain(accountAddress),
     types: policyUpdateTypes,
@@ -218,7 +224,7 @@ export async function updateAndActivatePolicy(input: {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         account: accountAddress,
-        maxAmountWei: maxAmount.toString(),
+        policy: serializePolicy(policy),
         salt: salt.toString(),
         policyCommitment: commitment,
         nonce: context.nonce,

@@ -3,7 +3,7 @@ id: task-06-01-03
 type: task
 title: Account・Policy API・CLIの期限付き決済
 story: story-06-01
-status: pending
+status: done
 blocked_by: [task-06-01-02]
 created: 2026-09-06
 updated: 2026-09-06
@@ -31,8 +31,10 @@ pnpm build; pnpm test:contracts; pnpm test:unit; pnpm test:e2e
 
 ## 検証結果
 
-未実施。
+2026-09-06: `pnpm test`成功（build/Verifier再生成/typecheck、Circuit 4、Contract 29、unit 95、E2E 22）。既存Contract 28件とfuzz各256 runsを維持し、期限ちょうどの正常実行と15公開入力hash照合を追加。E2Eは新DB・新Accountで実作成CLIの0.1 ETH/300秒登録・暗号化保存・active化、直接実行0.01 ETH、実Alto経由CLI決済0.01 ETH、実MCP native経路を確認。Bundler CLIは明示validUntil（最新block+120秒）も使用。Token rotation等の既存テストはv2 fixtureへ更新して成功。
+
+`forge fmt --check contracts/src/ZkPolicyAccount.sol contracts/test/ZkPolicyAccount.t.sol`、`git diff --check`成功。全検証ログ: `/private/tmp/story01-full-test.log`。通常E2Eで実Agent 5件はskipされ、このStoryの成功件数に含めない。新規異常系はユーザー指定どおり延期。
 
 ## Blocked
 
-実装開始はEpicのPreflight解消後。
+なし。

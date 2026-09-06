@@ -1,3 +1,4 @@
+import { u64Schema } from "../../../packages/policy/src/index.ts";
 import { z } from "zod";
 import type { Address, Hex } from "viem";
 import { createAndActivatePolicy } from "./create-policy.ts";
@@ -18,6 +19,7 @@ const result = await createAndActivatePolicy({
   accountAddress: input.POLICY_ACCOUNT_ADDRESS as Address,
   ownerPrivateKey: input.POLICY_OWNER_PRIVATE_KEY as Hex,
   maxAmountWei: BigInt(maxAmountWei),
+  maxValiditySeconds: u64Schema.parse(process.argv[3] ?? "300"),
   deadline: Math.floor(Date.now() / 1_000) + 600,
 });
 

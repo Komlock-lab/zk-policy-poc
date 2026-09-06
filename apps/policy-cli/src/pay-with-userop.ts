@@ -21,7 +21,7 @@ import {
 
 export const userOpAccountAbi = parseAbi([
   "function entryPoint() view returns (address)",
-  "function executeUserOp(address recipient,uint256 value,bytes proof)",
+  "function executeUserOp(address recipient,uint256 value,uint64 issuedAt,uint64 validUntil,bytes proof)",
 ]);
 
 export interface UserOpPaymentInput extends PolicyPaymentInput {
@@ -35,7 +35,7 @@ export async function preparePolicyUserOperation(input: UserOpPaymentInput) {
   assertLocalPaymentUrl(input.bundlerUrl, "bundlerUrl");
   const entryPointAddress = paymentAddressSchema.parse(input.entryPointAddress);
   const payment = await preparePolicyPayment(input);
-  const { publicClient, owner, accountAddress, recipient, valueWei, proof } =
+  const { publicClient, owner, accountAddress, recipient, valueWei, proof, intent } =
     payment;
   const bundler = createBundlerClient({
     client: publicClient,
@@ -100,7 +100,7 @@ export async function preparePolicyUserOperation(input: UserOpPaymentInput) {
   const callData = encodeFunctionData({
     abi: userOpAccountAbi,
     functionName: "executeUserOp",
-    args: [recipient, valueWei, proof.proof],
+    args: [recipient, valueWei, intent.issuedAt, intent.validUntil, proof.proof],
   });
   const userOperation = await bundler.prepareUserOperation({
     account,

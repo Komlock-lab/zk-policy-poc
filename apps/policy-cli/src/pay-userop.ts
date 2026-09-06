@@ -1,3 +1,4 @@
+import { u64Schema } from "../../../packages/policy/src/index.ts";
 import { pathToFileURL } from "node:url";
 import { z } from "zod";
 import type { Address, Hex } from "viem";
@@ -19,10 +20,11 @@ export async function runUserOpPaymentCli(
   args: string[],
 ) {
   const input = environmentSchema.parse(env);
-  const [recipient, value] = z
+  const [recipient, value, validUntil] = z
     .tuple([
       z.string().regex(/^0x[0-9a-fA-F]{40}$/),
       z.string().regex(/^(0|[1-9][0-9]*)$/),
+      u64Schema.optional(),
     ])
     .parse(args);
   return payWithPolicyUserOperation({
@@ -36,6 +38,7 @@ export async function runUserOpPaymentCli(
     token: input.POLICY_TOKEN,
     recipient: recipient as Address,
     valueWei: BigInt(value),
+    ...(validUntil === undefined ? {} : { validUntil }),
   });
 }
 

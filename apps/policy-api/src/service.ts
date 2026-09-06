@@ -7,7 +7,7 @@ import {
   isAddressEqual,
   toHex,
 } from "viem";
-import { computePolicyCommitment, fieldElementSchema, parseCircuitAmount } from "../../../packages/policy/src/index.ts";
+import { computePolicyCommitment, fieldElementSchema, parseCircuitAmount, normalizePolicy, paymentPublicInputs, paymentIntentSchema, type Policy, type PolicyInput, type PaymentIntent } from "../../../packages/policy/src/index.ts";
 import {
   generateSpendLimitProof,
   type SpendLimitProof,
@@ -40,7 +40,9 @@ export type PolicyProofGenerator = (input: SpendLimitProofInput) => Promise<Spen
 export interface RegisterPolicyInput {
   policyId: string;
   account: Address;
-  maxAmountWei: string;
+  maxAmountWei?: string;
+  policy?: PolicyInput;
+  maxValiditySeconds?: string;
   salt: string;
   policyCommitment: Hex;
   nonce: string;
@@ -58,8 +60,7 @@ export interface RotatePolicyTokenInput {
 
 interface ValidatedPolicyUpdate {
   account: Address;
-  maxAmount: bigint;
-  salt: bigint;
+  secret: Policy;
   commitment: Hex;
   nonce: bigint;
   configured: boolean;
@@ -79,7 +80,7 @@ export class PolicyService {
     private readonly chain: PolicyChainGateway,
     private readonly encryptionKey: Buffer,
     private readonly now: () => number = () => Math.floor(Date.now() / 1_000),
-    private readonly computeCommitment: (maxAmount: bigint, salt: bigint) => Promise<bigint> =
+    private readonly computeCommitment: (policy: Policy) => Promise<bigint> =
       computePolicyCommitment,
     private readonly generateProof: PolicyProofGenerator = generateSpendLimitProof,
   ) {}
@@ -108,7 +109,7 @@ export class PolicyService {
 
     const token = generatePolicyToken();
     const secret = encryptPolicySecret(
-      { maxAmountWei: validated.maxAmount.toString(), salt: validated.salt.toString() },
+      validated.secret,
       this.encryptionKey,
       input.policyId,
       1,
@@ -154,7 +155,7 @@ export class PolicyService {
         commitment: validated.commitment,
         secretForVersion: (version) =>
           encryptPolicySecret(
-            { maxAmountWei: validated.maxAmount.toString(), salt: validated.salt.toString() },
+            validated.secret,
             this.encryptionKey,
             input.policyId,
             version,
@@ -268,9 +269,8 @@ export class PolicyService {
   private async validatePolicyUpdate(input: RegisterPolicyInput): Promise<ValidatedPolicyUpdate> {
     const account = getAddress(input.account);
     if (input.deadline < this.now()) throw new PolicyApiError(401, "SIGNATURE_EXPIRED");
-    const maxAmount = parseCircuitAmount(BigInt(input.maxAmountWei));
-    const salt = fieldElementSchema.parse(BigInt(input.salt));
-    const commitment = toHex(await this.computeCommitment(maxAmount, salt), { size: 32 });
+    const secret = normalizePolicy(input.policy ?? { maxAmountWei: input.maxAmountWei, salt: input.salt, maxValiditySeconds: input.maxValiditySeconds });
+    const commitment = toHex(await this.computeCommitment(secret), { size: 32 });
     if (commitment.toLowerCase() !== input.policyCommitment.toLowerCase()) {
       throw new PolicyApiError(400, "POLICY_COMMITMENT_MISMATCH");
     }
@@ -294,7 +294,7 @@ export class PolicyService {
       this.chain.getPolicyState(account),
     ]);
     if (!isAddressEqual(signer, owner)) throw new PolicyApiError(401, "INVALID_OWNER_SIGNATURE");
-    return { account, maxAmount, salt, commitment, nonce, configured: policyState.configured };
+    return { account, secret, commitment, nonce, configured: policyState.configured };
   }
 
   private encodeCommitmentUpdate(commitment: Hex): Hex {
@@ -308,12 +308,12 @@ export class PolicyService {
   async createProof(input: {
     policyId: string;
     token: string;
-    valueWei: string;
+    intent: PaymentIntent;
   }): Promise<{
     policyId: string;
     policyVersion: number;
     proof: Hex;
-    publicInputs: readonly [Hex, Hex];
+    publicInputs: readonly Hex[];
   }> {
     const policy = this.repository.getPolicy(input.policyId);
     if (!policy || !matchesPolicyToken(input.token, policy.tokenHash)) {
@@ -328,28 +328,36 @@ export class PolicyService {
       throw new PolicyApiError(409, "ONCHAIN_POLICY_MISMATCH");
     }
 
+    const intent = paymentIntentSchema.parse(input.intent);
+    let secret: Policy;
     let maxAmount: bigint;
     let salt: bigint;
     try {
-      const secret = decryptPolicySecret(
+      secret = normalizePolicy(decryptPolicySecret(
         active,
         this.encryptionKey,
         active.policyId,
         active.version,
-      );
-      maxAmount = parseCircuitAmount(BigInt(secret.maxAmountWei));
+      ));
+      const rule = secret.assetRules.find((rule) => isAddressEqual(rule.asset, intent.asset));
+      if (!rule) throw new Error("asset is not allowed");
+      maxAmount = rule.maxAmount;
       salt = fieldElementSchema.parse(BigInt(secret.salt));
     } catch (error) {
       throw new PolicyApiError(500, "POLICY_SECRET_INVALID", { cause: error });
     }
 
-    const value = parseCircuitAmount(BigInt(input.valueWei));
+    const value = parseCircuitAmount(intent.amount);
     if (value > maxAmount) throw new PolicyApiError(422, "POLICY_LIMIT_EXCEEDED");
 
+    const paymentState = await this.chain.getPaymentState(policy.account, intent.asset);
+    const context = { ...intent, chainId: 31337n, account: policy.account, dayId: paymentState.dayId, spentBefore: paymentState.spentBefore };
     let generated: SpendLimitProof;
     try {
       generated = await this.generateProof({
         value,
+        context,
+        policy: secret,
         maxAmount,
         salt,
         policyCommitment: BigInt(active.commitment),
@@ -358,12 +366,8 @@ export class PolicyService {
       throw new PolicyApiError(500, "PROOF_GENERATION_FAILED", { cause: error });
     }
 
-    const expectedValue = toHex(value, { size: 32 });
-    if (
-      generated.publicInputs.length !== 2 ||
-      generated.publicInputs[0].toLowerCase() !== expectedValue.toLowerCase() ||
-      generated.publicInputs[1].toLowerCase() !== active.commitment.toLowerCase()
-    ) {
+    const expectedInputs = paymentPublicInputs({ ...context, policyCommitment: BigInt(active.commitment) });
+    if (generated.publicInputs.length !== 15 || generated.publicInputs.some((value, index) => value.toLowerCase() !== expectedInputs[index]!.toLowerCase())) {
       throw new PolicyApiError(500, "PROOF_PUBLIC_INPUT_MISMATCH");
     }
 

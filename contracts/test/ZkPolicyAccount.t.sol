@@ -2,9 +2,7 @@
 pragma solidity 0.8.30;
 
 import {EntryPoint} from "@account-abstraction/contracts/core/EntryPoint.sol";
-import {
-    PackedUserOperation
-} from "@account-abstraction/contracts/interfaces/PackedUserOperation.sol";
+import {PackedUserOperation} from "@account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 import {ZkPolicyAccount} from "../src/ZkPolicyAccount.sol";
 import {ISpendLimitVerifier} from "../src/interfaces/ISpendLimitVerifier.sol";
 
@@ -18,22 +16,25 @@ interface Vm {
     function addr(uint256 privateKey) external returns (address);
     function assume(bool condition) external;
     function deal(address account, uint256 newBalance) external;
-    function expectEmit(bool checkTopic1, bool checkTopic2, bool checkTopic3, bool checkData)
-        external;
+    function expectEmit(bool checkTopic1, bool checkTopic2, bool checkTopic3, bool checkData) external;
     function expectRevert() external;
     function expectRevert(bytes calldata revertData) external;
     function getRecordedLogs() external returns (Log[] memory);
     function prank(address msgSender) external;
     function recordLogs() external;
-    function sign(uint256 privateKey, bytes32 digest)
-        external
-        returns (uint8 v, bytes32 r, bytes32 s);
+    function warp(uint256 timestamp) external;
+    function sign(uint256 privateKey, bytes32 digest) external returns (uint8 v, bytes32 r, bytes32 s);
 }
 
 contract MockSpendLimitVerifier is ISpendLimitVerifier {
     bool public result = true;
     bytes32 public expectedValue;
     bytes32 public expectedCommitment;
+    bytes32 public expectedInputsHash;
+
+    function configureInputs(bytes32[] calldata inputs) external {
+        expectedInputsHash = keccak256(abi.encode(inputs));
+    }
 
     function configure(bool result_, bytes32 expectedValue_, bytes32 expectedCommitment_) external {
         result = result_;
@@ -42,8 +43,9 @@ contract MockSpendLimitVerifier is ISpendLimitVerifier {
     }
 
     function verify(bytes calldata, bytes32[] calldata publicInputs) external view returns (bool) {
-        return result && publicInputs.length == 2 && publicInputs[0] == expectedValue
-            && publicInputs[1] == expectedCommitment;
+        return result && publicInputs.length == 15 && publicInputs[7] == expectedValue
+            && publicInputs[3] == expectedCommitment
+            && (expectedInputsHash == 0 || keccak256(abi.encode(publicInputs)) == expectedInputsHash);
     }
 }
 
@@ -134,7 +136,7 @@ contract ZkPolicyAccountTest {
         verifier.configure(true, bytes32(value), POLICY_COMMITMENT);
         vm.prank(owner);
 
-        account.execute(recipient, value, PROOF);
+        account.execute(recipient, value, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF);
 
         require(recipient.balance == value, "recipient balance mismatch");
         require(address(account).balance == 0, "account balance mismatch");
@@ -149,7 +151,7 @@ contract ZkPolicyAccountTest {
         emit PaymentExecuted(recipient, value);
         vm.prank(address(entryPoint));
 
-        account.executeUserOp(recipient, value, PROOF);
+        account.executeUserOp(recipient, value, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF);
 
         require(recipient.balance == value, "recipient balance mismatch");
     }
@@ -159,8 +161,12 @@ contract ZkPolicyAccountTest {
         uint256 value = 0.01 ether;
         verifier.configure(true, bytes32(value), POLICY_COMMITMENT);
         vm.deal(address(account), 1 ether);
-        PackedUserOperation memory userOp =
-            _userOp(abi.encodeCall(ZkPolicyAccount.executeUserOp, (recipient, value, PROOF)));
+        PackedUserOperation memory userOp = _userOp(
+            abi.encodeCall(
+                ZkPolicyAccount.executeUserOp,
+                (recipient, value, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF)
+            )
+        );
         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
         userOp.signature = _sign(userOpHash, OWNER_PRIVATE_KEY);
         PackedUserOperation[] memory userOps = new PackedUserOperation[](1);
@@ -179,8 +185,12 @@ contract ZkPolicyAccountTest {
         uint256 value = 0.01 ether;
         verifier.configure(true, bytes32(value), POLICY_COMMITMENT);
         vm.deal(address(account), 1 ether);
-        PackedUserOperation memory userOp =
-            _userOp(abi.encodeCall(ZkPolicyAccount.executeUserOp, (recipient, value, PROOF)));
+        PackedUserOperation memory userOp = _userOp(
+            abi.encodeCall(
+                ZkPolicyAccount.executeUserOp,
+                (recipient, value, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF)
+            )
+        );
         userOp.signature = _sign(entryPoint.getUserOpHash(userOp), 0xB0B);
         PackedUserOperation[] memory userOps = new PackedUserOperation[](1);
         userOps[0] = userOp;
@@ -197,7 +207,7 @@ contract ZkPolicyAccountTest {
         vm.expectRevert(abi.encodeWithSelector(ZkPolicyAccount.Unauthorized.selector, caller));
         vm.prank(caller);
 
-        account.execute(payable(address(0xBEEF)), 1, PROOF);
+        account.execute(payable(address(0xBEEF)), 1, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF);
     }
 
     function testExecuteUserOpRejectsNonEntryPointCaller() public {
@@ -205,16 +215,14 @@ contract ZkPolicyAccountTest {
         vm.expectRevert(abi.encodeWithSelector(ZkPolicyAccount.Unauthorized.selector, caller));
         vm.prank(caller);
 
-        account.executeUserOp(payable(address(0xBEEF)), 1, PROOF);
+        account.executeUserOp(
+            payable(address(0xBEEF)), 1, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF
+        );
     }
 
     function testUpdateRejectsCommitmentOutsideField() public {
         bytes32 invalidCommitment = bytes32(type(uint256).max);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                ZkPolicyAccount.PolicyCommitmentOutOfRange.selector, invalidCommitment
-            )
-        );
+        vm.expectRevert(abi.encodeWithSelector(ZkPolicyAccount.PolicyCommitmentOutOfRange.selector, invalidCommitment));
         vm.prank(owner);
 
         account.updatePolicyCommitment(invalidCommitment);
@@ -243,7 +251,7 @@ contract ZkPolicyAccountTest {
         vm.expectRevert(abi.encodeWithSelector(ZkPolicyAccount.PolicyNotConfigured.selector));
         vm.prank(owner);
 
-        unconfigured.execute(payable(address(0xBEEF)), 1, PROOF);
+        unconfigured.execute(payable(address(0xBEEF)), 1, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF);
     }
 
     function testRejectsUnauthorizedPolicyUpdate() public {
@@ -267,10 +275,7 @@ contract ZkPolicyAccountTest {
     }
 
     function testFuzzAcceptsCommitmentInsideField(uint256 commitment) public {
-        vm.assume(
-            commitment
-                < 21888242871839275222246405745257275088548364400416034343698204186575808495617
-        );
+        vm.assume(commitment < 21888242871839275222246405745257275088548364400416034343698204186575808495617);
         vm.prank(owner);
 
         account.updatePolicyCommitment(bytes32(commitment));
@@ -282,7 +287,7 @@ contract ZkPolicyAccountTest {
         vm.expectRevert(abi.encodeWithSelector(ZkPolicyAccount.InvalidRecipient.selector));
         vm.prank(owner);
 
-        account.execute(payable(address(0)), 1, PROOF);
+        account.execute(payable(address(0)), 1, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF);
     }
 
     function testRejectsAmountOutsideU128() public {
@@ -290,7 +295,7 @@ contract ZkPolicyAccountTest {
         vm.expectRevert(abi.encodeWithSelector(ZkPolicyAccount.AmountOutOfRange.selector, value));
         vm.prank(owner);
 
-        account.execute(payable(address(0xBEEF)), value, PROOF);
+        account.execute(payable(address(0xBEEF)), value, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF);
     }
 
     function testRejectsInvalidProof() public {
@@ -299,7 +304,7 @@ contract ZkPolicyAccountTest {
         vm.expectRevert(abi.encodeWithSelector(ZkPolicyAccount.InvalidProof.selector));
         vm.prank(owner);
 
-        account.execute(payable(address(0xBEEF)), value, PROOF);
+        account.execute(payable(address(0xBEEF)), value, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF);
     }
 
     function testRejectsMismatchedPublicValue() public {
@@ -308,7 +313,7 @@ contract ZkPolicyAccountTest {
         vm.expectRevert(abi.encodeWithSelector(ZkPolicyAccount.InvalidProof.selector));
         vm.prank(owner);
 
-        account.execute(payable(address(0xBEEF)), value, PROOF);
+        account.execute(payable(address(0xBEEF)), value, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF);
     }
 
     function testExecuteUserOpRejectsStaleCommitment() public {
@@ -319,7 +324,9 @@ contract ZkPolicyAccountTest {
         vm.expectRevert(abi.encodeWithSelector(ZkPolicyAccount.InvalidProof.selector));
         vm.prank(address(entryPoint));
 
-        account.executeUserOp(payable(address(0xBEEF)), value, PROOF);
+        account.executeUserOp(
+            payable(address(0xBEEF)), value, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF
+        );
     }
 
     function testExecuteUserOpRejectsMismatchedPublicValue() public {
@@ -328,7 +335,9 @@ contract ZkPolicyAccountTest {
         vm.expectRevert(abi.encodeWithSelector(ZkPolicyAccount.InvalidProof.selector));
         vm.prank(address(entryPoint));
 
-        account.executeUserOp(payable(address(0xBEEF)), value, PROOF);
+        account.executeUserOp(
+            payable(address(0xBEEF)), value, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF
+        );
     }
 
     function testExecuteUserOpRejectsFailedTransfer() public {
@@ -340,7 +349,9 @@ contract ZkPolicyAccountTest {
         vm.expectRevert(abi.encodeWithSelector(ZkPolicyAccount.TransferFailed.selector));
         vm.prank(address(entryPoint));
 
-        account.executeUserOp(payable(address(recipient)), value, PROOF);
+        account.executeUserOp(
+            payable(address(recipient)), value, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF
+        );
 
         require(address(account).balance == accountBalanceBefore, "account balance changed");
         require(address(recipient).balance == 0, "recipient balance changed");
@@ -356,7 +367,9 @@ contract ZkPolicyAccountTest {
         vm.expectRevert(abi.encodeWithSelector(ZkPolicyAccount.TransferFailed.selector));
         vm.prank(owner);
 
-        account.execute(payable(address(recipient)), value, PROOF);
+        account.execute(
+            payable(address(recipient)), value, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF
+        );
 
         require(address(account).balance == accountBalanceBefore, "account balance changed");
         require(address(recipient).balance == recipientBalanceBefore, "recipient balance changed");
@@ -369,9 +382,36 @@ contract ZkPolicyAccountTest {
         verifier.configure(true, bytes32(uint256(value)), POLICY_COMMITMENT);
         vm.prank(owner);
 
-        account.execute(recipient, value, PROOF);
+        account.execute(recipient, value, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF);
 
         require(recipient.balance == value, "recipient balance mismatch");
+    }
+
+    function testExpiryPaymentBindsAllPublicInputsAtDeadline() public {
+        uint64 issuedAt = 172800;
+        uint64 validUntil = issuedAt + 300;
+        vm.warp(validUntil);
+        address payable recipient = payable(address(0xCAFE));
+        uint256 value = 0.01 ether;
+        vm.deal(address(account), value);
+        verifier.configure(true, bytes32(value), POLICY_COMMITMENT);
+        bytes32[] memory inputs = new bytes32[](15);
+        inputs[0] = bytes32(uint256(2));
+        inputs[1] = bytes32(block.chainid);
+        inputs[2] = bytes32(uint256(uint160(address(account))));
+        inputs[3] = POLICY_COMMITMENT;
+        inputs[5] = bytes32(uint256(uint160(address(recipient))));
+        inputs[7] = bytes32(value);
+        inputs[8] = bytes32(uint256(uint160(address(recipient))));
+        inputs[11] = bytes32(uint256(issuedAt));
+        inputs[12] = bytes32(uint256(validUntil));
+        inputs[13] = bytes32(uint256(2));
+        verifier.configureInputs(inputs);
+        vm.prank(owner);
+
+        account.execute(recipient, value, issuedAt, validUntil, PROOF);
+
+        require(recipient.balance == value, "deadline payment balance mismatch");
     }
 
     function _userOp(bytes memory callData) private view returns (PackedUserOperation memory) {
@@ -393,17 +433,12 @@ contract ZkPolicyAccountTest {
         return abi.encodePacked(r, s, v);
     }
 
-    function _hasPaymentLog(Vm.Log[] memory logs, address recipient, uint256 value)
-        private
-        view
-        returns (bool)
-    {
+    function _hasPaymentLog(Vm.Log[] memory logs, address recipient, uint256 value) private view returns (bool) {
         bytes32 signature = keccak256("PaymentExecuted(address,uint256)");
         for (uint256 i = 0; i < logs.length; i++) {
             if (
-                logs[i].emitter == address(account) && logs[i].topics.length == 2
-                    && logs[i].topics[0] == signature
-                    && logs[i].topics[1] == bytes32(uint256(uint160(recipient)))
+                logs[i].emitter == address(account) && logs[i].topics.length == 2 && logs[i].topics[0] == signature
+                    && logs[i].topics[1] == bytes32(uint256(uint160(address(recipient))))
                     && abi.decode(logs[i].data, (uint256)) == value
             ) return true;
         }
