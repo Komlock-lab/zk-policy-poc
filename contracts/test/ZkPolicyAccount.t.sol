@@ -613,6 +613,54 @@ contract ZkPolicyAccountTest {
         verifier.configureInputs(inputs);
     }
 
+    function testPolicyUpdatePreservesNativeAndTokenSpend() public {
+        vm.warp(172800);
+        address payable recipient = payable(address(0xCAFE));
+        vm.deal(address(account), 1 ether);
+        PolicyToken token = new PolicyToken();
+        token.mint(address(account), 100);
+        verifier.configure(true, bytes32(uint256(0.05 ether)), POLICY_COMMITMENT);
+        vm.prank(owner);
+        account.execute(recipient, 0.05 ether, 172800, 173100, PROOF);
+        verifier.configure(true, bytes32(uint256(10)), POLICY_COMMITMENT);
+        vm.prank(address(entryPoint));
+        account.executeERC20UserOp(address(token), recipient, 10, 172800, 173100, PROOF);
+
+        bytes32 updatedCommitment = bytes32(uint256(5678));
+        vm.prank(owner);
+        account.updatePolicyCommitment(updatedCommitment);
+        require(account.policyCommitment() == updatedCommitment, "updated commitment mismatch");
+        _assertDailySpend(address(0), 2, 0.05 ether);
+        _assertDailySpend(address(token), 2, 10);
+        verifier.configure(true, bytes32(uint256(0.02 ether)), updatedCommitment);
+        vm.prank(address(entryPoint));
+        account.executeUserOp(recipient, 0.02 ether, 172800, 173100, PROOF);
+        verifier.configure(true, bytes32(uint256(20)), updatedCommitment);
+        vm.prank(owner);
+        account.executeERC20(address(token), recipient, 20, 172800, 173100, PROOF);
+        _assertDailySpend(address(0), 2, 0.07 ether);
+        _assertDailySpend(address(token), 2, 30);
+        require(recipient.balance == 0.07 ether, "updated native recipient balance");
+        require(token.balanceOf(recipient) == 30, "updated token recipient balance");
+    }
+
+    function testFuzzPolicyUpdatePreservesDailySpend(uint64 first, uint64 second) public {
+        vm.warp(172800);
+        address payable recipient = payable(address(0xCAFE));
+        vm.deal(address(account), uint256(first) + second);
+        verifier.configure(true, bytes32(uint256(first)), POLICY_COMMITMENT);
+        vm.prank(owner);
+        account.execute(recipient, first, 172800, 173100, PROOF);
+        bytes32 updatedCommitment = bytes32(uint256(5678));
+        vm.prank(owner);
+        account.updatePolicyCommitment(updatedCommitment);
+        _assertDailySpend(address(0), 2, first);
+        verifier.configure(true, bytes32(uint256(second)), updatedCommitment);
+        vm.prank(address(entryPoint));
+        account.executeUserOp(recipient, second, 172800, 173100, PROOF);
+        _assertDailySpend(address(0), 2, uint128(first) + second);
+    }
+
     function _userOp(bytes memory callData) private view returns (PackedUserOperation memory) {
         return PackedUserOperation({
             sender: address(account),

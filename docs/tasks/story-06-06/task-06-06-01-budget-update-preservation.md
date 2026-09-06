@@ -3,7 +3,7 @@ id: task-06-06-01
 type: task
 title: Policy更新と支出状態の独立性を実装・確認
 story: story-06-06
-status: pending
+status: done
 blocked_by: []
 created: 2026-09-06
 updated: 2026-09-06
@@ -31,8 +31,10 @@ pnpm test:unit; pnpm test:contracts
 
 ## 検証結果
 
-未実施。
+- 既存Owner CLI JSON入力→署名付きAPI更新→receipt→activateがasset別dailyLimitを保持することを確認。AccountのCommitment更新はdailySpend mappingへ触れず、Policy versionではなくAccount/assetに支出を保持するためproduct変更不要。
+- `pnpm test:unit`: 103件成功。CLIの資産別dailyLimit読取を追加。初回は読取段階も正規化済みとしたテスト期待順序が誤っていたため、実装境界に合わせ修正後成功。
+- `pnpm test:contracts`: 39件成功。native0.05/Token10→Commitment更新→native0.02/Token20で累積0.07/30、残高を照合。更新を挟む正常fuzz256 runsも成功。
 
 ## Blocked
 
-実装開始はEpicのPreflight解消後。
+なし。
