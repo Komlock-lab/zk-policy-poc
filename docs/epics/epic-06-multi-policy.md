@@ -102,7 +102,7 @@ AgentへPolicy本文、Owner Key、API Token、Proofを公開しない。MCPの�
 | --- | --- | --- | --- |
 | [story-06-01](../stories/epic-06/story-06-01-owner-registers-expiring-policy.md) | Ownerが有効期限付きPolicyを登録して決済する | なし | done |
 | [story-06-02](../stories/epic-06/story-06-02-owner-updates-recipient-allowlist.md) | Ownerが許可送金先を更新して決済する | story-06-01 | done |
-| [story-06-03](../stories/epic-06/story-06-03-user-pays-allowed-erc20.md) | 利用者が許可ERC-20を送金する | story-06-02 | approved |
+| [story-06-03](../stories/epic-06/story-06-03-user-pays-allowed-erc20.md) | 利用者が許可ERC-20を送金する | story-06-02 | done |
 | [story-06-04](../stories/epic-06/story-06-04-user-pays-allowed-contract.md) | 利用者が許可Contractへ請求ID付きで支払う | story-06-03 | approved |
 | [story-06-05](../stories/epic-06/story-06-05-user-pays-with-daily-budget.md) | 利用者が日次予算内で続けて支払う | story-06-04 | approved |
 | [story-06-06](../stories/epic-06/story-06-06-owner-updates-daily-budget.md) | Ownerが当日の支出を維持して日次上限を更新する | story-06-05 | approved |

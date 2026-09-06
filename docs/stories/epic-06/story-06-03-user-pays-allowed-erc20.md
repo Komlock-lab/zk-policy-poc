@@ -3,7 +3,7 @@ id: story-06-03
 type: story
 title: 利用者が許可ERC-20を送金する
 epic: epic-06
-status: in-progress
+status: done
 depends_on: [story-06-02]
 adrs: [adr-0012, adr-0013]
 created: 2026-09-06
@@ -76,3 +76,5 @@ updated: 2026-09-06
 ## Blocked
 
 なし。Story PRのmergeとdone遷移はrun-epicが担当。
+
+統合: Story PR #23をEpicへmerge。Epic上の`pnpm test`も成功（Circuit 7 / Contract 32 / unit 99 / E2E 24）。ログ: `/private/tmp/epic-06-layer2-tests.log`。
