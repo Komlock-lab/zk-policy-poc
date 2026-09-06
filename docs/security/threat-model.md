@@ -1,7 +1,9 @@
 # Threat model
 
-この文書は [`zk-bound`](https://github.com/br-to/zk-bound) の脅威モデルを、
+この文書は [zk-bound](https://github.com/br-to/zk-bound) の脅威モデルを、
 Safe Module を除いて本リポジトリの実行境界へ写したものである。
+Safe ではなく自作 Smart Account を選んだ理由は
+[ADR-0016](../adr/adr-0016-custom-smart-account-over-safe-module.md) を正本とする。
 Circuit と Account の詳細は [ADR-0012](../adr/adr-0012-composite-policy-schema.md)
 と [ADR-0002](../adr/adr-0002-authorization-and-policy-boundary.md) を正本とする。
 

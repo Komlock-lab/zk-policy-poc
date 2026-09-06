@@ -1,13 +1,14 @@
 # zk-bound からの選択的取り込み
 
 - Date: 2026-09-07
-- Source: ローカルリポジトリ `/Users/kobaratoi/develop/zk-bound`
+- Source: [zk-bound](https://github.com/br-to/zk-bound)（前身 [zk-agent-guard](https://github.com/br-to/zk-agent-guard)）
 - 除外: Safe Module とその ADR、計画、実行境界
+- 実行境界の選択理由: [ADR-0016](../adr/adr-0016-custom-smart-account-over-safe-module.md)
 
 `zk-bound` は Toi Kobara (`br-to`) が `zk-agent-guard` の暗号層を引き継ぎ、
 Safe + `ZkPolicySafeModule` へ実行境界を移した後継リポジトリである。
-本リポジトリはすでに Noir / UltraHonk / Poseidon2 / 複合 Policy / ERC-4337 /
-MCP まで実装済みのため、回路や Safe 実行層は持ち込まない。
+本リポジトリは Safe を使わず、Smart Account と ERC-4337 を自分で追うために
+`ZkPolicyAccount` を選んだ。回路や Safe 実行層は持ち込まない。
 持ち込んだのは、このリポジトリに欠けていた **security-sensitive な運用面** である。
 
 ## すでに本リポジトリが持っているもの
