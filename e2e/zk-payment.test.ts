@@ -40,7 +40,9 @@ describe("Phase 1 ZK payment", () => {
     await expect(
       generateSpendLimitProof({
         value: parseEther("1"),
+        target: recipient,
         maxAmount: parseEther("0.1"),
+        allowedTarget: recipient,
         salt: generateSalt(),
       }),
     ).rejects.toThrow("value exceeds max amount");

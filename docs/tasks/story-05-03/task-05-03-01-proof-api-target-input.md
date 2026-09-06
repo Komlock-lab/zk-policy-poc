@@ -3,7 +3,7 @@ id: task-05-03-01
 type: task
 title: Proof生成APIのtarget対応
 story: story-05-03
-status: pending
+status: done
 blocked_by: []
 created: 2026-09-06
 updated: 2026-09-06
@@ -31,7 +31,8 @@ Proof生成APIが送金予定の送金先を受け取り、Circuitへ`target`と
 
 ## 検証結果
 
-未実施。
+- `pnpm exec vitest run apps/policy-api`: 51 tests passed。`target`不一致時に`TARGET_NOT_ALLOWED`でProof生成前に拒否するテスト、Proverが返す3要素Public Input(`value`/`target`/`policyCommitment`)の不一致検知を含む。
+- `pnpm exec tsc --noEmit`: エラーなし。
 
 ## Blocked
 

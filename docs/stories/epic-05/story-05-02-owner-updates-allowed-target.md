@@ -3,7 +3,7 @@ id: story-05-02
 type: story
 title: Ownerが送金先を含むPolicyを更新する
 epic: epic-05
-status: approved
+status: in-progress
 depends_on: [story-05-01]
 adrs: [adr-0012, adr-0013]
 created: 2026-09-06
@@ -53,13 +53,15 @@ Ownerは同じPolicy IDの許可送金先(または上限)を更新し、新vers
 
 | ID | Task | Status |
 | --- | --- | --- |
-| [task-05-02-01](../../tasks/story-05-02/task-05-02-01-policy-update-cli-target.md) | Policy更新CLIのallowedTarget対応 | pending |
-| [task-05-02-02](../../tasks/story-05-02/task-05-02-02-policy-update-target-e2e.md) | Policy更新(送金先変更)E2E | pending |
+| [task-05-02-01](../../tasks/story-05-02/task-05-02-01-policy-update-cli-target.md) | Policy更新CLIのallowedTarget対応 | done |
+| [task-05-02-02](../../tasks/story-05-02/task-05-02-02-policy-update-target-e2e.md) | Policy更新(送金先変更)E2E | blocked |
 
 ## 検証結果
 
-未実施。
+- AC-1〜AC-3: CLI側のコードとunit testレベルでの回帰は確認したが、実際のオンチェーンCommitment更新とProof無効化の確認はe2e(task-05-02-02、blocked)の範囲であり未検証。
+- `pnpm exec vitest run apps/policy-cli`: 全テスト成功。
+- `pnpm exec tsc --noEmit`: エラーなし。
 
 ## Blocked
 
-なし。
+- story-05-01と同じCRS・solcのネットワーク制限により`pnpm test:e2e`が実行できない(task-05-02-02)。story-05-01のtask-05-01-04(Verifier再生成)が完了してから同じ環境でe2eを実行する必要がある。

@@ -30,6 +30,7 @@ const OWNER_PRIVATE_KEY =
   "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80" as Hex;
 const ATTACKER_PRIVATE_KEY =
   "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d" as Hex;
+const ALLOWED_TARGET = "0x70997970c51812dc3a010c7d01b50e0d17dc79c8" as Address;
 const artifactSchema = z.object({
   abi: z.array(z.unknown()),
   bytecode: z.object({ object: z.string().regex(/^0x[0-9a-fA-F]*$/) }),
@@ -94,6 +95,7 @@ describe("policy update", () => {
         accountAddress,
         ownerPrivateKey: OWNER_PRIVATE_KEY,
         maxAmountWei: parseEther("0.1"),
+        allowedTarget: ALLOWED_TARGET,
         deadline: Math.floor(Date.now() / 1_000) + 600,
       });
       const updated = await updateAndActivatePolicy({
@@ -104,6 +106,7 @@ describe("policy update", () => {
         policyId: initial.policyId,
         token: initial.token,
         maxAmountWei: parseEther("0.2"),
+        allowedTarget: ALLOWED_TARGET,
         deadline: Math.floor(Date.now() / 1_000) + 600,
       });
       expect(updated.policyVersion).toBe(2);
@@ -132,7 +135,10 @@ describe("policy update", () => {
         expect(contextResponse.status).toBe(200);
         const context = contextSchema.parse(await contextResponse.json());
         const salt = generateSalt();
-        const commitment = toHex(await computePolicyCommitment(maxAmountWei, salt), { size: 32 });
+        const commitment = toHex(
+          await computePolicyCommitment(maxAmountWei, ALLOWED_TARGET, salt),
+          { size: 32 },
+        );
         const deadline = Math.floor(Date.now() / 1_000) + 600;
         const signature = await owner.signTypedData({
           domain: policyDomain(accountAddress),
@@ -141,6 +147,7 @@ describe("policy update", () => {
           message: {
             policyId: context.policyId,
             account: accountAddress,
+            allowedTarget: ALLOWED_TARGET,
             policyCommitment: commitment,
             nonce: BigInt(context.nonce),
             deadline: BigInt(deadline),
@@ -149,6 +156,7 @@ describe("policy update", () => {
         const payload = {
           account: accountAddress,
           maxAmountWei: maxAmountWei.toString(),
+          allowedTarget: ALLOWED_TARGET,
           salt: salt.toString(),
           policyCommitment: commitment,
           nonce: context.nonce,

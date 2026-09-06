@@ -3,7 +3,7 @@ id: task-05-01-01
 type: task
 title: Circuitへのallowed target制約追加
 story: story-05-01
-status: pending
+status: done
 blocked_by: []
 created: 2026-09-06
 updated: 2026-09-06
@@ -32,7 +32,8 @@ Circuitが送金先を制約し、許可されていない送金先では有効�
 
 ## 検証結果
 
-未実施。
+- `nargo test`(circuits/spend-limit、1.0.0-beta.26): 6 tests passed。`accepts_value_below_limit`、`accepts_value_equal_to_limit`で一致するtargetを許可し、`rejects_target_not_allowed`で不一致targetを`"target not allowed"`で拒否することを確認した。
+- `matches_ts_sdk_commitment_vector`で3入力Poseidon2 CommitmentがTS SDK側(packages/policy)の計算値と一致することを確認した(task-05-01-02参照)。
 
 ## Blocked
 

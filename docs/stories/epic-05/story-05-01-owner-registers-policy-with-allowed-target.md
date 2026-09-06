@@ -3,7 +3,7 @@ id: story-05-01
 type: story
 title: Ownerが送金先を含むPolicyを新規登録する
 epic: epic-05
-status: approved
+status: in-progress
 depends_on: []
 adrs: [adr-0012, adr-0013]
 created: 2026-09-06
@@ -60,18 +60,24 @@ OwnerはCLIから支出上限と許可送金先を含む秘密Policyを作成し
 
 | ID | Task | Status |
 | --- | --- | --- |
-| [task-05-01-01](../../tasks/story-05-01/task-05-01-01-circuit-target-constraint.md) | Circuitへのallowed target制約追加 | pending |
-| [task-05-01-02](../../tasks/story-05-01/task-05-01-02-policy-package-target-commitment.md) | packages/policyのPolicy型とCommitment計算拡張 | pending |
-| [task-05-01-03](../../tasks/story-05-01/task-05-01-03-prover-target-public-input.md) | packages/proverのtarget public input対応 | pending |
-| [task-05-01-04](../../tasks/story-05-01/task-05-01-04-account-verifier-target-public-input.md) | ZkPolicyAccountとVerifierのpublic input拡張 | pending |
-| [task-05-01-05](../../tasks/story-05-01/task-05-01-05-policy-api-eip712-target-field.md) | Policy APIのEIP-712・登録スキーマ拡張 | pending |
-| [task-05-01-06](../../tasks/story-05-01/task-05-01-06-policy-registration-cli-target.md) | Policy登録CLIのallowedTarget対応 | pending |
-| [task-05-01-07](../../tasks/story-05-01/task-05-01-07-initial-target-policy-e2e.md) | 初回Policy登録(送金先付き)E2E | pending |
+| [task-05-01-01](../../tasks/story-05-01/task-05-01-01-circuit-target-constraint.md) | Circuitへのallowed target制約追加 | done |
+| [task-05-01-02](../../tasks/story-05-01/task-05-01-02-policy-package-target-commitment.md) | packages/policyのPolicy型とCommitment計算拡張 | done |
+| [task-05-01-03](../../tasks/story-05-01/task-05-01-03-prover-target-public-input.md) | packages/proverのtarget public input対応 | done |
+| [task-05-01-04](../../tasks/story-05-01/task-05-01-04-account-verifier-target-public-input.md) | ZkPolicyAccountとVerifierのpublic input拡張 | blocked |
+| [task-05-01-05](../../tasks/story-05-01/task-05-01-05-policy-api-eip712-target-field.md) | Policy APIのEIP-712・登録スキーマ拡張 | done |
+| [task-05-01-06](../../tasks/story-05-01/task-05-01-06-policy-registration-cli-target.md) | Policy登録CLIのallowedTarget対応 | done |
+| [task-05-01-07](../../tasks/story-05-01/task-05-01-07-initial-target-policy-e2e.md) | 初回Policy登録(送金先付き)E2E | blocked |
 
 ## 検証結果
 
-未実施。
+- AC-1(正常系): Circuit・TS SDK単体では`nargo test`・`vitest`で正常系を確認したが、実際のAccount登録・オンチェーンCommitment一致はe2e(task-05-01-07、blocked)の範囲であり未検証。
+- AC-2〜AC-5(異常系、Commitment不一致・不正target・非Owner署名・PolicyNotConfigured): Policy API・Circuit単体テストで確認した。`PolicyNotConfigured`(AC-5)はContract testの対象だが、`forge test`がsolcダウンロード不可のため実行できず未検証。
+- `pnpm exec vitest run apps packages scripts/lib`: 98 tests passed。
+- `pnpm exec tsc --noEmit`: エラーなし。
+- `nargo test`(circuits/spend-limit): 6 tests passed。
+- `forge fmt --check`(変更したContractファイルのみ): 成功。
+- `forge test`・`pnpm generate:verifier`・`pnpm test:e2e`は、このセッションのegressポリシーがsolc(binaries.soliditylang.org)とBarretenberg CRS(crs.aztec-labs.com)を403拒否するため実行できず、未検証(task-05-01-04、task-05-01-07のBlocked参照)。
 
 ## Blocked
 
-なし。
+- このセッションのegressポリシーがsolc(binaries.soliditylang.org)とBarretenberg CRS(crs.aztec-labs.com)へのアクセスを403拒否するため、`forge test`、`pnpm generate:verifier`、`pnpm test:e2e`が実行できない(task-05-01-04、task-05-01-07)。ネットワーク制限のない別環境で実行し、結果を追記してからStoryをdoneにする。

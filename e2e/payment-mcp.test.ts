@@ -57,6 +57,7 @@ describe.sequential("Phase 4 real MCP policy payment", () => {
       accountAddress,
       ownerPrivateKey: LOCAL_OWNER_KEY,
       maxAmountWei: parseEther("0.1"),
+      allowedTarget: recipient,
       deadline: Math.floor(Date.now() / 1000) + 600,
     });
     policyId = policy.policyId;

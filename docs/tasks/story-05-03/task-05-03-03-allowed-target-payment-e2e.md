@@ -3,7 +3,7 @@ id: task-05-03-03
 type: task
 title: 許可済み/許可外送金先のE2E検証
 story: story-05-03
-status: pending
+status: blocked
 blocked_by: [task-05-03-02]
 created: 2026-09-06
 updated: 2026-09-06
@@ -30,8 +30,10 @@ updated: 2026-09-06
 
 ## 検証結果
 
-未実施。
+- `e2e/policy-payment.test.ts`に許可送金先への送金成功に加えて、上限内・許可外送金先(`UNAUTHORIZED_RECIPIENT`)への送金がProof発行段階で422拒否され、残高・nonceが変化しないケースを追加した。
+- Claude Code・Codex実agent経由の許可外送金先ケース(`e2e/claude-code-payment.test.ts`/`codex-payment.test.ts`)は、実行に`claude`/`codex` CLIとネットワーク接続が必要で環境変数ゲート(`RUN_CLAUDE_CODE_E2E`/`RUN_CODEX_E2E`)により既定でskipされており、本セッションでは追加のシナリオ実装を見送った。既存の型変更(`allowedTarget`配線)のみ反映し、`pnpm exec tsc --noEmit`でエラーがないことを確認した。
+- `pnpm test:e2e`はtask-05-01-04と同じ理由(solc・CRSの取得先が403拒否)で実行できず、追加したシナリオを含め未検証。
 
 ## Blocked
 
-なし。
+- task-05-01-04と同じCRS・solcのネットワーク制限により`pnpm test:e2e`が実行できない。別環境でtask-05-01-04・05-01-07・05-02-02とあわせて実行し、結果を追記する必要がある。

@@ -4,6 +4,7 @@ export const policyUpdateTypes = {
   PolicyUpdate: [
     { name: "policyId", type: "string" },
     { name: "account", type: "address" },
+    { name: "allowedTarget", type: "address" },
     { name: "policyCommitment", type: "bytes32" },
     { name: "nonce", type: "uint256" },
     { name: "deadline", type: "uint64" },
@@ -22,6 +23,7 @@ export const policyAccessTokenRotationTypes = {
 export interface PolicyUpdateMessage {
   policyId: string;
   account: Address;
+  allowedTarget: Address;
   policyCommitment: Hex;
   nonce: bigint;
   deadline: bigint;

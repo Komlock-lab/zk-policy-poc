@@ -10,14 +10,30 @@ import {
 describe("policy cryptography", () => {
   const key = Buffer.alloc(32, 1);
 
+  const allowedTarget = "0x70997970c51812dc3a010c7d01b50e0d17dc79c8";
+
   it("round trips secrets and binds AAD", () => {
-    const encrypted = encryptPolicySecret({ maxAmountWei: "100", salt: "200" }, key, "p", 1);
-    expect(decryptPolicySecret(encrypted, key, "p", 1)).toEqual({ maxAmountWei: "100", salt: "200" });
+    const encrypted = encryptPolicySecret(
+      { maxAmountWei: "100", allowedTarget, salt: "200" },
+      key,
+      "p",
+      1,
+    );
+    expect(decryptPolicySecret(encrypted, key, "p", 1)).toEqual({
+      maxAmountWei: "100",
+      allowedTarget,
+      salt: "200",
+    });
     expect(() => decryptPolicySecret(encrypted, key, "other", 1)).toThrow();
   });
 
   it("rejects tampered ciphertext", () => {
-    const encrypted = encryptPolicySecret({ maxAmountWei: "100", salt: "200" }, key, "p", 1);
+    const encrypted = encryptPolicySecret(
+      { maxAmountWei: "100", allowedTarget, salt: "200" },
+      key,
+      "p",
+      1,
+    );
     encrypted.ciphertext[0] = (encrypted.ciphertext[0] ?? 0) ^ 1;
     expect(() => decryptPolicySecret(encrypted, key, "p", 1)).toThrow();
   });

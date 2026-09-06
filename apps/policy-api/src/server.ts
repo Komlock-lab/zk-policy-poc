@@ -58,6 +58,7 @@ export function buildPolicyApi(service: PolicyService): FastifyInstance {
       .object({
         account: addressSchema,
         maxAmountWei: z.string().regex(/^(0|[1-9][0-9]*)$/),
+        allowedTarget: addressSchema,
         salt: z.string().regex(/^(0|[1-9][0-9]*)$/),
         policyCommitment: bytes32Schema,
         nonce: uint256DecimalSchema,
@@ -80,10 +81,14 @@ export function buildPolicyApi(service: PolicyService): FastifyInstance {
 
   app.post("/v1/policies/:policyId/proofs", async (request) => {
     const { policyId } = z.object({ policyId: uuidSchema }).parse(request.params);
-    const { valueWei } = z.object({ valueWei: circuitAmountDecimalSchema }).strict().parse(request.body);
+    const { valueWei, target } = z
+      .object({ valueWei: circuitAmountDecimalSchema, target: addressSchema })
+      .strict()
+      .parse(request.body);
     return service.createProof({
       policyId,
       valueWei,
+      target,
       token: bearerToken(request.headers.authorization),
     });
   });

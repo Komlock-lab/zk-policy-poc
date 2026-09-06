@@ -204,10 +204,11 @@ describe("PolicyRepository", () => {
     const path = join(directory, "policy.sqlite");
     const repository = new PolicyRepository(path);
     const maxAmountWei = "987654321012345678901234567890";
+    const allowedTarget = "0x70997970c51812dc3a010c7d01b50e0d17dc79c8";
     const salt = "123456789098765432101234567890";
     const token = generatePolicyToken();
     const encryptedSecret = encryptPolicySecret(
-      { maxAmountWei, salt },
+      { maxAmountWei, allowedTarget, salt },
       Buffer.alloc(32, 7),
       "00000000-0000-4000-8000-000000000001",
       1,
@@ -223,6 +224,7 @@ describe("PolicyRepository", () => {
     repository.close();
     const databaseBytes = await readFile(path);
     expect(databaseBytes.includes(Buffer.from(maxAmountWei))).toBe(false);
+    expect(databaseBytes.includes(Buffer.from(allowedTarget))).toBe(false);
     expect(databaseBytes.includes(Buffer.from(salt))).toBe(false);
     expect(databaseBytes.includes(Buffer.from(token))).toBe(false);
     const reopened = new PolicyRepository(path);

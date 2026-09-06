@@ -1,4 +1,9 @@
 export {
+  addressSchema,
+  encodeAddress,
+  parseAddress,
+} from "./address.ts";
+export {
   U128_MAX,
   circuitAmountSchema,
   parseCircuitAmount,

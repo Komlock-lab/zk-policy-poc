@@ -1,11 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
-import { toHex, type Address, type Hex } from "viem";
+import { getAddress, toHex, type Address, type Hex } from "viem";
 import { U128_MAX } from "../../../packages/policy/src/index.ts";
 import { PolicyRepository } from "./repository.ts";
 import { buildPolicyApi } from "./server.ts";
 import { PolicyApiError, PolicyService } from "./service.ts";
 
 const account = "0x0000000000000000000000000000000000001234" as Address;
+const allowedTarget = "0x70997970c51812dc3a010c7d01b50e0d17dc79c8" as Address;
 
 describe("policy API routes", () => {
   it("returns a context and rejects malformed requests at the boundary", async () => {
@@ -45,6 +46,7 @@ describe("policy API routes", () => {
       payload: {
         account,
         maxAmountWei: "1",
+        allowedTarget,
         salt: "1",
         policyCommitment: `0x${"00".repeat(32)}`,
         nonce: (1n << 256n).toString(),
@@ -60,6 +62,7 @@ describe("policy API routes", () => {
       payload: {
         account,
         maxAmountWei: "1",
+        allowedTarget,
         salt: "1",
         policyCommitment: `0x${"00".repeat(32)}`,
         nonce: ((1n << 256n) - 1n).toString(),
@@ -90,7 +93,7 @@ describe("policy API routes", () => {
       policyId: "00000000-0000-4000-8000-000000000001",
       policyVersion: 1,
       proof: "0x1234",
-      publicInputs: [toHex(10n, { size: 32 }), toHex(20n, { size: 32 })],
+      publicInputs: [toHex(10n, { size: 32 }), toHex(BigInt(allowedTarget), { size: 32 }), toHex(20n, { size: 32 })],
     });
     const app = buildPolicyApi(service);
     const url = "/v1/policies/00000000-0000-4000-8000-000000000001/proofs";
@@ -100,7 +103,7 @@ describe("policy API routes", () => {
         method: "POST",
         url,
         headers: authorization ? { authorization } : {},
-        payload: { valueWei: "10" },
+        payload: { valueWei: "10", target: allowedTarget },
       });
       expect(response.statusCode).toBe(401);
       expect(response.json()).toEqual({ error: "INVALID_POLICY_TOKEN" });
@@ -108,11 +111,12 @@ describe("policy API routes", () => {
     expect(createProof).not.toHaveBeenCalled();
 
     for (const payload of [
-      { valueWei: "not-a-number" },
-      { valueWei: "01" },
-      { valueWei: "-1" },
-      { valueWei: (U128_MAX + 1n).toString() },
-      { valueWei: "10", extra: true },
+      { valueWei: "not-a-number", target: allowedTarget },
+      { valueWei: "01", target: allowedTarget },
+      { valueWei: "-1", target: allowedTarget },
+      { valueWei: (U128_MAX + 1n).toString(), target: allowedTarget },
+      { valueWei: "10", target: "not-an-address" },
+      { valueWei: "10", target: allowedTarget, extra: true },
     ]) {
       const response = await app.inject({
         method: "POST",
@@ -128,12 +132,13 @@ describe("policy API routes", () => {
       method: "POST",
       url,
       headers: { authorization: `Bearer zkp_${"a".repeat(43)}` },
-      payload: { valueWei: "10" },
+      payload: { valueWei: "10", target: allowedTarget },
     });
     expect(valid.statusCode).toBe(200);
     expect(createProof).toHaveBeenCalledWith({
       policyId: "00000000-0000-4000-8000-000000000001",
       valueWei: "10",
+      target: getAddress(allowedTarget),
       token: `zkp_${"a".repeat(43)}`,
     });
 
@@ -146,7 +151,7 @@ describe("policy API routes", () => {
       method: "POST",
       url,
       headers: { authorization: `Bearer zkp_${"a".repeat(43)}` },
-      payload: { valueWei: "10" },
+      payload: { valueWei: "10", target: allowedTarget },
     });
     expect(failed.statusCode).toBe(500);
     expect(failed.json()).toEqual({ error: "PROOF_GENERATION_FAILED" });

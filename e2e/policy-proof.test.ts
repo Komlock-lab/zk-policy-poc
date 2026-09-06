@@ -8,6 +8,7 @@ import { buildPolicyApi } from "../apps/policy-api/src/server.ts";
 import { PolicyService } from "../apps/policy-api/src/service.ts";
 
 const account = "0x0000000000000000000000000000000000001234" as Address;
+const allowedTarget = "0x70997970c51812dc3a010c7d01b50e0d17dc79c8" as Address;
 const policyId = "00000000-0000-4000-8000-000000000001";
 const token = `zkp_${"a".repeat(43)}`;
 const encryptionKey = Buffer.alloc(32, 1);
@@ -18,6 +19,7 @@ const proofResponseSchema = z
     policyVersion: z.number().int().positive(),
     proof: z.string().regex(/^0x[0-9a-f]+$/i),
     publicInputs: z.tuple([
+      z.string().regex(/^0x[0-9a-f]{64}$/i),
       z.string().regex(/^0x[0-9a-f]{64}$/i),
       z.string().regex(/^0x[0-9a-f]{64}$/i),
     ]),
@@ -36,7 +38,7 @@ describe("policy proof API", () => {
     const maxAmount = parseEther("0.1");
     const value = parseEther("0.01");
     const salt = 123n;
-    const commitment = await computePolicyCommitment(maxAmount, salt);
+    const commitment = await computePolicyCommitment(maxAmount, allowedTarget, salt);
     const commitmentHex = toHex(commitment, { size: 32 });
     repository = new PolicyRepository(":memory:");
     repository.createInitialPending({
@@ -45,7 +47,7 @@ describe("policy proof API", () => {
       expectedNonce: 0n,
       commitment: commitmentHex,
       secret: encryptPolicySecret(
-        { maxAmountWei: maxAmount.toString(), salt: salt.toString() },
+        { maxAmountWei: maxAmount.toString(), allowedTarget, salt: salt.toString() },
         encryptionKey,
         policyId,
         1,
@@ -66,19 +68,23 @@ describe("policy proof API", () => {
       method: "POST",
       url: `/v1/policies/${policyId}/proofs`,
       headers: { authorization: `Bearer ${token}` },
-      payload: { valueWei: value.toString() },
+      payload: { valueWei: value.toString(), target: allowedTarget },
     });
     expect(response.statusCode).toBe(200);
     const body = proofResponseSchema.parse(response.json()) as {
       policyId: string;
       policyVersion: number;
       proof: Hex;
-      publicInputs: [Hex, Hex];
+      publicInputs: [Hex, Hex, Hex];
     };
     expect(body.policyId).toBe(policyId);
     expect(body.policyVersion).toBe(1);
     expect(body.proof.length).toBeGreaterThan(2);
-    expect(body.publicInputs).toEqual([toHex(value, { size: 32 }), commitmentHex]);
+    expect(body.publicInputs).toEqual([
+      toHex(value, { size: 32 }),
+      toHex(BigInt(allowedTarget), { size: 32 }),
+      commitmentHex,
+    ]);
 
     await app.close();
   }, 120_000);

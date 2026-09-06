@@ -3,7 +3,7 @@ id: task-05-01-02
 type: task
 title: packages/policyのPolicy型とCommitment計算拡張
 story: story-05-01
-status: pending
+status: done
 blocked_by: [task-05-01-01]
 created: 2026-09-06
 updated: 2026-09-06
@@ -33,7 +33,8 @@ TypeScript側が`allowedTarget`を含むPolicyを表現し、Circuitと同じ3�
 
 ## 検証結果
 
-未実施。
+- `pnpm exec vitest run packages/policy`: 6 tests passed。zero addressの`allowedTarget`を拒否するテストを追加した。
+- `computePolicyCommitment(100_000_000_000_000_000n, "0x70997970c51812dc3a010c7d01b50e0d17dc79c8", 123456789n)`の実際の出力値を`circuits/spend-limit`の`matches_ts_sdk_commitment_vector`にロックし、`nargo test`で同じ値になることを確認した(0x2efa087728f035622bbcf985bc41221322af049eef82bb031d13d822985c17e0)。
 
 ## Blocked
 

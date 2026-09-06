@@ -22,6 +22,7 @@ import { startAnvil, type AnvilInstance } from "../scripts/lib/anvil.ts";
 
 const OWNER_PRIVATE_KEY =
   "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80" as Hex;
+const ALLOWED_TARGET = "0x70997970c51812dc3a010c7d01b50e0d17dc79c8" as Address;
 const artifactSchema = z.object({
   abi: z.array(z.unknown()),
   bytecode: z.object({ object: z.string().regex(/^0x[0-9a-fA-F]*$/) }),
@@ -78,6 +79,7 @@ describe("initial policy registration", () => {
         accountAddress,
         ownerPrivateKey: OWNER_PRIVATE_KEY,
         maxAmountWei: parseEther("0.1"),
+        allowedTarget: ALLOWED_TARGET,
         deadline: Math.floor(Date.now() / 1_000) + 600,
       });
       const [configured, commitment] = await Promise.all([

@@ -17,9 +17,23 @@ describe("computePolicyCommitment", () => {
     // Same inputs as the Noir test `matches_ts_sdk_commitment_vector`. A mismatch
     // here means bb.js and the circuit's `poseidon` dependency have diverged, and
     // every policyCommitment already registered onchain is unverifiable.
-    const commitment = await computePolicyCommitment(100_000_000_000_000_000n, 123456789n);
-    expect(commitment).toBe(
-      0x0c2f1344913f23e28cbc4aec7d5bb46b6261934bd8829c5043b07f3c5de92c34n,
+    const commitment = await computePolicyCommitment(
+      100_000_000_000_000_000n,
+      "0x70997970c51812dc3a010c7d01b50e0d17dc79c8",
+      123456789n,
     );
+    expect(commitment).toBe(
+      0x2efa087728f035622bbcf985bc41221322af049eef82bb031d13d822985c17e0n,
+    );
+  });
+
+  it("rejects a zero allowedTarget", async () => {
+    await expect(
+      computePolicyCommitment(
+        100_000_000_000_000_000n,
+        "0x0000000000000000000000000000000000000000",
+        123456789n,
+      ),
+    ).rejects.toThrow();
   });
 });

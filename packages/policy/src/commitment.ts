@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto";
 import { Barretenberg } from "@aztec/bb.js";
 import { z } from "zod";
 
+import { encodeAddress } from "./address.ts";
 import { parseCircuitAmount } from "./amount.ts";
 
 export const BN254_FIELD_MODULUS =
@@ -27,15 +28,17 @@ function bytesToField(value: Uint8Array): bigint {
 
 export async function computePolicyCommitment(
   maxAmountInput: unknown,
+  allowedTargetInput: unknown,
   saltInput: unknown,
 ): Promise<bigint> {
   const maxAmount = parseCircuitAmount(maxAmountInput);
+  const allowedTarget = encodeAddress(allowedTargetInput);
   const salt = fieldElementSchema.parse(saltInput);
   const barretenberg = await Barretenberg.new({ threads: 1 });
 
   try {
     const { hash } = await barretenberg.poseidon2Hash({
-      inputs: [fieldToBytes(maxAmount), fieldToBytes(salt)],
+      inputs: [fieldToBytes(maxAmount), fieldToBytes(allowedTarget), fieldToBytes(salt)],
     });
     return bytesToField(hash);
   } finally {

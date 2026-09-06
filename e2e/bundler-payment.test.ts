@@ -71,6 +71,7 @@ describe.sequential("Phase 3 real Alto policy payment", () => {
       accountAddress,
       ownerPrivateKey: LOCAL_OWNER_KEY,
       maxAmountWei: parseEther("0.1"),
+      allowedTarget: "0x0000000000000000000000000000000000001234",
       deadline: Math.floor(Date.now() / 1000) + 600,
     });
     await publicClient.waitForTransactionReceipt({

@@ -2,6 +2,7 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes, timingSafeEq
 
 export interface PolicySecret {
   maxAmountWei: string;
+  allowedTarget: string;
   salt: string;
 }
 
@@ -46,12 +47,18 @@ export function decryptPolicySecret(
     decoded === null ||
     !("maxAmountWei" in decoded) ||
     typeof decoded.maxAmountWei !== "string" ||
+    !("allowedTarget" in decoded) ||
+    typeof decoded.allowedTarget !== "string" ||
     !("salt" in decoded) ||
     typeof decoded.salt !== "string"
   ) {
     throw new Error("decrypted policy has an invalid shape");
   }
-  return { maxAmountWei: decoded.maxAmountWei, salt: decoded.salt };
+  return {
+    maxAmountWei: decoded.maxAmountWei,
+    allowedTarget: decoded.allowedTarget,
+    salt: decoded.salt,
+  };
 }
 
 export const generatePolicyToken = (): string => `zkp_${randomBytes(32).toString("base64url")}`;

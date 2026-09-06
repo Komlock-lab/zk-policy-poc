@@ -93,8 +93,15 @@ export async function runLocalPayment(input: LocalPaymentInput): Promise<LocalPa
     throw new Error("local chain id must be 31337");
   }
 
-  const policyCommitment = await computePolicyCommitment(maxAmount, salt);
-  const proof = await generateSpendLimitProof({ value, maxAmount, salt, policyCommitment });
+  const policyCommitment = await computePolicyCommitment(maxAmount, recipientAddress, salt);
+  const proof = await generateSpendLimitProof({
+    value,
+    target: recipientAddress,
+    maxAmount,
+    allowedTarget: recipientAddress,
+    salt,
+    policyCommitment,
+  });
   const entryPointArtifact = await findArtifact("EntryPoint");
   const verifierArtifact = await findArtifact("HonkVerifier");
   const accountArtifact = await findArtifact("ZkPolicyAccount");
@@ -134,7 +141,7 @@ export async function runLocalPayment(input: LocalPaymentInput): Promise<LocalPa
     abi: accountArtifact.abi,
     address: accountReceipt.contractAddress,
     functionName: "updatePolicyCommitment",
-    args: [proof.publicInputs[1]],
+    args: [proof.publicInputs[2]],
   });
   await publicClient.waitForTransactionReceipt({ hash: policyUpdateHash });
 

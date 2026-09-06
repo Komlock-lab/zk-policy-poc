@@ -3,7 +3,7 @@ id: story-05-03
 type: story
 title: Ownerが許可された送金先へ支払い、許可外送金先への支払いが拒否される
 epic: epic-05
-status: approved
+status: in-progress
 depends_on: [story-05-01]
 adrs: [adr-0012, adr-0013]
 created: 2026-09-06
@@ -55,14 +55,18 @@ roadmap Phase 5が計画するPrompt Injection検証(送金先の差し替え)�
 
 | ID | Task | Status |
 | --- | --- | --- |
-| [task-05-03-01](../../tasks/story-05-03/task-05-03-01-proof-api-target-input.md) | Proof生成APIのtarget対応 | pending |
-| [task-05-03-02](../../tasks/story-05-03/task-05-03-02-payment-client-target-wiring.md) | Payment Client(CLI/MCP)のtarget配線 | pending |
-| [task-05-03-03](../../tasks/story-05-03/task-05-03-03-allowed-target-payment-e2e.md) | 許可済み/許可外送金先のE2E検証 | pending |
+| [task-05-03-01](../../tasks/story-05-03/task-05-03-01-proof-api-target-input.md) | Proof生成APIのtarget対応 | done |
+| [task-05-03-02](../../tasks/story-05-03/task-05-03-02-payment-client-target-wiring.md) | Payment Client(CLI/MCP)のtarget配線 | done |
+| [task-05-03-03](../../tasks/story-05-03/task-05-03-03-allowed-target-payment-e2e.md) | 許可済み/許可外送金先のE2E検証 | blocked |
 
 ## 検証結果
 
-未実施。
+- AC-1、AC-2: Proof API・Payment ClientのCommitment/Public Input検証ロジックはunit testで確認したが、実際のオンチェーン送金成功・拒否の確認は`e2e/policy-payment.test.ts`に追加したシナリオ含めe2e(task-05-03-03、blocked)の範囲であり未検証。
+- AC-3(Claude Code・Codex経由の許可外送金先提案): 既存e2e(`claude-code-payment.test.ts`/`codex-payment.test.ts`)の型変更のみ反映し、許可外送金先を提案する新規シナリオは追加していない。これらのテストは`claude`/`codex` CLIと環境変数ゲートを要し既定でskipされるため、AC-3は本セッションでは未着手のまま残っている。
+- `pnpm exec vitest run apps/policy-api apps/policy-cli apps/payment-mcp`: 全テスト成功。
+- `pnpm exec tsc --noEmit`: エラーなし。
 
 ## Blocked
 
-なし。
+- task-05-01-04と同じCRS・solcのネットワーク制限により`pnpm test:e2e`が実行できない(task-05-03-03)。
+- AC-3のClaude Code・Codex経由シナリオは、実CLIが必要なため本セッションでは未実装。別セッションでAC-3用のシナリオ追加とe2e実行を行う必要がある。

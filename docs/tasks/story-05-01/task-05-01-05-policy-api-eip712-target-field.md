@@ -3,7 +3,7 @@ id: task-05-01-05
 type: task
 title: Policy APIのEIP-712・登録スキーマ拡張
 story: story-05-01
-status: pending
+status: done
 blocked_by: [task-05-01-02]
 created: 2026-09-06
 updated: 2026-09-06
@@ -32,7 +32,8 @@ Policy登録APIが`allowedTarget`を署名対象・保存対象として扱い�
 
 ## 検証結果
 
-未実施。
+- `pnpm exec vitest run apps/policy-api`: 51 tests passed。`PolicyUpdate`型への`allowedTarget`追加、`allowedTarget`不一致・zero addressの拒否、`TARGET_NOT_ALLOWED`(target不一致時のProof発行拒否)を含む。
+- `pnpm exec tsc --noEmit`: エラーなし。
 
 ## Blocked
 

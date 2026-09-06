@@ -3,7 +3,7 @@ id: task-05-01-07
 type: task
 title: 初回Policy登録(送金先付き)E2E
 story: story-05-01
-status: pending
+status: blocked
 blocked_by: [task-05-01-04, task-05-01-06]
 created: 2026-09-06
 updated: 2026-09-06
@@ -30,8 +30,9 @@ updated: 2026-09-06
 
 ## 検証結果
 
-未実施。
+- `e2e/policy-registration.test.ts`に許可送金先(`allowedTarget`)を含むPolicy登録のコード変更を反映した(`pnpm exec tsc --noEmit`でエラーなし)。
+- `pnpm test:e2e`はtask-05-01-04と同じ理由(solc・CRSの取得先が403拒否)で`forge build`(Contractビルド)と実Proof生成の両方が失敗するため実行できず、実行結果は未検証。
 
 ## Blocked
 
-なし。
+- task-05-01-04と同じCRS・solcのネットワーク制限により`pnpm test:e2e`が実行できない。別環境でtask-05-01-04のVerifier再生成・`forge test`と合わせて実行する必要がある。

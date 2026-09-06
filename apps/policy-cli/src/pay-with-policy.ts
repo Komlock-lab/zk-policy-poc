@@ -26,6 +26,10 @@ const privateKeySchema = z
   .string()
   .regex(/^0x[0-9a-fA-F]{64}$/)
   .transform((value) => value as Hex);
+const publicInputHexSchema = z
+  .string()
+  .regex(/^0x[0-9a-fA-F]{64}$/)
+  .transform((value) => value as Hex);
 const proofResponseSchema = z
   .object({
     policyId: policyIdSchema,
@@ -34,16 +38,7 @@ const proofResponseSchema = z
       .string()
       .regex(/^0x(?:[0-9a-fA-F]{2})+$/)
       .transform((value) => value as Hex),
-    publicInputs: z.tuple([
-      z
-        .string()
-        .regex(/^0x[0-9a-fA-F]{64}$/)
-        .transform((value) => value as Hex),
-      z
-        .string()
-        .regex(/^0x[0-9a-fA-F]{64}$/)
-        .transform((value) => value as Hex),
-    ]),
+    publicInputs: z.tuple([publicInputHexSchema, publicInputHexSchema, publicInputHexSchema]),
   })
   .strict();
 
@@ -51,7 +46,7 @@ export interface PolicyPaymentProof {
   policyId: string;
   policyVersion: number;
   proof: Hex;
-  publicInputs: readonly [Hex, Hex];
+  publicInputs: readonly [Hex, Hex, Hex];
 }
 
 export function assertLocalPaymentUrl(value: string, label: string): void {
@@ -70,18 +65,22 @@ export function assertLocalPaymentUrl(value: string, label: string): void {
 
 export function validatePolicyPaymentProof(
   value: unknown,
-  expected: { policyId: string; valueWei: bigint; policyCommitment: Hex },
+  expected: { policyId: string; valueWei: bigint; target: Address; policyCommitment: Hex },
 ): PolicyPaymentProof {
   const proof = proofResponseSchema.parse(value);
   const expectedValue = toHex(expected.valueWei, { size: 32 });
+  const expectedTarget = toHex(BigInt(expected.target), { size: 32 });
   if (proof.policyId !== expected.policyId) {
     throw new Error("policy API returned a proof for an unexpected policy");
   }
   if (proof.publicInputs[0].toLowerCase() !== expectedValue.toLowerCase()) {
     throw new Error("policy proof value does not match the requested payment");
   }
+  if (proof.publicInputs[1].toLowerCase() !== expectedTarget.toLowerCase()) {
+    throw new Error("policy proof target does not match the requested recipient");
+  }
   if (
-    proof.publicInputs[1].toLowerCase() !==
+    proof.publicInputs[2].toLowerCase() !==
     expected.policyCommitment.toLowerCase()
   ) {
     throw new Error("policy proof commitment does not match the account");
@@ -136,7 +135,7 @@ export async function preparePolicyPayment(input: PolicyPaymentInput) {
         authorization: `Bearer ${token}`,
         "content-type": "application/json",
       },
-      body: JSON.stringify({ valueWei: valueWei.toString() }),
+      body: JSON.stringify({ valueWei: valueWei.toString(), target: recipient }),
     },
   );
   const responseBody = await proofResponse(response);
@@ -166,6 +165,7 @@ export async function preparePolicyPayment(input: PolicyPaymentInput) {
   const proof = validatePolicyPaymentProof(responseBody, {
     policyId,
     valueWei,
+    target: recipient,
     policyCommitment,
   });
   return { owner, publicClient, accountAddress, recipient, valueWei, proof };

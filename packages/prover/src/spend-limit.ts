@@ -8,6 +8,7 @@ import { z } from "zod";
 
 import {
   computePolicyCommitment,
+  encodeAddress,
   fieldElementSchema,
   parseCircuitAmount,
 } from "../../policy/src/index.ts";
@@ -19,12 +20,14 @@ const circuitArtifactSchema = z.object({
 
 export interface SpendLimitProof {
   proof: Hex;
-  publicInputs: readonly [Hex, Hex];
+  publicInputs: readonly [Hex, Hex, Hex];
 }
 
 export interface SpendLimitProofInput {
   value: bigint;
+  target: string;
   maxAmount: bigint;
+  allowedTarget: string;
   salt: bigint;
   policyCommitment?: bigint;
 }
@@ -43,14 +46,19 @@ export async function generateSpendLimitProof(
   circuitPath = defaultCircuitPath,
 ): Promise<SpendLimitProof> {
   const value = parseCircuitAmount(input.value);
+  const target = encodeAddress(input.target);
   const maxAmount = parseCircuitAmount(input.maxAmount);
+  const allowedTarget = encodeAddress(input.allowedTarget);
   const salt = fieldElementSchema.parse(input.salt);
 
   if (value > maxAmount) {
     throw new Error("value exceeds max amount");
   }
+  if (target !== allowedTarget) {
+    throw new Error("target not allowed");
+  }
 
-  const computedCommitment = await computePolicyCommitment(maxAmount, salt);
+  const computedCommitment = await computePolicyCommitment(maxAmount, allowedTarget, salt);
   const policyCommitment = fieldElementSchema.parse(
     input.policyCommitment ?? computedCommitment,
   );
@@ -69,8 +77,10 @@ export async function generateSpendLimitProof(
   try {
     const { witness } = await noir.execute({
       value: value.toString(),
+      target: target.toString(),
       policy_commitment: policyCommitment.toString(),
       max_amount: maxAmount.toString(),
+      allowed_target: allowedTarget.toString(),
       salt: salt.toString(),
     });
     const proofData = await backend.generateProof(witness, {
@@ -87,22 +97,28 @@ export async function generateSpendLimitProof(
     const publicInputs = proofData.publicInputs.map((publicInput) =>
       fieldToHex(BigInt(publicInput)),
     );
-    const expectedPublicInputs = [fieldToHex(value), fieldToHex(policyCommitment)] as const;
-    const [publicValue, publicCommitment] = publicInputs;
+    const expectedPublicInputs = [
+      fieldToHex(value),
+      fieldToHex(target),
+      fieldToHex(policyCommitment),
+    ] as const;
+    const [publicValue, publicTarget, publicCommitment] = publicInputs;
 
     if (
-      publicInputs.length !== 2 ||
+      publicInputs.length !== 3 ||
       publicValue === undefined ||
+      publicTarget === undefined ||
       publicCommitment === undefined ||
       publicValue !== expectedPublicInputs[0] ||
-      publicCommitment !== expectedPublicInputs[1]
+      publicTarget !== expectedPublicInputs[1] ||
+      publicCommitment !== expectedPublicInputs[2]
     ) {
       throw new Error("unexpected public input order or value");
     }
 
     return {
       proof: toHex(proofData.proof),
-      publicInputs: [publicValue, publicCommitment],
+      publicInputs: [publicValue, publicTarget, publicCommitment],
     };
   } finally {
     await barretenberg.destroy();

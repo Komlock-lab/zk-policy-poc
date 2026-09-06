@@ -10,13 +10,15 @@ const policyId = "00000000-0000-4000-8000-000000000001";
 const otherPolicyId = "00000000-0000-4000-8000-000000000002";
 const valueWei = 10n;
 const commitment = toHex(20n, { size: 32 });
+const target = "0x70997970c51812dc3a010c7d01b50e0d17dc79c8" as Address;
+const otherTarget = "0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc" as Address;
 const ownerPrivateKey =
   "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80" as Hex;
 const validResponse = {
   policyId,
   policyVersion: 2,
   proof: "0x1234",
-  publicInputs: [toHex(valueWei, { size: 32 }), commitment],
+  publicInputs: [toHex(valueWei, { size: 32 }), toHex(BigInt(target), { size: 32 }), commitment],
 };
 
 describe("API-backed payment client", () => {
@@ -53,19 +55,20 @@ describe("API-backed payment client", () => {
       validatePolicyPaymentProof(validResponse, {
         policyId,
         valueWei,
+        target,
         policyCommitment: commitment,
       }),
     ).toEqual(validResponse);
     expect(() =>
       validatePolicyPaymentProof(
         { ...validResponse, extra: true },
-        { policyId, valueWei, policyCommitment: commitment },
+        { policyId, valueWei, target, policyCommitment: commitment },
       ),
     ).toThrow();
     expect(() =>
       validatePolicyPaymentProof(
         { ...validResponse, proof: "0x1" },
-        { policyId, valueWei, policyCommitment: commitment },
+        { policyId, valueWei, target, policyCommitment: commitment },
       ),
     ).toThrow();
   });
@@ -75,6 +78,7 @@ describe("API-backed payment client", () => {
       validatePolicyPaymentProof(validResponse, {
         policyId: otherPolicyId,
         valueWei,
+        target,
         policyCommitment: commitment,
       }),
     ).toThrow("unexpected policy");
@@ -82,6 +86,7 @@ describe("API-backed payment client", () => {
       validatePolicyPaymentProof(validResponse, {
         policyId,
         valueWei: valueWei + 1n,
+        target,
         policyCommitment: commitment,
       }),
     ).toThrow("does not match the requested payment");
@@ -89,6 +94,15 @@ describe("API-backed payment client", () => {
       validatePolicyPaymentProof(validResponse, {
         policyId,
         valueWei,
+        target: otherTarget,
+        policyCommitment: commitment,
+      }),
+    ).toThrow("does not match the requested recipient");
+    expect(() =>
+      validatePolicyPaymentProof(validResponse, {
+        policyId,
+        valueWei,
+        target,
         policyCommitment: toHex(21n, { size: 32 }),
       }),
     ).toThrow("does not match the account");

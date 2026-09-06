@@ -11,6 +11,7 @@ const input = z
   })
   .parse(process.env);
 const maxAmountWei = z.string().regex(/^(0|[1-9][0-9]*)$/).parse(process.argv[2]);
+const allowedTarget = z.string().regex(/^0x[0-9a-fA-F]{40}$/).parse(process.argv[3]);
 
 const result = await createAndActivatePolicy({
   apiUrl: input.POLICY_API_URL,
@@ -18,6 +19,7 @@ const result = await createAndActivatePolicy({
   accountAddress: input.POLICY_ACCOUNT_ADDRESS as Address,
   ownerPrivateKey: input.POLICY_OWNER_PRIVATE_KEY as Hex,
   maxAmountWei: BigInt(maxAmountWei),
+  allowedTarget,
   deadline: Math.floor(Date.now() / 1_000) + 600,
 });
 

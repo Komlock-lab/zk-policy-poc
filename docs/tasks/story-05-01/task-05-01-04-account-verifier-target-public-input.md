@@ -3,7 +3,7 @@ id: task-05-01-04
 type: task
 title: ZkPolicyAccountとVerifierのpublic input拡張
 story: story-05-01
-status: pending
+status: blocked
 blocked_by: [task-05-01-01]
 created: 2026-09-06
 updated: 2026-09-06
@@ -32,8 +32,13 @@ Accountが実際の送金先をVerifierへ渡し、Circuitの送金先制約を�
 
 ## 検証結果
 
-未実施。
+- コード変更は完了した。`ZkPolicyAccount.sol`の`_executePolicyPayment`は`publicInputs`を`[value, target, policyCommitment]`の3要素にし、`MockSpendLimitVerifier`と`ZkPolicyAccount.t.sol`を3要素に合わせて更新し、送金先不一致で`InvalidProof`になる`testRejectsMismatchedTarget`を追加した。
+- `forge fmt --check contracts/src/ZkPolicyAccount.sol contracts/test/ZkPolicyAccount.t.sol --root contracts`: 成功(差分なし)。
+- `pnpm generate:verifier`(`bb write_vk`/`bb write_solidity_verifier`)は、このセッションのネットワークポリシーがBarretenbergのCRS取得先(crs.aztec-labs.com)を403で拒否するため実行できず、生成済み`contracts/src/verifiers/generated/SpendLimitVerifier.sol`は旧Circuit(2 Public Input)のまま未更新。
+- `forge test --root contracts`は、solcコンパイラのダウンロード先(binaries.soliditylang.org)も同ポリシーで403拒否されるため実行できず、Contractのビルド・実行確認は未検証。
 
 ## Blocked
 
-なし。
+- CRS(`crs.aztec-labs.com`)とsolc(`binaries.soliditylang.org`)の両方がこのセッションのegressポリシーで403拒否されており、`pnpm generate:verifier`と`forge test`が実行できない。別環境(ネットワーク制限のないローカルまたはCI)で次を実行して結果を追記する必要がある。
+  - `pnpm generate:verifier`でVerifierを再生成する。
+  - `forge test --root contracts`で本Task変更分を含む全Contractテストを実行する。

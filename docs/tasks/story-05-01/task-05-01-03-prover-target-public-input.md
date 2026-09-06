@@ -3,7 +3,7 @@ id: task-05-01-03
 type: task
 title: packages/proverのtarget public input対応
 story: story-05-01
-status: pending
+status: done
 blocked_by: [task-05-01-02]
 created: 2026-09-06
 updated: 2026-09-06
@@ -31,7 +31,8 @@ updated: 2026-09-06
 
 ## 検証結果
 
-未実施。
+- `pnpm exec vitest run packages/prover`: 2 tests passed(上限超過・target不一致のどちらもwitness実行前に拒否することを確認)。
+- 実際のCircuit witness実行とUltraHonk Proof生成を伴う正常系(3要素Public Inputの往復)は、このセッションのネットワークポリシーがBarretenbergのCRS取得先(crs.aztec-labs.com)を403で拒否するため未検証。既存の`packages/prover`テストも元々この経路をunit testで検証しておらず、e2e(`pnpm test:e2e`、task-05-01-07/05-03-03)の範囲としている。
 
 ## Blocked
 

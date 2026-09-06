@@ -3,7 +3,7 @@ id: task-05-01-06
 type: task
 title: Policy登録CLIのallowedTarget対応
 story: story-05-01
-status: pending
+status: done
 blocked_by: [task-05-01-05]
 created: 2026-09-06
 updated: 2026-09-06
@@ -32,7 +32,9 @@ OwnerがCLIから許可送金先を指定してPolicyを登録できるように
 
 ## 検証結果
 
-未実施。
+- `pnpm exec vitest run apps/policy-cli`: 全テスト成功(`create-policy.test.ts`、`pay-with-policy.test.ts`、`pay-userop.test.ts`、`rotate-policy-token.test.ts`)。
+- `pnpm exec tsc --noEmit`: エラーなし。
+- `createAndActivatePolicy`/CLIエントリポイント(`apps/policy-cli/src/index.ts`)は実際のPolicy API・Anvilに接続する統合的な処理のため、unit testでは`verifyPendingRegistration`等の純粋関数のみを検証しており、実際のHTTP・チェーン接続を伴う正常系はe2e(task-05-01-07)の範囲。
 
 ## Blocked
 

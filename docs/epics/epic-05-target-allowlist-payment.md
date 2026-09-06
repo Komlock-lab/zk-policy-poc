@@ -2,7 +2,7 @@
 id: epic-05
 type: epic
 title: 送金先Addressのallowlistを使ったZK決済
-status: approved
+status: in-progress
 created: 2026-09-06
 updated: 2026-09-06
 adrs: [adr-0012, adr-0013]
@@ -90,9 +90,9 @@ Ownerが秘密の送金先1件をPolicyに含めて登録・更新でき、許�
 
 | ID | Story | Depends on | Status |
 | --- | --- | --- | --- |
-| [story-05-01](../stories/epic-05/story-05-01-owner-registers-policy-with-allowed-target.md) | Ownerが送金先を含むPolicyを新規登録する | なし | approved |
-| [story-05-02](../stories/epic-05/story-05-02-owner-updates-allowed-target.md) | Ownerが送金先を含むPolicyを更新する | story-05-01 | approved |
-| [story-05-03](../stories/epic-05/story-05-03-owner-pays-allowed-target-only.md) | Ownerが許可された送金先へ支払い、許可外送金先への支払いが拒否される | story-05-01 | approved |
+| [story-05-01](../stories/epic-05/story-05-01-owner-registers-policy-with-allowed-target.md) | Ownerが送金先を含むPolicyを新規登録する | なし | in-progress |
+| [story-05-02](../stories/epic-05/story-05-02-owner-updates-allowed-target.md) | Ownerが送金先を含むPolicyを更新する | story-05-01 | in-progress |
+| [story-05-03](../stories/epic-05/story-05-03-owner-pays-allowed-target-only.md) | Ownerが許可された送金先へ支払い、許可外送金先への支払いが拒否される | story-05-01 | in-progress |
 
 ## 依存グラフ
 
@@ -115,7 +115,8 @@ Ownerが秘密の送金先1件をPolicyに含めて登録・更新でき、許�
 
 ## ペンディング
 
-なし。
+- このセッションのegressポリシーがBarretenberg CRS(crs.aztec-labs.com)とsolc(binaries.soliditylang.org)へのアクセスを403拒否するため、`pnpm generate:verifier`、`forge test`、`pnpm test:e2e`が実行できていない。circuits/packages/policy-api/policy-cliのコードとunit testは全て完了・検証済みだが、Verifier再生成とオンチェーン統合の実行確認はネットワーク制限のない別環境で行う必要がある(story-05-01のtask-05-01-04を参照)。
+- story-05-03のAC-3(Claude Code・Codex経由で許可外送金先を提案した場合の拒否確認)は、実CLIを要する既存e2eテストの型変更のみ反映しており、新規シナリオは未実装。
 
 ## Delivery
 

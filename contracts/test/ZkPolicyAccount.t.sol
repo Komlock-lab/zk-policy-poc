@@ -33,17 +33,24 @@ interface Vm {
 contract MockSpendLimitVerifier is ISpendLimitVerifier {
     bool public result = true;
     bytes32 public expectedValue;
+    bytes32 public expectedTarget;
     bytes32 public expectedCommitment;
 
-    function configure(bool result_, bytes32 expectedValue_, bytes32 expectedCommitment_) external {
+    function configure(
+        bool result_,
+        bytes32 expectedValue_,
+        bytes32 expectedTarget_,
+        bytes32 expectedCommitment_
+    ) external {
         result = result_;
         expectedValue = expectedValue_;
+        expectedTarget = expectedTarget_;
         expectedCommitment = expectedCommitment_;
     }
 
     function verify(bytes calldata, bytes32[] calldata publicInputs) external view returns (bool) {
-        return result && publicInputs.length == 2 && publicInputs[0] == expectedValue
-            && publicInputs[1] == expectedCommitment;
+        return result && publicInputs.length == 3 && publicInputs[0] == expectedValue
+            && publicInputs[1] == expectedTarget && publicInputs[2] == expectedCommitment;
     }
 }
 
@@ -75,6 +82,10 @@ contract ZkPolicyAccountTest {
         account = new ZkPolicyAccount(owner, verifier, entryPoint);
         vm.prank(owner);
         account.updatePolicyCommitment(POLICY_COMMITMENT);
+    }
+
+    function _targetField(address recipient) private pure returns (bytes32) {
+        return bytes32(uint256(uint160(recipient)));
     }
 
     function testConstructorStoresDependencies() public view {
@@ -131,7 +142,7 @@ contract ZkPolicyAccountTest {
         address payable recipient = payable(address(0xBEEF));
         uint256 value = 0.01 ether;
         vm.deal(address(account), value);
-        verifier.configure(true, bytes32(value), POLICY_COMMITMENT);
+        verifier.configure(true, bytes32(value), _targetField(recipient), POLICY_COMMITMENT);
         vm.prank(owner);
 
         account.execute(recipient, value, PROOF);
@@ -144,7 +155,7 @@ contract ZkPolicyAccountTest {
         address payable recipient = payable(address(0xBEEF));
         uint256 value = 0.01 ether;
         vm.deal(address(account), value);
-        verifier.configure(true, bytes32(value), POLICY_COMMITMENT);
+        verifier.configure(true, bytes32(value), _targetField(recipient), POLICY_COMMITMENT);
         vm.expectEmit(true, false, false, true);
         emit PaymentExecuted(recipient, value);
         vm.prank(address(entryPoint));
@@ -157,7 +168,7 @@ contract ZkPolicyAccountTest {
     function testEntryPointHandleOpsValidatesAndExecutesPayment() public {
         address payable recipient = payable(address(0xCAFE));
         uint256 value = 0.01 ether;
-        verifier.configure(true, bytes32(value), POLICY_COMMITMENT);
+        verifier.configure(true, bytes32(value), _targetField(recipient), POLICY_COMMITMENT);
         vm.deal(address(account), 1 ether);
         PackedUserOperation memory userOp =
             _userOp(abi.encodeCall(ZkPolicyAccount.executeUserOp, (recipient, value, PROOF)));
@@ -177,7 +188,7 @@ contract ZkPolicyAccountTest {
     function testEntryPointHandleOpsRejectsWrongSignerWithoutConsumingNonce() public {
         address payable recipient = payable(address(0xCAFE));
         uint256 value = 0.01 ether;
-        verifier.configure(true, bytes32(value), POLICY_COMMITMENT);
+        verifier.configure(true, bytes32(value), _targetField(recipient), POLICY_COMMITMENT);
         vm.deal(address(account), 1 ether);
         PackedUserOperation memory userOp =
             _userOp(abi.encodeCall(ZkPolicyAccount.executeUserOp, (recipient, value, PROOF)));
@@ -295,7 +306,7 @@ contract ZkPolicyAccountTest {
 
     function testRejectsInvalidProof() public {
         uint256 value = 1;
-        verifier.configure(false, bytes32(value), POLICY_COMMITMENT);
+        verifier.configure(false, bytes32(value), _targetField(address(0xBEEF)), POLICY_COMMITMENT);
         vm.expectRevert(abi.encodeWithSelector(ZkPolicyAccount.InvalidProof.selector));
         vm.prank(owner);
 
@@ -304,7 +315,18 @@ contract ZkPolicyAccountTest {
 
     function testRejectsMismatchedPublicValue() public {
         uint256 value = 1;
-        verifier.configure(true, bytes32(value + 1), POLICY_COMMITMENT);
+        verifier.configure(
+            true, bytes32(value + 1), _targetField(address(0xBEEF)), POLICY_COMMITMENT
+        );
+        vm.expectRevert(abi.encodeWithSelector(ZkPolicyAccount.InvalidProof.selector));
+        vm.prank(owner);
+
+        account.execute(payable(address(0xBEEF)), value, PROOF);
+    }
+
+    function testRejectsMismatchedTarget() public {
+        uint256 value = 1;
+        verifier.configure(true, bytes32(value), _targetField(address(0xCAFE)), POLICY_COMMITMENT);
         vm.expectRevert(abi.encodeWithSelector(ZkPolicyAccount.InvalidProof.selector));
         vm.prank(owner);
 
@@ -313,7 +335,7 @@ contract ZkPolicyAccountTest {
 
     function testExecuteUserOpRejectsStaleCommitment() public {
         uint256 value = 1;
-        verifier.configure(true, bytes32(value), POLICY_COMMITMENT);
+        verifier.configure(true, bytes32(value), _targetField(address(0xBEEF)), POLICY_COMMITMENT);
         vm.prank(owner);
         account.updatePolicyCommitment(bytes32(uint256(5678)));
         vm.expectRevert(abi.encodeWithSelector(ZkPolicyAccount.InvalidProof.selector));
@@ -324,7 +346,9 @@ contract ZkPolicyAccountTest {
 
     function testExecuteUserOpRejectsMismatchedPublicValue() public {
         uint256 value = 1;
-        verifier.configure(true, bytes32(value + 1), POLICY_COMMITMENT);
+        verifier.configure(
+            true, bytes32(value + 1), _targetField(address(0xBEEF)), POLICY_COMMITMENT
+        );
         vm.expectRevert(abi.encodeWithSelector(ZkPolicyAccount.InvalidProof.selector));
         vm.prank(address(entryPoint));
 
@@ -335,7 +359,9 @@ contract ZkPolicyAccountTest {
         uint256 value = 1;
         RejectEther recipient = new RejectEther();
         vm.deal(address(account), value);
-        verifier.configure(true, bytes32(value), POLICY_COMMITMENT);
+        verifier.configure(
+            true, bytes32(value), _targetField(address(recipient)), POLICY_COMMITMENT
+        );
         uint256 accountBalanceBefore = address(account).balance;
         vm.expectRevert(abi.encodeWithSelector(ZkPolicyAccount.TransferFailed.selector));
         vm.prank(address(entryPoint));
@@ -350,7 +376,9 @@ contract ZkPolicyAccountTest {
         uint256 value = 1;
         RejectEther recipient = new RejectEther();
         vm.deal(address(account), value);
-        verifier.configure(true, bytes32(value), POLICY_COMMITMENT);
+        verifier.configure(
+            true, bytes32(value), _targetField(address(recipient)), POLICY_COMMITMENT
+        );
         uint256 accountBalanceBefore = address(account).balance;
         uint256 recipientBalanceBefore = address(recipient).balance;
         vm.expectRevert(abi.encodeWithSelector(ZkPolicyAccount.TransferFailed.selector));
@@ -366,7 +394,9 @@ contract ZkPolicyAccountTest {
         vm.assume(value > 0);
         address payable recipient = payable(address(0xCAFE));
         vm.deal(address(account), value);
-        verifier.configure(true, bytes32(uint256(value)), POLICY_COMMITMENT);
+        verifier.configure(
+            true, bytes32(uint256(value)), _targetField(recipient), POLICY_COMMITMENT
+        );
         vm.prank(owner);
 
         account.execute(recipient, value, PROOF);

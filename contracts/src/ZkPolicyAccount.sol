@@ -104,9 +104,10 @@ contract ZkPolicyAccount is IAccount {
         if (recipient == address(0)) revert InvalidRecipient();
         if (value > U128_MAX) revert AmountOutOfRange(value);
 
-        bytes32[] memory publicInputs = new bytes32[](2);
+        bytes32[] memory publicInputs = new bytes32[](3);
         publicInputs[0] = bytes32(value);
-        publicInputs[1] = policyCommitment;
+        publicInputs[1] = bytes32(uint256(uint160(recipient)));
+        publicInputs[2] = policyCommitment;
 
         if (!verifier.verify(proof, publicInputs)) revert InvalidProof();
 

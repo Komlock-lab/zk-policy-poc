@@ -85,6 +85,7 @@ describe.runIf(runClaudeCodeE2e).sequential("Phase 4 real Claude Code payment", 
       accountAddress,
       ownerPrivateKey: LOCAL_OWNER_KEY,
       maxAmountWei: parseEther("0.1"),
+      allowedTarget: recipient,
       deadline: Math.floor(Date.now() / 1000) + 600,
     });
     policyId = policy.policyId;

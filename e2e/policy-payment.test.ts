@@ -33,6 +33,7 @@ const OWNER_PRIVATE_KEY =
   "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80" as Hex;
 const RECIPIENT_PRIVATE_KEY =
   "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d" as Hex;
+const UNAUTHORIZED_RECIPIENT = "0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc" as Address;
 const artifactSchema = z.object({
   abi: z.array(z.unknown()),
   bytecode: z.object({ object: z.string().regex(/^0x[0-9a-fA-F]*$/) }),
@@ -89,6 +90,7 @@ describe("Phase 2 API-backed policy payment", () => {
         accountAddress,
         ownerPrivateKey: OWNER_PRIVATE_KEY,
         maxAmountWei: parseEther("0.05"),
+        allowedTarget: recipient.address,
         deadline: Math.floor(Date.now() / 1_000) + 600,
       });
       const updated = await updateAndActivatePolicy({
@@ -99,6 +101,7 @@ describe("Phase 2 API-backed policy payment", () => {
         policyId: initial.policyId,
         token: initial.token,
         maxAmountWei: parseEther("0.1"),
+        allowedTarget: recipient.address,
         deadline: Math.floor(Date.now() / 1_000) + 600,
       });
       expect(updated.policyVersion).toBe(2);
@@ -152,6 +155,31 @@ describe("Phase 2 API-backed policy payment", () => {
         nonceBeforeOverLimit,
       );
 
+      const disallowedTargetBalance = await publicClient.getBalance({
+        address: UNAUTHORIZED_RECIPIENT,
+      });
+      const nonceBeforeDisallowedTarget = await publicClient.getTransactionCount({
+        address: owner.address,
+      });
+      await expect(
+        payWithPolicyProof({
+          apiUrl,
+          rpcUrl: anvil.rpcUrl,
+          accountAddress,
+          ownerPrivateKey: OWNER_PRIVATE_KEY,
+          policyId: initial.policyId,
+          token: rotated.token,
+          recipient: UNAUTHORIZED_RECIPIENT,
+          valueWei: paymentValue,
+        }),
+      ).rejects.toThrow("policy API proof request failed with status 422");
+      expect(await publicClient.getBalance({ address: UNAUTHORIZED_RECIPIENT })).toBe(
+        disallowedTargetBalance,
+      );
+      expect(await publicClient.getTransactionCount({ address: owner.address })).toBe(
+        nonceBeforeDisallowedTarget,
+      );
+
       const oldCommitment = await publicClient.readContract({
         address: accountAddress,
         abi: zkPolicyAccountAbi,
@@ -163,12 +191,13 @@ describe("Phase 2 API-backed policy payment", () => {
           authorization: `Bearer ${rotated.token}`,
           "content-type": "application/json",
         },
-        body: JSON.stringify({ valueWei: paymentValue.toString() }),
+        body: JSON.stringify({ valueWei: paymentValue.toString(), target: recipient.address }),
       });
       expect(oldProofResponse.status).toBe(200);
       const oldProof = validatePolicyPaymentProof(await oldProofResponse.json(), {
         policyId: initial.policyId,
         valueWei: paymentValue,
+        target: recipient.address,
         policyCommitment: oldCommitment,
       });
       const secondUpdate = await updateAndActivatePolicy({
@@ -179,6 +208,7 @@ describe("Phase 2 API-backed policy payment", () => {
         policyId: initial.policyId,
         token: rotated.token,
         maxAmountWei: parseEther("0.2"),
+        allowedTarget: recipient.address,
         deadline: Math.floor(Date.now() / 1_000) + 600,
       });
       expect(secondUpdate.policyVersion).toBe(3);

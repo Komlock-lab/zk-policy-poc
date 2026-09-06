@@ -3,7 +3,7 @@ id: task-05-03-02
 type: task
 title: Payment Client(CLI/MCP)のtarget配線
 story: story-05-03
-status: pending
+status: done
 blocked_by: [task-05-03-01]
 created: 2026-09-06
 updated: 2026-09-06
@@ -32,7 +32,10 @@ updated: 2026-09-06
 
 ## 検証結果
 
-未実施。
+- `pnpm exec vitest run apps/policy-cli apps/payment-mcp`: 全テスト成功。`pay-with-policy.test.ts`に送金先不一致(`does not match the requested recipient`)のテストを追加した。
+- `pnpm exec tsc --noEmit`: エラーなし。
+- `pay-with-userop.ts`は`pay-with-policy.ts`の`preparePolicyPayment`を再利用しており、`recipient`をtargetとして渡す配線は共通化されているため個別の追加テストは不要と判断した。
+- `payment-mcp`の`pay_native`はproof生成の詳細に関与しないため`server.ts`のコード変更は不要だったが、依存する型変更後も既存テストが全て成功することを確認した。
 
 ## Blocked
 
