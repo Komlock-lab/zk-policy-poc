@@ -3,7 +3,7 @@ id: audit-06
 type: audit
 title: 複数ポリシー対応の統合監査
 epic: epic-06
-status: pending
+status: passed
 date: 2026-09-06
 ---
 
@@ -11,7 +11,7 @@ date: 2026-09-06
 
 ## 実行した検証
 
-最終Storyでの監査準備。全Story done後に同一実装の差分確認と全quality gateを再実行して確定する。
+全9 Story doneの `41761a4` で4分野を最終確認。差分は計画文書・Contractの整形と単独revertへの波括弧追加のみで意味変更なし。最終実Agent gateも成功し、判定を確定した。
 
 | Story/AC | 実検証 | 観測結果 |
 | --- | --- | --- |
@@ -63,14 +63,24 @@ Story09の初期試行では複数依頼の一部Toolが呼ばれない事象と
 
 | ID | Severity | Area | Finding | Remediation | Status |
 | --- | --- | --- | --- | --- | --- |
-| — | — | 全4分野 | 監査準備時点の静的レビューで指摘なし | 不要 | 全Story統合後の最終確認待ち |
+| — | — | 全4分野 | 全Story統合後の静的レビューで指摘なし | 不要 | 確認済み |
 
 ## 再監査
 
-- 初回レビュー対象: `63d0383`。実装変更なしで全Story統合後に差分確認する。
+- 初回レビュー対象: `63d0383`。全Story done後の `41761a4` でADR/ZK/Contract/API担当が最終差分を確認。意味変更なし。
 - 修正・再監査iteration: 0。
 
 ## 最終結果
 
-- CRITICAL/HIGH残件: 未確認
-- 判定: pending（全Story統合後に確定）
+- CRITICAL/HIGH残件: 0
+- MEDIUM/LOW残件: 0
+- 判定: passed
+
+## 最終gateの実測
+
+- `41761a4`で`pnpm test`再実行成功: Circuit 11、Contract 39、unit 103、local E2E 27。Agent 7 skipを成功に含めない。build/typecheckも成功。ログ `/private/tmp/epic06-final-full-test.log`。
+- `pnpm benchmark:circuit`再実行: ACIR 4314、Brillig 87、Proof 8000 bytes、生成936 ms（単発実測）。ログ `/private/tmp/epic06-final-benchmark.log`。
+- `bash scripts/check-toolchain.sh`、対象Solidityの`forge fmt --check`、planning validator、validatorテスト9件、`git diff --check`成功。
+- 元worktreeの計画40ファイルは最初に保存したcommit `30f6873` とbyte単位で一致し、既存Codexの2変更も維持。元mainは `29ab9e3` のまま。
+
+- 最終実Agent gate: `RUN_CLAUDE_CODE_E2E=1 RUN_CODEX_E2E=1 NODE_OPTIONS=--experimental-sqlite pnpm exec vitest run e2e/claude-code-payment.test.ts e2e/codex-payment.test.ts`成功。Claude 2・Codex 5、全7件skipなし。ログ `/private/tmp/epic06-final-agent-tests.log`。

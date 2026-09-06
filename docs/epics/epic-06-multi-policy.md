@@ -2,7 +2,7 @@
 id: epic-06
 type: epic
 title: 複数ポリシー対応
-status: in-progress
+status: review
 error_acceptance: deferred
 error_acceptance_reason: Phase 5を飛ばし正常系の複数条件決済を優先する
 error_acceptance_authorization: 2026-09-06 ユーザー指定「異常系は今考えなくていい」「いまの案でプランニング、実装して」
@@ -133,7 +133,7 @@ chain ID 31337、非forkのローカル環境、fixture資産を使用する。�
 
 ## 承認と実装開始条件
 
-2026-09-06のユーザー指示「いまの案でプランニング、実装して」を現在案の承認および計画詳細化・実装の指示として記録する。2026-09-06の追加指定「Risk Score不要」「PoCだから正常系だけでOK」「他に懸念なければ実装して」を反映。実装対象ADRは3件accepted、Risk Score ADRはrejected。Storyはapproved、Taskはpending。追加の設計判断はない。
+2026-09-06のユーザー指示「いまの案でプランニング、実装して」を現在案の承認および計画詳細化・実装の指示として記録する。2026-09-06の追加指定「Risk Score不要」「PoCだから正常系だけでOK」「他に懸念なければ実装して」を反映。実装対象ADRは3件accepted、Risk Score ADRはrejected。承認時点でStoryはapproved、Taskはpending。追加の設計判断はない。
 
 正常系のみの計画はEpicの明示的な延期理由・承認根拠をvalidate-planningで検証する。既存Epicの異常系AC要件は維持する。
 
@@ -153,8 +153,11 @@ chain ID 31337、非forkのローカル環境、fixture資産を使用する。�
 
 ## Delivery
 
-- Epic PR: 未作成
-- Preflight解消済み。Story依存順に実装中。
-- 計画検証: node scripts/validate-planning.mjs成功（112 documents）。
-- 計画検証ルールのテスト: node --test scripts/validate-planning.test.mjs成功（9 tests）。
-- Phase 6の36文書の相対リンク確認成功。git diff --check成功。
+- 全9 Story・22 Task done。Story PR #21〜#29をEpicへ統合済み。
+- [統合監査](../audits/epic-06-multi-policy.md): passed、CRITICAL/HIGH 0、MEDIUM/LOW 0。
+- 最終quality gate（`41761a4`）: build/typecheck、Circuit 11、Contract 39、unit 103、local E2E 27、実Claude 2・実Codex 5成功。実Agentの通常skipは別実行で確認。
+- 回路ACIR 4314 / Brillig 87、Proof 8000 bytes、生成936 ms（単発実測）。
+- planning validator 113 documents、validator test 9件、相対リンク33文書、対象Solidity format、diff check成功。
+- 元worktreeの未コミット計画40ファイルとCodex既存2変更を保持。mainは29ab9e3のまま。
+- 保持worktree: `/private/tmp/zk-policy-epic-06`、`/private/tmp/zk-policy-story-06-*`。support用detached worktreeも保持。
+- 最終Epic PRはこのreview commitをpush後に作成し、mainへはmergeしない。
