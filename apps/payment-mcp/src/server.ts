@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/server";
 import { getAddress, type Address } from "viem";
 import { z } from "zod";
-import { parseCircuitAmount } from "../../../packages/policy/src/index.ts";
+import { parseCircuitAmount, invoiceIdSchema } from "../../../packages/policy/src/index.ts";
 import {
   payWithPolicyUserOperation,
   type TypedUserOpPaymentInput,
@@ -26,6 +26,13 @@ export const erc20PaymentIntentSchema = z.object({
   token: paymentIntentSchema.shape.recipient,
   recipient: paymentIntentSchema.shape.recipient,
   amount: paymentIntentSchema.shape.valueWei,
+  validUntil: paymentIntentSchema.shape.validUntil,
+}).strict();
+
+export const contractPaymentIntentSchema = z.object({
+  contract: paymentIntentSchema.shape.recipient,
+  invoiceId: invoiceIdSchema,
+  valueWei: paymentIntentSchema.shape.valueWei,
   validUntil: paymentIntentSchema.shape.validUntil,
 }).strict();
 
@@ -75,6 +82,18 @@ export async function executeERC20PaymentTool(
   return paymentResultSchema.parse({ ...result, status: "success" });
 }
 
+export async function executeContractPaymentTool(
+  input: z.input<typeof contractPaymentIntentSchema>, config: PaymentMcpConfig,
+  execute: PaymentExecutor = payWithPolicyUserOperation,
+) {
+  const intent = contractPaymentIntentSchema.parse(input);
+  const result = await execute({ ...config, kind: 2, contractAddress: intent.contract,
+    invoiceId: intent.invoiceId, valueWei: parseCircuitAmount(BigInt(intent.valueWei)),
+    ...(intent.validUntil === undefined ? {} : { validUntil: BigInt(intent.validUntil) }),
+  });
+  return paymentResultSchema.parse({ ...result, status: "success" });
+}
+
 export function createPaymentMcpServer(options: {
   config: PaymentMcpConfig;
   execute?: PaymentExecutor;
@@ -84,7 +103,7 @@ export function createPaymentMcpServer(options: {
     {
       capabilities: { tools: {} },
       instructions:
-        "Use pay_native or pay_erc20 only for an explicit payment request. Pass a checksummed or hexadecimal recipient address and an exact decimal amount in the asset's smallest unit (wei for native). The server enforces the configured ZK policy and local-chain boundary. It never exposes signing credentials, policy credentials, or proofs.",
+        "Use pay_native, pay_erc20, or pay_contract only for an explicit payment request. Pass a checksummed or hexadecimal recipient address and an exact decimal amount in the asset's smallest unit (wei for native). The server enforces the configured ZK policy and local-chain boundary. It never exposes signing credentials, policy credentials, or proofs.",
     },
   );
   server.registerTool(
@@ -126,6 +145,20 @@ export function createPaymentMcpServer(options: {
   }, async (input) => {
     try {
       const result = await executeERC20PaymentTool(input, options.config, options.execute);
+      return { content: [{ type: "text", text: JSON.stringify(result) }], structuredContent: result };
+    } catch {
+      return { content: [{ type: "text", text: "Payment failed: PAYMENT_REJECTED" }], isError: true };
+    }
+  });
+  server.registerTool("pay_contract", {
+    title: "Pay contract invoice under ZK policy",
+    description: "Pay native token to an allowed contract's pay(bytes32) function. Pass the contract address, a 32-byte invoiceId, and an exact decimal wei amount.",
+    inputSchema: contractPaymentIntentSchema,
+    outputSchema: paymentResultSchema,
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
+  }, async (input) => {
+    try {
+      const result = await executeContractPaymentTool(input, options.config, options.execute);
       return { content: [{ type: "text", text: JSON.stringify(result) }], structuredContent: result };
     } catch {
       return { content: [{ type: "text", text: "Payment failed: PAYMENT_REJECTED" }], isError: true };

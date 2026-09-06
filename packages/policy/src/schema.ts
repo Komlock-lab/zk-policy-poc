@@ -57,17 +57,20 @@ export function policyFields(input: Policy): bigint[] {
     BigInt(p.dailyEnabled), p.salt];
 }
 
+export const invoiceIdSchema = z.string().regex(/^0x[0-9a-fA-F]{64}$/).transform((v) => v as Hex);
+
 const paymentIntentFields = {
   recipient: addressSchema.refine((v) => v !== zeroAddress), amount: amountSchema,
   target: addressSchema,
-  invoiceId: z.string().regex(/^0x[0-9a-fA-F]{64}$/).transform((v) => v as Hex),
+  invoiceId: invoiceIdSchema,
   issuedAt: u64Schema, validUntil: u64Schema,
 };
 export const paymentIntentSchema = z.discriminatedUnion("kind", [
   z.object({ ...paymentIntentFields, kind: z.literal(0), asset: z.literal(zeroAddress) }).strict(),
   z.object({ ...paymentIntentFields, kind: z.literal(1), asset: addressSchema.refine((v) => v !== zeroAddress) }).strict(),
-]).refine((v) => v.target === (v.kind === 0 ? v.recipient : v.asset)
-  && BigInt(v.invoiceId) === 0n && v.validUntil >= v.issuedAt, "invalid payment context");
+  z.object({ ...paymentIntentFields, kind: z.literal(2), asset: z.literal(zeroAddress) }).strict(),
+]).refine((v) => v.target === (v.kind === 1 ? v.asset : v.recipient)
+  && (v.kind === 2 || BigInt(v.invoiceId) === 0n) && v.validUntil >= v.issuedAt, "invalid payment context");
 export type PaymentIntent = z.output<typeof paymentIntentSchema>;
 export type PaymentContext = Omit<PaymentIntent, never> & { chainId: bigint; account: string; policyCommitment: bigint; dayId: bigint; spentBefore: bigint }
 export const publicInputsSchema = z.array(z.string().regex(/^0x[0-9a-fA-F]{64}$/).transform((v) => v as Hex)).length(15);

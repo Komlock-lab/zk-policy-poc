@@ -3,7 +3,7 @@ id: task-06-04-03
 type: task
 title: Contract決済のAPI・Client・MCP接続
 story: story-06-04
-status: pending
+status: done
 blocked_by: [task-06-04-02]
 created: 2026-09-06
 updated: 2026-09-06
@@ -31,8 +31,10 @@ pnpm test:unit; pnpm test:e2e
 
 ## 検証結果
 
-未実施。
+2026-09-06: `pnpm test:unit`成功（101 tests）。新規`e2e/contract-payment.test.ts`を`NODE_OPTIONS=--experimental-sqlite pnpm exec vitest run e2e/contract-payment.test.ts`で実行して成功。直接0.01 ETH、実CLI/Alto 0.02 ETH、実stdio MCP pay_contract/Alto 0.03 ETHを異なるinvoiceIdで決済し、receiver残高0→0.01→0.03→0.06 ETHと各InvoicePaid・ContractPaymentExecuted・successful receiptを確認。上下128bitが異なるinvoiceと全FFの32-byte invoiceも実証。
+
+最終`pnpm test`成功: build/Verifier再生成/typecheck、Circuit 9、Contract 35、unit 101、E2E 25。native/ERC-20の既存経路も維持。通常E2Eで実Agent 5件はskipされ成功に含めない。Agent固有allow設定はStory06-09/10まで据え置き。`git diff --check`、`node scripts/validate-planning.mjs`成功。ログ: `/private/tmp/story04-full-test.log`、`/private/tmp/story04-contract-e2e.log`。
 
 ## Blocked
 
-実装開始はEpicのPreflight解消後。
+なし。

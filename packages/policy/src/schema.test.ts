@@ -27,3 +27,13 @@ it("binds ERC-20 target and asset with the token's exact amount", () => {
     issuedAt: 100n, validUntil: 400n, dayId: 0n, spentBefore: 0n }).map(BigInt);
   expect(inputs.slice(4, 9)).toEqual([1n, BigInt(recipient), BigInt(token), 123n, BigInt(token)]);
 });
+
+it("splits all 32 invoice bytes into the ordered u128 public inputs", () => {
+  const recipient = "0x0000000000000000000000000000000000002222";
+  const invoiceId = `0x${"ab".repeat(16)}${"cd".repeat(16)}` as const;
+  const inputs = paymentPublicInputs({ kind: 2, chainId: 31337n, account: recipient, policyCommitment: 3n,
+    recipient, asset: zeroAddress, amount: 123n, target: recipient, invoiceId,
+    issuedAt: 100n, validUntil: 400n, dayId: 0n, spentBefore: 0n }).map(BigInt);
+  expect(inputs.slice(4, 11)).toEqual([2n, BigInt(recipient), 0n, 123n, BigInt(recipient),
+    BigInt(`0x${"ab".repeat(16)}`), BigInt(`0x${"cd".repeat(16)}`)]);
+});
