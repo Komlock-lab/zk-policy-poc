@@ -2,7 +2,9 @@
 pragma solidity 0.8.30;
 
 import {EntryPoint} from "@account-abstraction/contracts/core/EntryPoint.sol";
-import {PackedUserOperation} from "@account-abstraction/contracts/interfaces/PackedUserOperation.sol";
+import {
+    PackedUserOperation
+} from "@account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 import {PolicyPaymentReceiver} from "../src/fixtures/PolicyPaymentReceiver.sol";
 import {PolicyToken} from "../src/fixtures/PolicyToken.sol";
 import {ZkPolicyAccount} from "../src/ZkPolicyAccount.sol";
@@ -18,14 +20,17 @@ interface Vm {
     function addr(uint256 privateKey) external returns (address);
     function assume(bool condition) external;
     function deal(address account, uint256 newBalance) external;
-    function expectEmit(bool checkTopic1, bool checkTopic2, bool checkTopic3, bool checkData) external;
+    function expectEmit(bool checkTopic1, bool checkTopic2, bool checkTopic3, bool checkData)
+        external;
     function expectRevert() external;
     function expectRevert(bytes calldata revertData) external;
     function getRecordedLogs() external returns (Log[] memory);
     function prank(address msgSender) external;
     function recordLogs() external;
     function warp(uint256 timestamp) external;
-    function sign(uint256 privateKey, bytes32 digest) external returns (uint8 v, bytes32 r, bytes32 s);
+    function sign(uint256 privateKey, bytes32 digest)
+        external
+        returns (uint8 v, bytes32 r, bytes32 s);
 }
 
 contract MockSpendLimitVerifier is ISpendLimitVerifier {
@@ -47,7 +52,8 @@ contract MockSpendLimitVerifier is ISpendLimitVerifier {
     function verify(bytes calldata, bytes32[] calldata publicInputs) external view returns (bool) {
         return result && publicInputs.length == 15 && publicInputs[7] == expectedValue
             && publicInputs[3] == expectedCommitment
-            && (expectedInputsHash == 0 || keccak256(abi.encode(publicInputs)) == expectedInputsHash);
+            && (expectedInputsHash == 0
+                || keccak256(abi.encode(publicInputs)) == expectedInputsHash);
     }
 }
 
@@ -139,7 +145,9 @@ contract ZkPolicyAccountTest {
         verifier.configure(true, bytes32(value), POLICY_COMMITMENT);
         vm.prank(owner);
 
-        account.execute(recipient, value, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF);
+        account.execute(
+            recipient, value, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF
+        );
 
         require(recipient.balance == value, "recipient balance mismatch");
         require(address(account).balance == 0, "account balance mismatch");
@@ -154,7 +162,9 @@ contract ZkPolicyAccountTest {
         emit PaymentExecuted(recipient, value);
         vm.prank(address(entryPoint));
 
-        account.executeUserOp(recipient, value, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF);
+        account.executeUserOp(
+            recipient, value, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF
+        );
 
         require(recipient.balance == value, "recipient balance mismatch");
     }
@@ -210,7 +220,13 @@ contract ZkPolicyAccountTest {
         vm.expectRevert(abi.encodeWithSelector(ZkPolicyAccount.Unauthorized.selector, caller));
         vm.prank(caller);
 
-        account.execute(payable(address(0xBEEF)), 1, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF);
+        account.execute(
+            payable(address(0xBEEF)),
+            1,
+            uint64(block.timestamp),
+            uint64(block.timestamp + 300),
+            PROOF
+        );
     }
 
     function testExecuteUserOpRejectsNonEntryPointCaller() public {
@@ -219,13 +235,21 @@ contract ZkPolicyAccountTest {
         vm.prank(caller);
 
         account.executeUserOp(
-            payable(address(0xBEEF)), 1, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF
+            payable(address(0xBEEF)),
+            1,
+            uint64(block.timestamp),
+            uint64(block.timestamp + 300),
+            PROOF
         );
     }
 
     function testUpdateRejectsCommitmentOutsideField() public {
         bytes32 invalidCommitment = bytes32(type(uint256).max);
-        vm.expectRevert(abi.encodeWithSelector(ZkPolicyAccount.PolicyCommitmentOutOfRange.selector, invalidCommitment));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ZkPolicyAccount.PolicyCommitmentOutOfRange.selector, invalidCommitment
+            )
+        );
         vm.prank(owner);
 
         account.updatePolicyCommitment(invalidCommitment);
@@ -254,7 +278,13 @@ contract ZkPolicyAccountTest {
         vm.expectRevert(abi.encodeWithSelector(ZkPolicyAccount.PolicyNotConfigured.selector));
         vm.prank(owner);
 
-        unconfigured.execute(payable(address(0xBEEF)), 1, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF);
+        unconfigured.execute(
+            payable(address(0xBEEF)),
+            1,
+            uint64(block.timestamp),
+            uint64(block.timestamp + 300),
+            PROOF
+        );
     }
 
     function testRejectsUnauthorizedPolicyUpdate() public {
@@ -278,7 +308,10 @@ contract ZkPolicyAccountTest {
     }
 
     function testFuzzAcceptsCommitmentInsideField(uint256 commitment) public {
-        vm.assume(commitment < 21888242871839275222246405745257275088548364400416034343698204186575808495617);
+        vm.assume(
+            commitment
+                < 21888242871839275222246405745257275088548364400416034343698204186575808495617
+        );
         vm.prank(owner);
 
         account.updatePolicyCommitment(bytes32(commitment));
@@ -290,7 +323,9 @@ contract ZkPolicyAccountTest {
         vm.expectRevert(abi.encodeWithSelector(ZkPolicyAccount.InvalidRecipient.selector));
         vm.prank(owner);
 
-        account.execute(payable(address(0)), 1, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF);
+        account.execute(
+            payable(address(0)), 1, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF
+        );
     }
 
     function testRejectsAmountOutsideU128() public {
@@ -298,7 +333,13 @@ contract ZkPolicyAccountTest {
         vm.expectRevert(abi.encodeWithSelector(ZkPolicyAccount.AmountOutOfRange.selector, value));
         vm.prank(owner);
 
-        account.execute(payable(address(0xBEEF)), value, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF);
+        account.execute(
+            payable(address(0xBEEF)),
+            value,
+            uint64(block.timestamp),
+            uint64(block.timestamp + 300),
+            PROOF
+        );
     }
 
     function testRejectsInvalidProof() public {
@@ -307,7 +348,13 @@ contract ZkPolicyAccountTest {
         vm.expectRevert(abi.encodeWithSelector(ZkPolicyAccount.InvalidProof.selector));
         vm.prank(owner);
 
-        account.execute(payable(address(0xBEEF)), value, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF);
+        account.execute(
+            payable(address(0xBEEF)),
+            value,
+            uint64(block.timestamp),
+            uint64(block.timestamp + 300),
+            PROOF
+        );
     }
 
     function testRejectsMismatchedPublicValue() public {
@@ -316,7 +363,13 @@ contract ZkPolicyAccountTest {
         vm.expectRevert(abi.encodeWithSelector(ZkPolicyAccount.InvalidProof.selector));
         vm.prank(owner);
 
-        account.execute(payable(address(0xBEEF)), value, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF);
+        account.execute(
+            payable(address(0xBEEF)),
+            value,
+            uint64(block.timestamp),
+            uint64(block.timestamp + 300),
+            PROOF
+        );
     }
 
     function testExecuteUserOpRejectsStaleCommitment() public {
@@ -328,7 +381,11 @@ contract ZkPolicyAccountTest {
         vm.prank(address(entryPoint));
 
         account.executeUserOp(
-            payable(address(0xBEEF)), value, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF
+            payable(address(0xBEEF)),
+            value,
+            uint64(block.timestamp),
+            uint64(block.timestamp + 300),
+            PROOF
         );
     }
 
@@ -339,7 +396,11 @@ contract ZkPolicyAccountTest {
         vm.prank(address(entryPoint));
 
         account.executeUserOp(
-            payable(address(0xBEEF)), value, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF
+            payable(address(0xBEEF)),
+            value,
+            uint64(block.timestamp),
+            uint64(block.timestamp + 300),
+            PROOF
         );
     }
 
@@ -353,7 +414,11 @@ contract ZkPolicyAccountTest {
         vm.prank(address(entryPoint));
 
         account.executeUserOp(
-            payable(address(recipient)), value, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF
+            payable(address(recipient)),
+            value,
+            uint64(block.timestamp),
+            uint64(block.timestamp + 300),
+            PROOF
         );
 
         require(address(account).balance == accountBalanceBefore, "account balance changed");
@@ -371,7 +436,11 @@ contract ZkPolicyAccountTest {
         vm.prank(owner);
 
         account.execute(
-            payable(address(recipient)), value, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF
+            payable(address(recipient)),
+            value,
+            uint64(block.timestamp),
+            uint64(block.timestamp + 300),
+            PROOF
         );
 
         require(address(account).balance == accountBalanceBefore, "account balance changed");
@@ -385,7 +454,9 @@ contract ZkPolicyAccountTest {
         verifier.configure(true, bytes32(uint256(value)), POLICY_COMMITMENT);
         vm.prank(owner);
 
-        account.execute(recipient, value, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF);
+        account.execute(
+            recipient, value, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF
+        );
 
         require(recipient.balance == value, "recipient balance mismatch");
     }
@@ -451,11 +522,21 @@ contract ZkPolicyAccountTest {
         vm.prank(caller);
         if (caller == owner) {
             account.executeERC20(
-                address(token), recipient, amount, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF
+                address(token),
+                recipient,
+                amount,
+                uint64(block.timestamp),
+                uint64(block.timestamp + 300),
+                PROOF
             );
         } else {
             account.executeERC20UserOp(
-                address(token), recipient, amount, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF
+                address(token),
+                recipient,
+                amount,
+                uint64(block.timestamp),
+                uint64(block.timestamp + 300),
+                PROOF
             );
         }
         require(token.balanceOf(address(account)) == 7, "account token balance mismatch");
@@ -474,7 +555,11 @@ contract ZkPolicyAccountTest {
         _checkContractPayment(0.01 ether, keccak256("invoice-entrypoint"), address(entryPoint));
     }
 
-    function testFuzzContractPaysActualInvoiceAndValue(uint128 value, bytes32 invoiceId, bool viaEntryPoint) public {
+    function testFuzzContractPaysActualInvoiceAndValue(
+        uint128 value,
+        bytes32 invoiceId,
+        bool viaEntryPoint
+    ) public {
         _checkContractPayment(value, invoiceId, viaEntryPoint ? address(entryPoint) : owner);
     }
 
@@ -502,11 +587,21 @@ contract ZkPolicyAccountTest {
         vm.prank(caller);
         if (caller == owner) {
             account.executeContract(
-                address(receiver), invoiceId, value, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF
+                address(receiver),
+                invoiceId,
+                value,
+                uint64(block.timestamp),
+                uint64(block.timestamp + 300),
+                PROOF
             );
         } else {
             account.executeContractUserOp(
-                address(receiver), invoiceId, value, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF
+                address(receiver),
+                invoiceId,
+                value,
+                uint64(block.timestamp),
+                uint64(block.timestamp + 300),
+                PROOF
             );
         }
         require(address(receiver).balance == value, "invoice receiver balance mismatch");
@@ -531,7 +626,9 @@ contract ZkPolicyAccountTest {
         bytes32 invoiceId = keccak256("daily-native-invoice");
         _expectStateInputs(2, address(receiver), address(0), 0.01 ether, invoiceId, 0.05 ether);
         vm.prank(address(entryPoint));
-        account.executeContractUserOp(address(receiver), invoiceId, 0.01 ether, 172800, 173100, PROOF);
+        account.executeContractUserOp(
+            address(receiver), invoiceId, 0.01 ether, 172800, 173100, PROOF
+        );
         _assertDailySpend(address(0), 2, 0.06 ether);
         require(recipient.balance == 0.05 ether, "native recipient balance");
         require(address(receiver).balance == 0.01 ether, "contract recipient balance");
@@ -552,7 +649,10 @@ contract ZkPolicyAccountTest {
         _assertDailySpend(address(first), 2, 15);
         _assertDailySpend(address(second), 2, 20);
         _assertDailySpend(address(0), 2, 0.06 ether);
-        require(first.balanceOf(recipient) == 15 && second.balanceOf(recipient) == 20, "token recipients");
+        require(
+            first.balanceOf(recipient) == 15 && second.balanceOf(recipient) == 20,
+            "token recipients"
+        );
 
         vm.warp(259200);
         _assertDailySpend(address(0), 3, 0);
@@ -564,7 +664,9 @@ contract ZkPolicyAccountTest {
         require(recipient.balance == 0.09 ether, "next day recipient balance");
     }
 
-    function testFuzzDailySpendTracksSequentialAmounts(uint64 first, uint64 second, bool nextDay) public {
+    function testFuzzDailySpendTracksSequentialAmounts(uint64 first, uint64 second, bool nextDay)
+        public
+    {
         vm.warp(172800);
         address payable recipient = payable(address(0xCAFE));
         vm.deal(address(account), uint256(first) + second);
@@ -575,12 +677,17 @@ contract ZkPolicyAccountTest {
         uint128 previous = nextDay ? 0 : first;
         _expectStateInputs(0, recipient, address(0), second, 0, previous);
         vm.prank(address(entryPoint));
-        account.executeUserOp(recipient, second, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF);
+        account.executeUserOp(
+            recipient, second, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF
+        );
         _assertDailySpend(address(0), nextDay ? 3 : 2, previous + second);
         require(recipient.balance == uint256(first) + second, "sequential recipient balance");
     }
 
-    function _assertDailySpend(address asset, uint64 expectedDay, uint128 expectedSpent) private view {
+    function _assertDailySpend(address asset, uint64 expectedDay, uint128 expectedSpent)
+        private
+        view
+    {
         (uint64 day, uint128 spent) = account.getDailySpend(asset);
         require(day == expectedDay && spent == expectedSpent, "daily spend mismatch");
     }
@@ -680,11 +787,16 @@ contract ZkPolicyAccountTest {
         return abi.encodePacked(r, s, v);
     }
 
-    function _hasPaymentLog(Vm.Log[] memory logs, address recipient, uint256 value) private view returns (bool) {
+    function _hasPaymentLog(Vm.Log[] memory logs, address recipient, uint256 value)
+        private
+        view
+        returns (bool)
+    {
         bytes32 signature = keccak256("PaymentExecuted(address,uint256)");
         for (uint256 i = 0; i < logs.length; i++) {
             if (
-                logs[i].emitter == address(account) && logs[i].topics.length == 2 && logs[i].topics[0] == signature
+                logs[i].emitter == address(account) && logs[i].topics.length == 2
+                    && logs[i].topics[0] == signature
                     && logs[i].topics[1] == bytes32(uint256(uint160(address(recipient))))
                     && abi.decode(logs[i].data, (uint256)) == value
             ) return true;
