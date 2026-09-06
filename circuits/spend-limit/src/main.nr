@@ -155,3 +155,56 @@ fn accepts_selected_token_daily_budget() {
     p[3] = compute_commitment(s);
     main(p, s);
 }
+
+#[test(should_fail_with = "recipient is not allowed")]
+fn rejects_recipient_not_in_allowlist() {
+    let (mut p, mut s) = fixture(10, 100, 123456789);
+    s[2] = 1; s[3] = 1; s[4] = 999;
+    p[3] = compute_commitment(s);
+    main(p, s);
+}
+
+#[test(should_fail_with = "contract is not allowed")]
+fn rejects_contract_not_in_allowlist() {
+    let (mut p, mut s) = fixture(10, 100, 123456789);
+    s[45] = 1; s[46] = 1; s[47] = 999;
+    p[4] = 2; p[9] = 123; p[10] = 456;
+    p[3] = compute_commitment(s);
+    main(p, s);
+}
+
+#[test(should_fail_with = "value exceeds max amount")]
+fn rejects_daily_budget_exceeded() {
+    let (mut p, mut s) = fixture(10, 100, 123456789);
+    s[63] = 1; s[23] = 50; p[14] = 45;
+    p[3] = compute_commitment(s);
+    main(p, s);
+}
+
+#[test(should_fail_with = "value exceeds max amount")]
+fn rejects_erc20_asset_without_matching_rule() {
+    let (mut p, s) = fixture(10, 100, 123456789);
+    p[4] = 1; p[6] = 9999; p[8] = 9999;
+    main(p, s);
+}
+
+#[test(should_fail)]
+fn rejects_validity_window_exceeding_max() {
+    let (mut p, s) = fixture(10, 100, 123456789);
+    p[12] = p[11] + (s[1] as Field) + 1;
+    main(p, s);
+}
+
+#[test(should_fail)]
+fn rejects_valid_until_before_issued_at() {
+    let (mut p, s) = fixture(10, 100, 123456789);
+    p[12] = p[11] - 1;
+    main(p, s);
+}
+
+#[test(should_fail)]
+fn rejects_wrong_schema_version() {
+    let (mut p, s) = fixture(10, 100, 123456789);
+    p[0] = 3;
+    main(p, s);
+}
