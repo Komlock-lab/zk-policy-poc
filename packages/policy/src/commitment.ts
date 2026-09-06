@@ -13,6 +13,10 @@ export function generateSalt(): bigint {
   }
 }
 
+// keccak256("zk-policy-poc.policy.v2") mod BN254_Fr. Keep in sync with circuits/spend-limit.
+export const POLICY_DOMAIN =
+  6483182709583644050186390213444276841080681456269654491464534989984382790914n;
+
 function fieldToBytes(value: bigint): Uint8Array {
   return Uint8Array.from(Buffer.from(value.toString(16).padStart(64, "0"), "hex"));
 }
@@ -29,10 +33,13 @@ export async function computePolicyCommitment(
   const barretenberg = await Barretenberg.new({ threads: 1 });
 
   try {
-    const { hash } = await barretenberg.poseidon2Hash({
+    const { hash: policyFieldsHash } = await barretenberg.poseidon2Hash({
       inputs: policyFields(policy).map(fieldToBytes),
     });
-    return bytesToField(hash);
+    const { hash: commitment } = await barretenberg.poseidon2Hash({
+      inputs: [fieldToBytes(POLICY_DOMAIN), policyFieldsHash],
+    });
+    return bytesToField(commitment);
   } finally {
     await barretenberg.destroy();
   }

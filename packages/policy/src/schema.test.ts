@@ -9,8 +9,8 @@ it("normalizes native limits to the 65-field v2 commitment", async () => {
   expect(fields[20]).toBe(1n);
   expect(fields[22]).toBe(100n);
   expect(fields[64]).toBe(123456789n);
-  expect(await computePolicyCommitment(policy)).toBe(8681856271876768858477722514944831047648970978592868574920873064906263226319n);
-  expect(await computePolicyCommitment(100n, 123456789n)).toBe(8681856271876768858477722514944831047648970978592868574920873064906263226319n);
+  expect(await computePolicyCommitment(policy)).toBe(16375109059540103049814800400289276582835342681949728713487340668763290790770n);
+  expect(await computePolicyCommitment(100n, 123456789n)).toBe(16375109059540103049814800400289276582835342681949728713487340668763290790770n);
 });
 it("serializes the ADR's 15 public inputs in order", () => {
   const recipient = "0x0000000000000000000000000000000000000002";

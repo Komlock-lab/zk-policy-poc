@@ -1,5 +1,13 @@
 use poseidon::poseidon2::Poseidon2;
 
+// keccak256("zk-policy-poc.policy.v2") mod BN254_Fr. Keep in sync with packages/policy.
+global POLICY_DOMAIN: Field = 0x0e5559f3d2fd7506a74426bba115323b003c6e165d2f7fd8e518881ce1a72d02;
+
+fn compute_commitment(policy_fields: [Field; 65]) -> Field {
+    let policy_fields_hash = Poseidon2::hash(policy_fields, 65);
+    Poseidon2::hash([POLICY_DOMAIN, policy_fields_hash], 2)
+}
+
 // Public: ADR-0012's 15 ordered payment fields. Private: the 65 normalized policy fields.
 fn main(public_inputs: pub [Field; 15], policy_fields: [Field; 65]) {
     let p = public_inputs;
@@ -68,19 +76,19 @@ fn main(public_inputs: pub [Field; 15], policy_fields: [Field; 65]) {
     let valid_until = p[12] as u64;
     assert(valid_until >= issued_at);
     assert(valid_until - issued_at <= s[1] as u64);
-    assert(Poseidon2::hash(s, 65) == p[3], "policy commitment mismatch");
+    assert(compute_commitment(s) == p[3], "policy commitment mismatch");
 }
 
 fn fixture(value: u128, limit: u128, salt: Field) -> ([Field; 15], [Field; 65]) {
     let mut s = [0; 65];
     s[0] = 2; s[1] = 300; s[20] = 1; s[22] = limit as Field; s[64] = salt;
     let mut p = [0; 15];
-    p[0] = 2; p[1] = 31337; p[2] = 1; p[3] = Poseidon2::hash(s, 65);
+    p[0] = 2; p[1] = 31337; p[2] = 1; p[3] = compute_commitment(s);
     p[5] = 2; p[7] = value as Field; p[8] = 2; p[11] = 100; p[12] = 400;
     (p, s)
 }
 #[test]
-fn accepts_value_below_limit() { let (p, s) = fixture(10, 100, 123456789); assert(p[3] == 8681856271876768858477722514944831047648970978592868574920873064906263226319); main(p, s); }
+fn accepts_value_below_limit() { let (p, s) = fixture(10, 100, 123456789); assert(p[3] == 16375109059540103049814800400289276582835342681949728713487340668763290790770); main(p, s); }
 #[test]
 fn accepts_value_equal_to_limit() { let (p, s) = fixture(100, 100, 987654321); main(p, s); }
 #[test(should_fail_with = "value exceeds max amount")]
@@ -92,7 +100,7 @@ fn rejects_wrong_commitment() { let (mut p, s) = fixture(10, 100, 123456789); p[
 fn accepts_recipient_added_to_allowlist() {
     let (mut p, mut s) = fixture(10, 100, 123456789);
     s[2] = 1; s[3] = 2; s[4] = 1; s[5] = 2;
-    p[3] = Poseidon2::hash(s, 65);
+    p[3] = compute_commitment(s);
     main(p, s);
 }
 #[test]
@@ -100,7 +108,7 @@ fn accepts_last_recipient_in_full_allowlist() {
     let (mut p, mut s) = fixture(10, 100, 123456789);
     s[2] = 1; s[3] = 16;
     for i in 0..16 { s[4 + i] = (i + 1) as Field; }
-    p[5] = 16; p[8] = 16; p[3] = Poseidon2::hash(s, 65);
+    p[5] = 16; p[8] = 16; p[3] = compute_commitment(s);
     main(p, s);
 }
 
@@ -110,7 +118,7 @@ fn accepts_erc20_with_its_own_asset_limit() {
     s[20] = 2; s[24] = 1234; s[25] = 100;
     s[2] = 1; s[3] = 1; s[4] = p[5];
     p[4] = 1; p[6] = 1234; p[8] = 1234;
-    p[3] = Poseidon2::hash(s, 65);
+    p[3] = compute_commitment(s);
     main(p, s);
 }
 
@@ -120,14 +128,14 @@ fn accepts_allowed_contract_with_invoice() {
     s[2] = 1; s[3] = 1; s[4] = p[5];
     s[45] = 1; s[46] = 1; s[47] = p[5];
     p[4] = 2; p[9] = 123; p[10] = 456;
-    p[3] = Poseidon2::hash(s, 65);
+    p[3] = compute_commitment(s);
     main(p, s);
 }
 #[test]
 fn accepts_native_with_contract_condition_enabled() {
     let (mut p, mut s) = fixture(10, 100, 123456789);
     s[45] = 1; s[46] = 1; s[47] = 1234;
-    p[3] = Poseidon2::hash(s, 65);
+    p[3] = compute_commitment(s);
     main(p, s);
 }
 
@@ -135,7 +143,7 @@ fn accepts_native_with_contract_condition_enabled() {
 fn accepts_daily_budget_at_limit() {
     let (mut p, mut s) = fixture(10, 100, 123456789);
     s[63] = 1; s[23] = 50; p[14] = 40;
-    p[3] = Poseidon2::hash(s, 65);
+    p[3] = compute_commitment(s);
     main(p, s);
 }
 #[test]
@@ -144,6 +152,6 @@ fn accepts_selected_token_daily_budget() {
     s[63] = 1; s[23] = 1;
     s[20] = 2; s[24] = 1234; s[25] = 100; s[26] = 100;
     p[4] = 1; p[6] = 1234; p[8] = 1234; p[14] = 90;
-    p[3] = Poseidon2::hash(s, 65);
+    p[3] = compute_commitment(s);
     main(p, s);
 }
