@@ -3,7 +3,7 @@ id: story-06-11
 type: story
 title: Developerがフェーズ6全体の正常系を再現する
 epic: epic-06
-status: in-progress
+status: done
 depends_on: [story-06-09, story-06-10]
 adrs: [adr-0012, adr-0013, adr-0014]
 created: 2026-09-06
@@ -75,3 +75,5 @@ AC-1: 以下の結果と監査文書の全Story/AC表で確認。
 なし。
 
 ship-story確認: 全Task done、4分野レビュー指摘なし、監査準備とEpic PR引渡し内容を作成。Account/testのformatのみ調整し、全Story統合後にrun-epicが監査を確定する。
+
+PR #29をEpicへ統合後、Contract 39件成功。全9 Story done。最終Epic監査・quality gate・main向けPR作成はrun-epicで継続する。
