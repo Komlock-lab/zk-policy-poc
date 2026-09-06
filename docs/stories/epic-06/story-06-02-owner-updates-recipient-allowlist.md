@@ -3,7 +3,7 @@ id: story-06-02
 type: story
 title: Ownerが許可送金先を更新して決済する
 epic: epic-06
-status: approved
+status: in-progress
 depends_on: [story-06-01]
 adrs: [adr-0012]
 created: 2026-09-06
@@ -54,13 +54,20 @@ Ownerが許可送金先を更新して決済する。
 
 | ID | Task | Status |
 | --- | --- | --- |
-| [task-06-02-01](../../tasks/story-06-02/task-06-02-01-recipient-membership.md) | recipient allowlistの回路制約 | pending |
-| [task-06-02-02](../../tasks/story-06-02/task-06-02-02-recipient-policy-update.md) | allowlistのOwner更新と決済E2E | pending |
+| [task-06-02-01](../../tasks/story-06-02/task-06-02-01-recipient-membership.md) | recipient allowlistの回路制約 | done |
+| [task-06-02-02](../../tasks/story-06-02/task-06-02-02-recipient-policy-update.md) | allowlistのOwner更新と決済E2E | done |
 
 ## 検証結果
 
-未実施。
+2026-09-06: 実装・ship-story検証完了。Epicへの統合待ちのためin-progressを維持。
+
+- AC-1: `e2e/recipient-policy-update.test.ts`が実Owner CLI `policy:create --policy-file`でAを許可したPolicyを作成しAへ支払い、`policy:update --policy-file`でBを追加。同じPolicy IDのversion 2、新CommitmentとAccount一致、暗号化されたallowlistの正規化を確認。新versionの実ProofでBへ支払いrecipient残高が0.01 ETH増加。
+- `pnpm test`成功: build/Verifier再生成/typecheck、Circuit 6、Contract 29（既存fuzz各256 runs）、unit 97、E2E 23。既存のrecipient条件false・numeric CLIも維持。実Agent 5件はskipされ成功に数えない。
+- `pnpm benchmark:circuit`成功: 2,606 ACIR opcodes、main Brillig 87、Proof 8,000 bytes、生成・ローカル検証746 ms。`forge inspect --root contracts HonkVerifier deployedBytecode`でruntime 15,939 bytes。
+- `git diff --check`、`node scripts/validate-planning.mjs`成功。ログ: `/private/tmp/story02-full-test.log`、`/private/tmp/story02-benchmark.log`。
+- scope/architecture/security review: recipientフラグのboolean、有効長16以下、有効部分のみの所属、160bit域・昇順一意性・zero paddingを同じ65 FieldのCommitmentへ拘束。15公開入力順序・Owner認証・暗号化保存を維持。rootの独立レビューもCRITICAL/HIGH残件なし。
+- 新規異常系はユーザー指定どおり延期。新しい設計判断・外部資料由来の知識がないためWiki/ADR変更なし。
 
 ## Blocked
 
-実装前条件はEpicのPreflightを参照。計画は承認済みだが実装開始前。
+なし。Story PRのmergeとdone遷移はrun-epicが担当。

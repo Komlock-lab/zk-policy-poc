@@ -11,7 +11,7 @@ import {
 import { privateKeyToAccount } from "viem/accounts";
 import { foundry } from "viem/chains";
 import { z } from "zod";
-import { computePolicyCommitment, generateSalt, parseCircuitAmount, normalizePolicy, serializePolicy, type PolicyInput } from "../../../packages/policy/src/index.ts";
+import { computePolicyCommitment, generateSalt, normalizePolicy, serializePolicy, type PolicyInput } from "../../../packages/policy/src/index.ts";
 import { policyDomain, policyUpdateTypes } from "../../policy-api/src/eip712.ts";
 import { zkPolicyAccountAbi } from "../../policy-api/src/chain.ts";
 
@@ -93,7 +93,7 @@ export async function createAndActivatePolicy(input: {
   rpcUrl: string;
   accountAddress: Address;
   ownerPrivateKey: Hex;
-  maxAmountWei: bigint;
+  maxAmountWei?: bigint;
   maxValiditySeconds?: bigint;
   policy?: Omit<PolicyInput, "salt">;
   deadline: number;
@@ -102,7 +102,6 @@ export async function createAndActivatePolicy(input: {
   assertLocalUrl(input.rpcUrl, "rpcUrl");
   const owner = privateKeyToAccount(input.ownerPrivateKey);
   const accountAddress = getAddress(input.accountAddress);
-  const maxAmount = parseCircuitAmount(input.maxAmountWei);
   const transport = http(input.rpcUrl);
   const publicClient = createPublicClient({ chain: foundry, transport });
   const walletClient = createWalletClient({ account: owner, chain: foundry, transport });
@@ -113,7 +112,7 @@ export async function createAndActivatePolicy(input: {
     contextResponseSchema,
   );
   const salt = generateSalt();
-  const policy = normalizePolicy(input.policy ? { ...input.policy, salt } : { maxAmountWei: maxAmount, salt, maxValiditySeconds: input.maxValiditySeconds });
+  const policy = normalizePolicy(input.policy ? { ...input.policy, salt } : { maxAmountWei: input.maxAmountWei, salt, maxValiditySeconds: input.maxValiditySeconds });
   const commitment = toHex(await computePolicyCommitment(policy), { size: 32 });
   const message = {
     policyId: context.policyId,
@@ -181,7 +180,7 @@ export async function updateAndActivatePolicy(input: {
   ownerPrivateKey: Hex;
   policyId: string;
   token: string;
-  maxAmountWei: bigint;
+  maxAmountWei?: bigint;
   maxValiditySeconds?: bigint;
   policy?: Omit<PolicyInput, "salt">;
   deadline: number;
@@ -192,7 +191,6 @@ export async function updateAndActivatePolicy(input: {
   const token = z.string().regex(/^zkp_[A-Za-z0-9_-]{43}$/).parse(input.token);
   const owner = privateKeyToAccount(input.ownerPrivateKey);
   const accountAddress = getAddress(input.accountAddress);
-  const maxAmount = parseCircuitAmount(input.maxAmountWei);
   const transport = http(input.rpcUrl);
   const publicClient = createPublicClient({ chain: foundry, transport });
   const walletClient = createWalletClient({ account: owner, chain: foundry, transport });
@@ -204,7 +202,7 @@ export async function updateAndActivatePolicy(input: {
   );
   if (context.policyId !== policyId) throw new Error("policy context does not match the requested policy");
   const salt = generateSalt();
-  const policy = normalizePolicy(input.policy ? { ...input.policy, salt } : { maxAmountWei: maxAmount, salt, maxValiditySeconds: input.maxValiditySeconds });
+  const policy = normalizePolicy(input.policy ? { ...input.policy, salt } : { maxAmountWei: input.maxAmountWei, salt, maxValiditySeconds: input.maxValiditySeconds });
   const commitment = toHex(await computePolicyCommitment(policy), { size: 32 });
   const signature = await owner.signTypedData({
     domain: policyDomain(accountAddress),

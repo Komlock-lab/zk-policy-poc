@@ -1,4 +1,4 @@
-import { u64Schema } from "../../../packages/policy/src/index.ts";
+import { readOwnerPolicyArguments } from "./policy-input.ts";
 import { z } from "zod";
 import type { Address, Hex } from "viem";
 import { createAndActivatePolicy } from "./create-policy.ts";
@@ -11,15 +11,14 @@ const input = z
     POLICY_OWNER_PRIVATE_KEY: z.string().regex(/^0x[0-9a-fA-F]{64}$/),
   })
   .parse(process.env);
-const maxAmountWei = z.string().regex(/^(0|[1-9][0-9]*)$/).parse(process.argv[2]);
+const policyInput = await readOwnerPolicyArguments(process.argv.slice(2));
 
 const result = await createAndActivatePolicy({
   apiUrl: input.POLICY_API_URL,
   rpcUrl: input.POLICY_RPC_URL,
   accountAddress: input.POLICY_ACCOUNT_ADDRESS as Address,
   ownerPrivateKey: input.POLICY_OWNER_PRIVATE_KEY as Hex,
-  maxAmountWei: BigInt(maxAmountWei),
-  maxValiditySeconds: u64Schema.parse(process.argv[3] ?? "300"),
+  ...policyInput,
   deadline: Math.floor(Date.now() / 1_000) + 600,
 });
 
