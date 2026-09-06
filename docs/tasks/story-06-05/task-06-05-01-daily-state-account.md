@@ -3,7 +3,7 @@ id: task-06-05-01
 type: task
 title: Accountの資産別日次累積保存
 story: story-06-05
-status: pending
+status: done
 blocked_by: []
 created: 2026-09-06
 updated: 2026-09-06
@@ -31,8 +31,8 @@ pnpm test:contracts（正常値のfuzzを含む）
 
 ## 検証結果
 
-未実施。
+2026-09-06: 既存Account実装を確認し、追加product変更なしで正本・順序を満たすと判断。`pnpm test:contracts`成功（37 tests、既存35件と同日/翌日/複数資産の正常系・fuzz各256 runs）。Owner native0.03 + EntryPoint native0.02 + Contract0.01 = native累積0.06、2 Tokenの独立枠、翌日getter0→native0.04を確認。各送金前の期待spentBeforeを含む全15公開入力hashを照合。ログ: `/private/tmp/story05-account-tests.log`。
 
 ## Blocked
 
-実装開始はEpicのPreflight解消後。
+なし。

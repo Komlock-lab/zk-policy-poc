@@ -515,6 +515,104 @@ contract ZkPolicyAccountTest {
         require(spent == value, "invoice native spend mismatch");
     }
 
+    function testDailySpendCombinesNativeAndContractAndSeparatesTokens() public {
+        vm.warp(172800);
+        address payable recipient = payable(address(0xCAFE));
+        vm.deal(address(account), 1 ether);
+        _expectStateInputs(0, recipient, address(0), 0.03 ether, 0, 0);
+        vm.prank(owner);
+        account.execute(recipient, 0.03 ether, 172800, 173100, PROOF);
+        _expectStateInputs(0, recipient, address(0), 0.02 ether, 0, 0.03 ether);
+        vm.prank(address(entryPoint));
+        account.executeUserOp(recipient, 0.02 ether, 172800, 173100, PROOF);
+        _assertDailySpend(address(0), 2, 0.05 ether);
+
+        PolicyPaymentReceiver receiver = new PolicyPaymentReceiver();
+        bytes32 invoiceId = keccak256("daily-native-invoice");
+        _expectStateInputs(2, address(receiver), address(0), 0.01 ether, invoiceId, 0.05 ether);
+        vm.prank(address(entryPoint));
+        account.executeContractUserOp(address(receiver), invoiceId, 0.01 ether, 172800, 173100, PROOF);
+        _assertDailySpend(address(0), 2, 0.06 ether);
+        require(recipient.balance == 0.05 ether, "native recipient balance");
+        require(address(receiver).balance == 0.01 ether, "contract recipient balance");
+
+        PolicyToken first = new PolicyToken();
+        PolicyToken second = new PolicyToken();
+        first.mint(address(account), 100);
+        second.mint(address(account), 100);
+        _expectStateInputs(1, recipient, address(first), 10, 0, 0);
+        vm.prank(owner);
+        account.executeERC20(address(first), recipient, 10, 172800, 173100, PROOF);
+        _expectStateInputs(1, recipient, address(second), 20, 0, 0);
+        vm.prank(address(entryPoint));
+        account.executeERC20UserOp(address(second), recipient, 20, 172800, 173100, PROOF);
+        _expectStateInputs(1, recipient, address(first), 5, 0, 10);
+        vm.prank(address(entryPoint));
+        account.executeERC20UserOp(address(first), recipient, 5, 172800, 173100, PROOF);
+        _assertDailySpend(address(first), 2, 15);
+        _assertDailySpend(address(second), 2, 20);
+        _assertDailySpend(address(0), 2, 0.06 ether);
+        require(first.balanceOf(recipient) == 15 && second.balanceOf(recipient) == 20, "token recipients");
+
+        vm.warp(259200);
+        _assertDailySpend(address(0), 3, 0);
+        _assertDailySpend(address(first), 3, 0);
+        _expectStateInputs(0, recipient, address(0), 0.04 ether, 0, 0);
+        vm.prank(owner);
+        account.execute(recipient, 0.04 ether, 259200, 259500, PROOF);
+        _assertDailySpend(address(0), 3, 0.04 ether);
+        require(recipient.balance == 0.09 ether, "next day recipient balance");
+    }
+
+    function testFuzzDailySpendTracksSequentialAmounts(uint64 first, uint64 second, bool nextDay) public {
+        vm.warp(172800);
+        address payable recipient = payable(address(0xCAFE));
+        vm.deal(address(account), uint256(first) + second);
+        _expectStateInputs(0, recipient, address(0), first, 0, 0);
+        vm.prank(owner);
+        account.execute(recipient, first, 172800, 173100, PROOF);
+        if (nextDay) vm.warp(259200);
+        uint128 previous = nextDay ? 0 : first;
+        _expectStateInputs(0, recipient, address(0), second, 0, previous);
+        vm.prank(address(entryPoint));
+        account.executeUserOp(recipient, second, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF);
+        _assertDailySpend(address(0), nextDay ? 3 : 2, previous + second);
+        require(recipient.balance == uint256(first) + second, "sequential recipient balance");
+    }
+
+    function _assertDailySpend(address asset, uint64 expectedDay, uint128 expectedSpent) private view {
+        (uint64 day, uint128 spent) = account.getDailySpend(asset);
+        require(day == expectedDay && spent == expectedSpent, "daily spend mismatch");
+    }
+
+    function _expectStateInputs(
+        uint8 kind,
+        address recipient,
+        address asset,
+        uint128 value,
+        bytes32 invoiceId,
+        uint128 spentBefore
+    ) private {
+        verifier.configure(true, bytes32(uint256(value)), POLICY_COMMITMENT);
+        bytes32[] memory inputs = new bytes32[](15);
+        inputs[0] = bytes32(uint256(2));
+        inputs[1] = bytes32(block.chainid);
+        inputs[2] = bytes32(uint256(uint160(address(account))));
+        inputs[3] = POLICY_COMMITMENT;
+        inputs[4] = bytes32(uint256(kind));
+        inputs[5] = bytes32(uint256(uint160(recipient)));
+        inputs[6] = bytes32(uint256(uint160(asset)));
+        inputs[7] = bytes32(uint256(value));
+        inputs[8] = bytes32(uint256(uint160(kind == 1 ? asset : recipient)));
+        inputs[9] = bytes32(uint256(invoiceId) >> 128);
+        inputs[10] = bytes32(uint256(uint128(uint256(invoiceId))));
+        inputs[11] = bytes32(block.timestamp);
+        inputs[12] = bytes32(block.timestamp + 300);
+        inputs[13] = bytes32(block.timestamp / 86400);
+        inputs[14] = bytes32(uint256(spentBefore));
+        verifier.configureInputs(inputs);
+    }
+
     function _userOp(bytes memory callData) private view returns (PackedUserOperation memory) {
         return PackedUserOperation({
             sender: address(account),

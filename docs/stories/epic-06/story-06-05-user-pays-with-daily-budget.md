@@ -3,7 +3,7 @@ id: story-06-05
 type: story
 title: 利用者が日次予算内で続けて支払う
 epic: epic-06
-status: approved
+status: in-progress
 depends_on: [story-06-04]
 adrs: [adr-0012, adr-0013, adr-0014]
 created: 2026-09-06
@@ -60,14 +60,23 @@ updated: 2026-09-06
 
 | ID | Task | Status |
 | --- | --- | --- |
-| [task-06-05-01](../../tasks/story-06-05/task-06-05-01-daily-state-account.md) | Accountの資産別日次累積保存 | pending |
-| [task-06-05-02](../../tasks/story-06-05/task-06-05-02-daily-proof-context.md) | 日次上限の回路と最新context取得 | pending |
-| [task-06-05-03](../../tasks/story-06-05/task-06-05-03-daily-payment-e2e.md) | 同日連続・日跨ぎ・資産別決済E2E | pending |
+| [task-06-05-01](../../tasks/story-06-05/task-06-05-01-daily-state-account.md) | Accountの資産別日次累積保存 | done |
+| [task-06-05-02](../../tasks/story-06-05/task-06-05-02-daily-proof-context.md) | 日次上限の回路と最新context取得 | done |
+| [task-06-05-03](../../tasks/story-06-05/task-06-05-03-daily-payment-e2e.md) | 同日連続・日跨ぎ・資産別決済E2E | done |
 
 ## 検証結果
 
-未実施。
+- AC-1: `e2e/daily-payment.test.ts`で日次上限0.1 ETH・累積0から実Altoで0.03 ETHのreceiptを待ち、0.02 ETHを支払い、getter0.05 ETHと受取残高増加を確認。
+- AC-2: 同E2Eの許可Contractへの固定pay決済0.01 ETHで、Contract残高増加とnative共通累積0.06 ETHを確認。
+- AC-3: 同E2EでToken 10→20を支払い、Token累積30・Account残高970・受取残高30とnative累積0.06 ETH維持を確認。
+- AC-4: 同E2EでAnvilを翌UTC日へ進め各getterが0になり、最初のnative 0.04 ETHのreceipt後に新日累積0.04 ETH、Token有効累積0・残高維持を確認。
+- 全条件有効のPolicyで全15公開入力を実Proof・Accountへ渡し、Proof生成のみで累積不変とreceipt後の最新spentBefore利用を確認。AccountのETH減少と支払額の差からgas/prefundが累積に含まれないことも確認。
+- `pnpm test`: build・Verifier再生成・TypeScript成功、回路11件、Contract37件（fuzz各256 runs）、単体102件、E2E26件成功。既存異常系は維持。既定でskipする実Agent固有5件は未実施として区別。
+- `pnpm benchmark:circuit`: ACIR 4,314・Brillig 87、daily有効実Proof 8,000 bytes・生成937 ms。HonkVerifier runtimeは`forge inspect --root contracts HonkVerifier deployedBytecode`から15,939 bytesを確認。
+- `forge fmt --check contracts/test/ZkPolicyAccount.t.sol`、`git diff --check`、`node scripts/validate-planning.mjs`: 成功。
+- 自己・独立レビューで重大指摘なし。u128加算、同一assetの1回上限AND日次上限、無効時zero、同一block context、既存Accountの検証・累積更新→外部呼出しを確認。公開入力・秘密境界・認可経路は維持。追加異常系はユーザー指定で延期。
+- accepted ADRの変更・新しい外部知識の取り込みはなく、Wiki更新は不要。
 
 ## Blocked
 
-実装前条件はEpicのPreflightを参照。計画は承認済みだが実装開始前。
+なし。Story PRをEpicへ統合する判断とdone遷移はrun-epicが担当する。
