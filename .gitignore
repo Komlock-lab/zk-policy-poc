@@ -15,3 +15,7 @@ vk
 
 .env
 .DS_Store
+
+slides/dist/
+slides/.slidev/
+slides/*.pdf
