@@ -107,8 +107,8 @@ ORや優先順位を入れると、どの条件で通ったかが観測から推
 
 </div>
 
-<div class="border rounded p-4" style="border-color:#0c6b86">
-<div class="text-xs uppercase tracking-wider font-mono pb-2" style="color:#0c6b86">ZK Policyのガードレール</div>
+<div class="border rounded p-4" style="border-color:#1288ab">
+<div class="text-xs uppercase tracking-wider font-mono pb-2" style="color:#1288ab">ZK Policyのガードレール</div>
 
 - ルールは**Off-chainの秘密**のまま保持する
 - エージェントにもオンチェーンにも中身を見せない
@@ -132,49 +132,68 @@ ORや優先順位を入れると、どの条件で通ったかが観測から推
 
 <div class="text-xs tracking-widest uppercase opacity-50 font-mono">サービス — アーキテクチャ</div>
 
-# 秘密はOff-chainに残り、境界を越えるのはProofだけ
+# 3つのゾーンと、その間の2つの境界
 
-```mermaid {scale: 0.72}
-flowchart LR
-    owner["Owner"]
-    cli["Policy CLI"]
-    api["Policy API<br/>SQLite + AES-256-GCM"]
-    agent["Claude Code / Codex"]
-    mcp["MCP Server<br/>pay_native / pay_erc20 / pay_contract"]
-    client["Payment Client"]
-    prover["Noir + Barretenberg<br/>UltraHonk Prover"]
-    bundler["Alto Bundler"]
-    ep["EntryPoint v0.8"]
-    account["ZkPolicyAccount"]
-    verifier["SpendLimitVerifier<br/>（自動生成）"]
-    target["送金先 / Token / Contract"]
+左から右へ一方向に読む。それぞれの境界で、何が越えるか / 何が越えないかが決まっている。
 
-    owner -->|"EIP-712署名 + nonce"| cli
-    cli --> api
-    cli -->|"policyCommitment登録"| account
-    agent -->|"自然言語の依頼"| mcp
-    mcp --> client
-    client -->|"Bearer Token"| api
-    api --> prover
-    prover -->|"proof + 15公開入力"| client
-    client -->|"UserOperation"| bundler
-    bundler --> ep --> account
-    account --> verifier
-    verifier -->|"valid のみ"| target
-```
+<div style="display:grid;grid-template-columns:1fr 106px 1fr 106px 1fr;align-items:stretch;font-size:0.78rem;margin-top:0.8rem;">
 
-<div class="grid grid-cols-2 gap-4 pt-3 text-sm">
-  <div>🔒 <b>境界を越えないもの</b><br><span class="opacity-60">maxAmount / dailyLimit / allowlist / salt / Owner Key / Proof Token</span></div>
-  <div>🌐 <b>境界を越えるもの</b><br><span class="opacity-60">proof / policyCommitment / amount / recipient / dayId / spentBefore</span></div>
+  <div style="border:1px solid #a8446b;background:rgba(168,68,107,.07);border-radius:3px;padding:10px;display:flex;flex-direction:column;gap:5px;">
+    <div style="font-family:monospace;font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:#a8446b;">① 秘密Policy · Off-chain</div>
+    <div style="border:1px solid rgba(127,127,127,.35);border-radius:2px;padding:5px 8px;line-height:1.35;">Owner<div style="font-family:monospace;font-size:.58rem;opacity:.6;margin-top:2px;line-height:1.45;">Policy CLI · EIP-712署名 + nonce</div></div>
+    <div style="text-align:center;opacity:.45;font-size:.65rem;line-height:1;">↓</div>
+    <div style="border:1px solid rgba(127,127,127,.35);border-radius:2px;padding:5px 8px;line-height:1.35;">秘密Policy<div style="font-family:monospace;font-size:.58rem;color:#a8446b;margin-top:2px;line-height:1.45;">上限 •••• / allowlist •••• / salt ••••</div></div>
+    <div style="text-align:center;opacity:.45;font-size:.65rem;line-height:1;">↓</div>
+    <div style="border:1px solid rgba(127,127,127,.35);border-radius:2px;padding:5px 8px;line-height:1.35;">Policy API + Prover<div style="font-family:monospace;font-size:.58rem;opacity:.6;margin-top:2px;line-height:1.45;">AES-256-GCM復号 → Noir + Barretenberg</div></div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;padding:0 8px;text-align:center;">
+    <div style="font-family:monospace;font-size:.57rem;line-height:1.5;color:#1288ab;">proof と<br>15個の公開入力</div>
+    <div style="width:100%;border-top:1px solid #1288ab;"></div>
+    <div style="font-family:monospace;font-size:.57rem;line-height:1.5;color:#a8446b;">✕ 上限 · allowlist<br>dailyLimit · salt</div>
+  </div>
+
+  <div style="border:1px solid rgba(127,127,127,.35);border-radius:3px;padding:10px;display:flex;flex-direction:column;gap:5px;">
+    <div style="font-family:monospace;font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;opacity:.6;">② エージェント実行環境</div>
+    <div style="border:1px solid rgba(127,127,127,.35);border-radius:2px;padding:5px 8px;line-height:1.35;">Claude Code / Codex<div style="font-family:monospace;font-size:.58rem;opacity:.6;margin-top:2px;line-height:1.45;">modelのcontextとtranscript</div></div>
+    <div style="text-align:center;opacity:.45;font-size:.65rem;line-height:1;">↓</div>
+    <div style="border:1px solid rgba(127,127,127,.35);border-radius:2px;padding:5px 8px;line-height:1.35;">MCP Server<div style="font-family:monospace;font-size:.58rem;opacity:.6;margin-top:2px;line-height:1.45;">pay_native / pay_erc20 / pay_contract</div></div>
+    <div style="text-align:center;opacity:.45;font-size:.65rem;line-height:1;">↓</div>
+    <div style="border:1px solid rgba(127,127,127,.35);border-radius:2px;padding:5px 8px;line-height:1.35;">Payment Client<div style="font-family:monospace;font-size:.58rem;opacity:.6;margin-top:2px;line-height:1.45;">環境変数のOwner Keyで署名</div></div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;padding:0 8px;text-align:center;">
+    <div style="font-family:monospace;font-size:.57rem;line-height:1.5;color:#1288ab;">UserOperation<br>（proof同梱）</div>
+    <div style="width:100%;border-top:1px solid #1288ab;"></div>
+    <div style="font-family:monospace;font-size:.57rem;line-height:1.5;color:#a8446b;">✕ Owner Key<br>Proof Token</div>
+  </div>
+
+  <div style="border:1px solid #1288ab;background:rgba(18,136,171,.07);border-radius:3px;padding:10px;display:flex;flex-direction:column;gap:5px;">
+    <div style="font-family:monospace;font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:#1288ab;">③ On-chain · 公開</div>
+    <div style="border:1px solid rgba(127,127,127,.35);border-radius:2px;padding:5px 8px;line-height:1.35;">ZkPolicyAccount<div style="font-family:monospace;font-size:.58rem;opacity:.6;margin-top:2px;line-height:1.45;">15公開入力を実状態から再構築</div></div>
+    <div style="text-align:center;opacity:.45;font-size:.65rem;line-height:1;">↓</div>
+    <div style="border:1px solid rgba(127,127,127,.35);border-radius:2px;padding:5px 8px;line-height:1.35;">SpendLimitVerifier<div style="font-family:monospace;font-size:.58rem;opacity:.6;margin-top:2px;line-height:1.45;">回路から自動生成</div></div>
+    <div style="text-align:center;opacity:.45;font-size:.65rem;line-height:1;">↓</div>
+    <div style="border:1px solid rgba(127,127,127,.35);border-radius:2px;padding:5px 8px;line-height:1.35;">送金先 / Token / Contract</div>
+  </div>
+
 </div>
 
-<div class="text-sm opacity-70 pt-3">
-Owner KeyとProof Tokenは、Hostから名前を限定した環境変数でstdio MCP Serverへ渡し、決済Client内部だけで使う。Tool引数にもレスポンスにも一切現れない。
+<div class="grid grid-cols-2 gap-4 pt-4 text-sm">
+  <div class="border rounded p-3">
+    <div class="text-xs font-mono pb-1" style="color:#1288ab">① → ② の境界</div>
+    エージェント側へ渡るのはproofと公開入力だけ。<b>上限やallowlistの値そのものは越えない。</b>modelのcontextとtranscriptには、秘密もproofも現れない。
+  </div>
+  <div class="border rounded p-3">
+    <div class="text-xs font-mono pb-1" style="color:#1288ab">② → ③ の境界</div>
+    Accountが15個の公開入力を<b>自分で作り直す</b>ため、Client側の申告値は使われない。この境界の途中にBundler（Alto）とEntryPoint v0.8がある。
+  </div>
 </div>
 
 <!--
 ここまでで2分。
-図は左から右に「Ownerが秘密を設定 → Agentが依頼 → オンチェーンで強制」と読む。
+図は左から右へ一方向。ゾーンの間にある2本の線が、この設計のすべて。
+上の行が「越えるもの」、下の行が「越えないもの」。
 -->
 
 ---
@@ -186,7 +205,7 @@ Owner KeyとProof Tokenは、Hostから名前を限定した環境変数でstdio
 <div class="grid grid-cols-2 gap-5 text-sm pt-1">
 
 <div>
-<div class="text-xs uppercase tracking-wider font-mono pb-1" style="color:#7b2d52">policy_fields[65] — Circuitだけが見る</div>
+<div class="text-xs uppercase tracking-wider font-mono pb-1" style="color:#a8446b">policy_fields[65] — Circuitだけが見る</div>
 
 | 位置 | 内容 |
 | --- | --- |
@@ -203,7 +222,7 @@ Owner KeyとProof Tokenは、Hostから名前を限定した環境変数でstdio
 </div>
 
 <div>
-<div class="text-xs uppercase tracking-wider font-mono pb-1" style="color:#0c6b86">public_inputs[15] — Verifierに渡る</div>
+<div class="text-xs uppercase tracking-wider font-mono pb-1" style="color:#1288ab">public_inputs[15] — Verifierに渡る</div>
 
 | Index | 内容 |
 | --- | --- |
@@ -363,8 +382,8 @@ payment : 1 ETH -> allowed recipient
 
 </div>
 
-<div class="border rounded p-3 mt-4 text-sm" style="border-color:#2c6e49">
-<b style="color:#2c6e49">audit-06 · passed</b> ── CRITICAL/HIGH 0件、MEDIUM/LOW 0件、修正iteration 0。ADR・ZK・Contract・API/秘密の4分野を独立レビュー。
+<div class="border rounded p-3 mt-4 text-sm" style="border-color:#2c8a5c">
+<b style="color:#2c8a5c">audit-06 · passed</b> ── CRITICAL/HIGH 0件、MEDIUM/LOW 0件、修正iteration 0。ADR・ZK・Contract・API/秘密の4分野を独立レビュー。
 </div>
 
 <div class="text-xs opacity-50 pt-3 font-mono">
@@ -382,12 +401,24 @@ payment : 1 ETH -> allowed recipient
 
 # PoCから、エージェントウォレット基盤へ
 
-```mermaid {scale: 0.78}
-timeline
-    現在 : 複数ポリシー対応まで完了 : native / ERC-20 / Contract決済を実Agentまで通した
-    Next : 攻撃・異常系の包括検証 : Safe Module（zk-bound）経路との接続検討
-    Later : 複数チェーン・複数Agent対応 : 同じ秘密ポリシーの境界を横断して共有する
-```
+<div style="display:flex;flex-direction:column;margin-top:0.6rem;">
+  <div style="display:flex;gap:16px;padding:10px 0;border-bottom:1px solid rgba(127,127,127,.25);">
+    <div style="flex:0 0 66px;font-family:monospace;font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:#2c8a5c;padding-top:3px;">現在</div>
+    <div><b>複数ポリシー対応まで完了</b><br><span class="opacity-60 text-sm">有効期限・送金先allowlist・Token/Contract allowlist・日次累積上限を、native / ERC-20 / Contract決済で実Agentまで通した</span></div>
+  </div>
+  <div style="display:flex;gap:16px;padding:10px 0;border-bottom:1px solid rgba(127,127,127,.25);">
+    <div style="flex:0 0 66px;font-family:monospace;font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;opacity:.55;padding-top:3px;">Next</div>
+    <div><b>攻撃・異常系の包括検証</b><br><span class="opacity-60 text-sm">Prompt Injection由来の不正な送金提案が、オンチェーンで確実に拒否されることを攻撃側の試行として測る</span></div>
+  </div>
+  <div style="display:flex;gap:16px;padding:10px 0;border-bottom:1px solid rgba(127,127,127,.25);">
+    <div style="flex:0 0 66px;font-family:monospace;font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;opacity:.55;padding-top:3px;">Next</div>
+    <div><b>Safe Module経路（zk-bound）との接続検討</b><br><span class="opacity-60 text-sm">自作Accountで得た実行境界の理解を、本番寄りの実行境界へつなげる</span></div>
+  </div>
+  <div style="display:flex;gap:16px;padding:10px 0;">
+    <div style="flex:0 0 66px;font-family:monospace;font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;opacity:.55;padding-top:3px;">Later</div>
+    <div><b>複数チェーン・複数Agent対応</b><br><span class="opacity-60 text-sm">同じ秘密ポリシーの境界を、複数チェーン・複数エージェントで共有できる基盤にする</span></div>
+  </div>
+</div>
 
 <div class="grid grid-cols-2 gap-4 pt-3 text-sm">
   <div class="border rounded p-3">
