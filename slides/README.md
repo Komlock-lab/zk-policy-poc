@@ -14,12 +14,33 @@ pnpm dev
 
 ## 構成
 
-`slides.md`内の`---`区切りが1枚のスライドに対応する。担当分担の目安:
+`slides.md`内の`---`区切りが1枚のスライドに対応する。発表は3ブロック5分を想定する。
 
-- A-1〜A-3（サービス概要・目的・アーキテクチャ）
-- B-1〜B-3（Programmable Cryptography詳細・デモ・将来像）
+| # | スライド | ブロック |
+| --- | --- | --- |
+| 1 | タイトル | — |
+| 2 | 概要 — エージェントの送金をZK Proofで検証してから実行する | サービス（2分） |
+| 3 | 目的 — ガードレールが読める場所にある限り越えられる | サービス（2分） |
+| 4 | アーキテクチャ — 3つのゾーンと、その間の2つの境界 | サービス（2分） |
+| 5 | ZK — 65個の秘密に対する充足を15個の公開だけで示す | ZK説明（1分） |
+| 6 | デモ — 正常系・異常系 | デモ（2分） |
+| 7 | デモ — Agent経由と実測 | デモ（2分） |
+| 8 | 将来像 | 時間が押していれば飛ばす |
+| 9 | クロージング | — |
 
-各スライドの直後にある`<!-- 担当: (未定) -->`コメントに自分の名前を書き、担当スライドだけを編集してPRを出す。
+時間配分はスライド面に出さず、各スライド末尾の`<!-- -->`コメント（Slidevのプレゼンターノート）に書いている。数値と仕様は`docs/`を正本とし、実装を変更したときはスライド側の記述も更新する。
+
+図はmermaidを使わず、gridとflexのHTMLで組んでいる。ノード数が増えると自動レイアウトの矢印が交差して読めなくなったため、配置を固定した。図を足すときも同じ方針で書く。
+
+| スライドの記述 | 正本 |
+| --- | --- |
+| Policyの構造・公開入力 | [ADR-0012](../docs/adr/adr-0012-composite-policy-schema.md) |
+| Commitmentと証明系 | [ADR-0003](../docs/adr/adr-0003-commitment-and-proving-system.md) |
+| 日次累積 | [ADR-0014](../docs/adr/adr-0014-onchain-daily-spend.md) |
+| Agent境界 | [ADR-0011](../docs/adr/adr-0011-autonomous-policy-authorization-and-secret-boundary.md) |
+| 自作Accountの選択 | [ADR-0016](../docs/adr/adr-0016-custom-smart-account-over-safe-module.md) |
+| 攻撃と防御 | [threat model](../docs/security/threat-model.md) |
+| 実測値・テスト件数 | [audit-06](../docs/audits/epic-06-multi-policy.md) |
 
 ## ビルド
 
