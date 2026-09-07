@@ -92,6 +92,7 @@ Smart Accountの実装方針は次のとおりです。
 │   └── prover/                    # NoirJSとBarretenbergのラッパー
 ├── scripts/                       # Proof生成・Contract呼び出し
 ├── e2e/                           # Proof生成から決済までの結合テスト
+├── slides/                        # 発表用Slidevプロジェクト（独立したpnpm project）
 ├── docs/
 │   ├── roadmap.md
 │   ├── epics/                     # Phase単位の計画と進捗
