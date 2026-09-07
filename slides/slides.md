@@ -4,8 +4,6 @@ title: ZK Policy Enforcement Layer
 info: |
   ## ZK Policy Enforcement Layer
   AIエージェントの送金をZK Proofで検証する仕組みを紹介する発表スライド。
-
-  Advanced Cryptography Program · Week 6
 class: text-left
 transition: slide-left
 lineNumbers: false
@@ -15,11 +13,6 @@ mdc: false
 # ZK Policy Enforcement Layer
 
 AIエージェントに秘密の支出ポリシーを渡さず、<br>ZK Proofで送金を強制するSmart Account基盤のPoC
-
-<div class="pt-4 text-sm opacity-60">
-Advanced Cryptography Program · Week 6<br>
-発表 5分 ・ 質疑応答 2分
-</div>
 
 <!--
 担当: (未定)
@@ -31,14 +24,18 @@ Advanced Cryptography Program · Week 6<br>
 
 ## AIエージェントの送金を、ZK Proofで検証してから実行する
 
-Claude CodeやCodexが提案した送金を、秘密の支出ポリシーに対するZK Proofで検証し、
-条件を満たす場合だけSmart Accountから実行するPoCです。
+```mermaid {scale: 0.9}
+flowchart LR
+    A["🤖 Agentが送金を提案"] --> B{"ZK Proofで検証"}
+    B -->|"条件を満たす"| C["✅ Smart Accountが送金"]
+    B -->|"満たさない"| D["🚫 実行しない"]
+```
 
-- **対象**: AIエージェントが自然言語の依頼から生成する送金
-- **検証**: 秘密の支出上限・有効期限・送金先やToken/Contractのallowlist・日次累積上限をZK Proofで検証
+- **対象**: Claude Code / Codexが提案した送金
+- **検証**: 秘密の支出上限・有効期限・送金先やToken/Contractのallowlist・日次累積上限
 - **実行**: Proofが有効な場合だけ、ERC-4337 Smart Accountが送金を実行
 
-<div class="grid grid-cols-3 gap-4 pt-8 text-sm">
+<div class="grid grid-cols-3 gap-4 pt-4 text-sm">
   <div class="border rounded-lg p-3 opacity-80">
     <div class="text-xs opacity-60">Phase 1〜4</div>
     <div class="font-semibold">done</div>
@@ -58,37 +55,29 @@ Claude CodeやCodexが提案した送金を、秘密の支出ポリシーに対�
 -->
 
 ---
-layout: two-cols
----
 
 # A-2 — サービス目的（世界観）
 
 ## エージェントに「財布」を持たせるには、信頼しなくていい仕組みが要る
 
-### 従来のガードレール
+```mermaid {scale: 0.85}
+flowchart LR
+    subgraph old["従来のガードレール"]
+        direction LR
+        o1["ルール = プロンプト/コード"] --> o2["Agentが中身を読める"] --> o3["Injectionやバグで越えられる"]
+    end
+    subgraph new["ZK Policyのガードレール"]
+        direction LR
+        n1["ルール = Off-chainの秘密"] --> n2["Agentにも見せない"] --> n3["満たしたことだけを証明する"]
+    end
+```
 
-- ルールをプロンプトやアプリコードで縛る
-- ルールの中身をエージェント自身が読める
-- Prompt Injectionや実装バグで越えられる余地が残る
-
-::right::
-
-<div class="pt-24">
-
-### ZK Policyのガードレール
-
-- ルールはOff-chainの秘密のまま保持する
-- エージェントにもオンチェーンにも中身を見せない
-- 「条件を満たした」ことだけをZK Proofで証明する
-
+<div class="border rounded-lg p-4 mt-4 text-base">
+人間はPolicy CLIで支出の境界を設定するだけ。以降エージェントは、その境界の中だけで自律的に送金できる。
 </div>
 
 <!--
 担当: (未定)
-
-補足で下に一言添えるなら:
-人間はPolicy CLIで支出の境界を設定するだけ。
-以降エージェントは、その境界の中だけで自律的に送金できる。
 -->
 
 ---
@@ -133,13 +122,21 @@ flowchart LR
 
 ## Noir + UltraHonk + Poseidon2 で「条件を満たした」ことだけを証明する
 
-`Noir Circuit` → `Barretenberg (bb / bb.js)` → `UltraHonk Proof（EVM向けKeccak）` → `Solidity Verifier自動生成`
-
+```mermaid {scale: 0.85}
+flowchart LR
+    m["maxAmount（秘密）"] --> h(["Poseidon2"])
+    s["salt（秘密）"] --> h
+    h --> c["policyCommitment（公開）"]
+    c --> v{"Solidity Verifier"}
+    p["実送金額（公開）"] --> v
+    v -->|valid| ok["✅ 送金実行"]
+    v -->|invalid| ng["🚫 実行しない"]
 ```
-policyCommitment = Poseidon2(maxAmount, salt)
-```
 
-上限額は候補が少なく総当たりで推測されやすいため、Policyごとの秘密乱数`salt`をCommitmentに混ぜることで推測を困難にしている。
+<div class="text-sm opacity-70">
+<code>policyCommitment = Poseidon2(maxAmount, salt)</code><br>
+Noir Circuit → Barretenberg（bb / bb.js）→ UltraHonk Proof（EVM向けKeccak）→ Solidity Verifier自動生成
+</div>
 
 <div class="grid grid-cols-3 gap-4 pt-4 text-sm">
   <div class="border rounded-lg p-3">
@@ -156,7 +153,7 @@ policyCommitment = Poseidon2(maxAmount, salt)
   </div>
 </div>
 
-<div class="text-xs opacity-50 pt-6">
+<div class="text-xs opacity-50 pt-4">
 実測（複合Policy回路）: ACIR 4,314 / Brillig 87 ・ Proof 8,000 bytes ・ 生成 936ms（単発） ・ Circuit 11 / Contract 39 / E2E 27 tests
 </div>
 
@@ -170,7 +167,14 @@ policyCommitment = Poseidon2(maxAmount, salt)
 
 ## 上限超過は「Proofが作れない」段階で止まる
 
-<div class="grid grid-cols-2 gap-4 pt-4">
+```mermaid {scale: 0.8}
+flowchart LR
+    P["送金依頼"] --> Q{"送金額 ≤ 上限?"}
+    Q -->|"Yes: 0.01 ETH"| R["Proof生成"] --> S["Verifier検証"] --> T["✅ 送金実行"]
+    Q -->|"No: 1 ETH"| U["Circuit制約違反"] --> V["🚫 Proof生成不可"] --> W["送信されない"]
+```
+
+<div class="grid grid-cols-2 gap-4 pt-2">
 
 ```bash
 # 正常系
@@ -194,10 +198,8 @@ $ pnpm local:payment --value 1
 
 </div>
 
-<div class="border rounded-lg p-4 mt-6 text-sm">
-<b>Agent経由でも同じ境界:</b> Claude Code / Codexへ自然言語で送金を依頼 → MCP <code>pay_native</code> →
-上限内は追加承認なしに成功、上限超過はUserOperation送信前に拒否。
-秘密の<code>maxAmount</code>・<code>salt</code>はAgent transcriptにも一切出力しない。
+<div class="border rounded-lg p-4 mt-4 text-sm">
+<b>Agent経由でも同じ境界:</b> Claude Code / CodexからMCP <code>pay_native</code> 経由で依頼しても、上限内は追加承認なしに成功し、上限超過はUserOperation送信前に拒否される。
 </div>
 
 <!--
@@ -210,16 +212,19 @@ $ pnpm local:payment --value 1
 
 ## PoCから、AIエージェント向けウォレット基盤へ
 
-- **now** — 複数ポリシーで正常系は完了
-  有効期限・送金先allowlist・Token/Contract allowlist・日次累積上限を、native・ERC-20・Contract決済で対応済み
-- **next** — 攻撃・異常系の包括検証
-  Prompt Injection由来の不正な送金提案が、オンチェーンで確実に拒否されることを実証する
-- **next** — Safe Module経路（zk-bound）との接続検討
-  自作Accountで得たAccount境界の理解を、本番寄りの実行境界へつなげる
-- **later** — 複数チェーン・複数Agent対応
-  同じ秘密ポリシーの境界を、複数チェーン・複数エージェントで共有できる基盤にする
+```mermaid {scale: 0.85}
+timeline
+    title ロードマップ
+    現在 : 複数ポリシー対応（有効期限・allowlist・日次上限） : native/ERC-20/Contract決済
+    Next : 攻撃・異常系の包括検証 : Safe Module（zk-bound）接続検討
+    Later : 複数チェーン・複数Agent対応
+```
 
-<div class="border rounded-lg p-4 mt-8">
+<div class="text-sm opacity-70 pt-2">
+Prompt Injection由来の不正送金がオンチェーンで拒否されることを実証 ・ 自作Accountの理解をSafe Module(zk-bound)へ接続 ・ 複数チェーン/複数Agentで同じ境界を共有
+</div>
+
+<div class="border rounded-lg p-4 mt-6">
 <b>Vision —</b> エージェントに鍵を渡さず、証明だけを渡す。そんなウォレットレイヤーを目指す。
 </div>
 
@@ -234,7 +239,7 @@ class: text-left
 
 # ご清聴ありがとうございました
 
-ご質問をお願いします（質疑応答 2分）
+ご質問をお願いします
 
 <div class="pt-8 text-sm opacity-60">
 GitHub: Komlock-lab / zk-policy-poc
