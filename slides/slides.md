@@ -154,202 +154,102 @@ Owner KeyとProof TokenはHostからClient内部に渡す。モデルには渡�
 
 ---
 
-<div class="text-xs tracking-widest uppercase opacity-50 font-mono">Programmable Cryptography — 何を証明し、どう強制するか</div>
+<div class="text-xs tracking-widest uppercase opacity-50 font-mono">Programmable Cryptography — ZKで実現すること</div>
 
-# 65個の秘密に対する充足を、15個の公開だけで示す
+# ポリシーを公開せず、送金が条件を満たすことを証明する
 
-単に秘密を隠すのではなく、秘密のデータに対する計算そのものを検証可能にする。
-
-<div class="grid grid-cols-2 gap-5 text-sm pt-1">
-
-<div>
-<div class="text-xs uppercase tracking-wider font-mono pb-1" style="color:#a8446b">policy_fields[65] — Circuitだけが見る</div>
-
-| 位置 | 内容 |
-| --- | --- |
-| `s[1]` | maxValiditySeconds |
-| `s[4..19]` | recipients[16]（昇順） |
-| `s[21..44]` | assets[8] × (asset, maxAmount, dailyLimit) |
-| `s[47..62]` | contracts[16]（昇順） |
-| `s[64]` | **salt**（秘密乱数） |
-
-<div class="text-xs pt-2">
-<code>policyCommitment = Poseidon2(65個すべて)</code><br>
-<span class="opacity-60">上限額は候補が少なく総当たりで復元できるため、saltをCommitmentに含めている。</span>
+<div class="grid grid-cols-2 gap-5 pt-5">
+<div class="border rounded p-5" style="border-color:#a8446b;background:rgba(168,68,107,.04)"><div class="text-xs font-mono pb-4" style="color:#a8446b">PRIVATE POLICY — 非公開</div><div class="text-xl font-semibold pb-3">秘密のポリシー</div><div class="text-sm leading-7">企業の予算・資産別の上限額<br>送金先やコントラクトの許可リスト<br>有効期間の上限・salt</div></div>
+<div class="border rounded p-5" style="border-color:#1288ab;background:rgba(18,136,171,.04)"><div class="text-xs font-mono pb-4" style="color:#1288ab">PUBLIC INPUTS + PROOF — 公開</div><div class="text-xl font-semibold pb-3">今回の送金と、その証明</div><div class="text-sm leading-7">送金額・送金先などの実行内容<br>登録済みcommitment・利用状態<br>UltraHonk proof</div></div>
 </div>
-</div>
-
-<div>
-<div class="text-xs uppercase tracking-wider font-mono pb-1" style="color:#1288ab">public_inputs[15] — Verifierに渡る</div>
-
-| Index | 内容 |
-| --- | --- |
-| `1-3` | chainId / account / **policyCommitment** |
-| `4-6` | kind（native/ERC-20/contract）/ recipient / asset |
-| `7-8` | amount / target |
-| `9-10` | invoiceId（上位・下位128bit） |
-| `11-14` | issuedAt / validUntil / dayId / spentBefore |
-
-<div class="text-xs pt-2">
-<b>決済の全構成要素が公開入力に入る。</b><br>
-<span class="opacity-60">1つでも変えるとProofは通らない（transaction binding）。</span>
-</div>
-</div>
-
-</div>
-
-<div class="grid grid-cols-2 gap-5 text-sm pt-3">
-
-<div>
-<div class="text-xs uppercase tracking-wider opacity-60 font-mono pb-1">回路が証明すること — すべてAND</div>
-
-- **allowlist照合** — 有効長だけをOR集約。昇順・重複なしを`lt`で強制
-- **asset別1回上限** — 公開`asset`と一致する行でのみ`amount <= maxAmount`
-- **日次累積** — `spentBefore + amount <= dailyLimit`
-- **有効期限** — `validUntil - issuedAt <= maxValiditySeconds`
-- **Commitment照合** — `Poseidon2::hash(s, 65) == p[3]`
-
-</div>
-
-<div>
-<div class="text-xs uppercase tracking-wider opacity-60 font-mono pb-1">Accountが強制すること</div>
-
-```solidity
-publicInputs[1]  = block.chainid;
-publicInputs[3]  = policyCommitment;
-publicInputs[14] = spentBefore;
-if (!verifier.verify(proof, publicInputs))
-    revert InvalidProof();
-dailySpend[asset] = ... // 送金より前
-```
-
-<div class="text-xs opacity-70 pt-1">
-Clientが渡すのは<b>proofだけ</b>。実行のたびに<code>spentBefore</code>が進むため、<b>同じproofは二度通らない</b>。
-</div>
-</div>
-
-</div>
-
-<div class="grid grid-cols-3 gap-3 pt-3 text-sm">
-  <div class="border rounded p-3">
-    <div class="text-xs opacity-60 font-mono pb-1">非開示</div>
-    ポリシーの内容はエージェントにも第三者にも露出しない
-  </div>
-  <div class="border rounded p-3">
-    <div class="text-xs opacity-60 font-mono pb-1">検証者不要</div>
-    オンチェーンで第三者の判定を挟まずに検証が完結する
-  </div>
-  <div class="border rounded p-3">
-    <div class="text-xs opacity-60 font-mono pb-1">リプレイ耐性</div>
-    <code>spentBefore</code>の更新により同じProofは二度と通らない
-  </div>
-</div>
+<div class="border rounded p-4 mt-6">検証するのは <b style="color:#1288ab">「登録したポリシーに、この送金が適合する」</b>こと。</div>
+<div class="text-xs opacity-60 pt-4">AIへの非開示はMCPの設計、オンチェーンへの非開示はZKで実現。証明生成バックエンドはポリシーを扱う。</div>
 
 <!--
-ここが1分。
-「Proofが正しい」ことと「そのProofがこの決済のものである」ことは別の問題で、
-後者はAccountが公開入力を自分で組み立てることでしか保証できない。
+目安：50秒。
+AIに送金を任せても、1回の上限、1日の利用上限、送金先など、守らせたいルールがあります。
+今回はルール自体をオンチェーンに公開せず、今回の送金がルールを満たすことをZKで証明します。
+コントラクトはサーバーからの「チェック済み」を信用する必要がなく、proofを検証して送金を実行できます。
+隠しているのはポリシーの中身です。送金額や送金先は公開されます。現在のバックエンドは秘密のポリシーを扱います。
+実装根拠：5285f00 packages/policy/src/schema.ts、circuits/spend-limit/src/main.nr。複合ポリシー実装を対象にしており、mainの旧回路とは区別する。
+-->
+
+---
+
+<div class="text-xs tracking-widest uppercase opacity-50 font-mono">Programmable Cryptography — ZKアーキテクチャ</div>
+
+# 回路を用意し、ルールを登録し、送金を検証する
+
+<svg viewBox="0 0 892 400" style="width:100%;height:auto;max-height:390px" role="img" aria-label="開発時、ポリシー設定時、送金時の3段階を左から右へ読むZKアーキテクチャ"><defs><marker id="zk-three-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10Z" fill="#1288ab"/></marker></defs><g style="font-family:Hiragino Sans,sans-serif" stroke-width="1.4"><text x="117" y="15" text-anchor="middle" style="font-size:13px" fill="#1288ab">① 開発時：証明・検証の仕組みを用意</text><g fill="#ffffff" stroke="#1288ab"><circle cx="12" cy="44" r="7"/><path d="M12 51 v20 m-10 -12 h20 m-10 12 l-8 12 m8 -12 l8 12" fill="none"/></g><text x="64" y="55" text-anchor="middle" style="font-size:14px" fill="#242424">開発者</text><text x="64" y="75" text-anchor="middle" style="font-size:10px" fill="#555555">条件を記述</text><g fill="#ffffff" stroke="#1288ab"><rect x="165" y="32" width="165" height="57" rx="10"/></g><text x="247.5" y="55" text-anchor="middle" style="font-size:14px" fill="#242424">Noir回路</text><text x="247.5" y="75" text-anchor="middle" style="font-size:10px" fill="#555555">コンパイル → ACIR</text><g fill="#ffffff" stroke="#1288ab"><rect x="393" y="32" width="190" height="57" rx="10"/></g><text x="488" y="55" text-anchor="middle" style="font-size:14px" fill="#242424">Barretenberg</text><text x="488" y="75" text-anchor="middle" style="font-size:10px" fill="#555555">UltraHonkのVK・Solidity生成</text><g fill="#ffffff" stroke="#1288ab"><rect x="712" y="32" width="178" height="57" rx="0"/><rect x="716" y="36" width="170" height="49"/></g><text x="801" y="55" text-anchor="middle" style="font-size:14px" fill="#242424">Verifier</text><text x="801" y="75" text-anchor="middle" style="font-size:10px" fill="#555555">オンチェーンに配置</text><path d="M110 62 H165" stroke="#1288ab" fill="none" marker-end="url(#zk-three-arrow)"/><text x="137.5" y="54" text-anchor="middle" style="font-size:9px" fill="#1288ab">回路</text><path d="M330 62 H393" stroke="#1288ab" fill="none" marker-end="url(#zk-three-arrow)"/><text x="361.5" y="54" text-anchor="middle" style="font-size:9px" fill="#1288ab">ACIR</text><path d="M583 62 H712" stroke="#1288ab" fill="none" marker-end="url(#zk-three-arrow)"/><text x="647.5" y="54" text-anchor="middle" style="font-size:9px" fill="#1288ab">開発者がデプロイ</text><text x="370" y="108" text-anchor="middle" style="font-size:11px" fill="#555555">ACIRを証明バックエンドにも配置</text><path d="M0 119 H892" stroke="#dddddd"/><g v-click="1"><text x="122" y="139" text-anchor="middle" style="font-size:13px" fill="#1288ab">② ポリシー設定時：ルールを固定</text><g fill="#ffffff" stroke="#1288ab"><circle cx="12" cy="165" r="7"/><path d="M12 172 v20 m-10 -12 h20 m-10 12 l-8 12 m8 -12 l8 12" fill="none"/></g><text x="64" y="176" text-anchor="middle" style="font-size:14px" fill="#242424">人（Owner）</text><text x="64" y="196" text-anchor="middle" style="font-size:10px" fill="#555555">ルールを設定</text><g fill="#ffffff" stroke="#1288ab"><rect x="192" y="153" width="205" height="57" rx="10"/></g><text x="294.5" y="176" text-anchor="middle" style="font-size:14px" fill="#242424">ポリシーレイヤー</text><text x="294.5" y="196" text-anchor="middle" style="font-size:10px" fill="#555555">Poseidon2でcommitment生成</text><g fill="#ffffff" stroke="#1288ab"><circle cx="501" cy="165" r="7"/><path d="M501 172 v20 m-10 -12 h20 m-10 12 l-8 12 m8 -12 l8 12" fill="none"/></g><text x="556.5" y="176" text-anchor="middle" style="font-size:14px" fill="#242424">人（Owner）</text><text x="556.5" y="196" text-anchor="middle" style="font-size:10px" fill="#555555">登録Txに署名</text><g fill="#ffffff" stroke="#1288ab"><rect x="712" y="153" width="178" height="57" rx="0"/><rect x="716" y="157" width="170" height="49"/></g><text x="801" y="176" text-anchor="middle" style="font-size:14px" fill="#242424">Smart Account</text><text x="801" y="196" text-anchor="middle" style="font-size:10px" fill="#555555">commitmentを保存</text><path d="M110 183 H192" stroke="#1288ab" fill="none" marker-end="url(#zk-three-arrow)"/><text x="151" y="175" text-anchor="middle" style="font-size:9px" fill="#1288ab">ポリシー</text><path d="M397 183 H489" stroke="#1288ab" fill="none" marker-end="url(#zk-three-arrow)"/><text x="443" y="175" text-anchor="middle" style="font-size:9px" fill="#1288ab">commitment</text><path d="M606 183 H712" stroke="#1288ab" fill="none" marker-end="url(#zk-three-arrow)"/><text x="659" y="175" text-anchor="middle" style="font-size:9px" fill="#1288ab">登録Tx</text><text x="295" y="229" text-anchor="middle" style="font-size:11px" fill="#555555">秘密のポリシー + salt をバックエンドに保存</text></g><path d="M0 241 H892" stroke="#dddddd"/><g v-click="2"><text x="111" y="262" text-anchor="middle" style="font-size:13px" fill="#1288ab">③ 送金時：適合を証明して実行</text><g fill="#ffffff" stroke="#1288ab"><circle cx="12" cy="294" r="7"/><path d="M12 301 v20 m-10 -12 h20 m-10 12 l-8 12 m8 -12 l8 12" fill="none"/></g><text x="47" y="305" text-anchor="middle" style="font-size:14px" fill="#242424">人</text><text x="47" y="325" text-anchor="middle" style="font-size:10px" fill="#555555">送金指示</text><g fill="#ffffff" stroke="#1288ab"><rect x="123" y="282" width="87" height="57" rx="10"/></g><text x="166.5" y="305" text-anchor="middle" style="font-size:14px" fill="#242424">AI</text><text x="166.5" y="325" text-anchor="middle" style="font-size:10px" fill="#555555">ツール呼出し</text><g fill="#ffffff" stroke="#1288ab"><rect x="277" y="282" width="213" height="57" rx="10"/></g><text x="383.5" y="305" text-anchor="middle" style="font-size:14px" fill="#242424">ポリシーレイヤー MCP</text><text x="383.5" y="325" text-anchor="middle" style="font-size:10px" fill="#555555">Barretenbergでproofを生成</text><g fill="#ffffff" stroke="#1288ab"><rect x="562" y="282" width="152" height="57" rx="0"/><rect x="566" y="286" width="144" height="49"/></g><text x="638" y="305" text-anchor="middle" style="font-size:14px" fill="#242424">Smart Account</text><text x="638" y="325" text-anchor="middle" style="font-size:10px" fill="#555555">実行内容から公開入力を構成</text><g fill="#ffffff" stroke="#1288ab"><rect x="795" y="282" width="95" height="57" rx="0"/><rect x="799" y="286" width="87" height="49"/></g><text x="842.5" y="305" text-anchor="middle" style="font-size:14px" fill="#242424">Verifier</text><text x="842.5" y="325" text-anchor="middle" style="font-size:10px" fill="#555555">proofを検証</text><path d="M76 312 H123" stroke="#1288ab" fill="none" marker-end="url(#zk-three-arrow)"/><text x="99.5" y="304" text-anchor="middle" style="font-size:9px" fill="#1288ab">指示</text><path d="M210 312 H277" stroke="#1288ab" fill="none" marker-end="url(#zk-three-arrow)"/><text x="243.5" y="304" text-anchor="middle" style="font-size:9px" fill="#1288ab">金額・宛先</text><path d="M490 312 H562" stroke="#1288ab" fill="none" marker-end="url(#zk-three-arrow)"/><text x="526" y="304" text-anchor="middle" style="font-size:9px" fill="#1288ab">proof・送金</text><path d="M714 302 H795" stroke="#1288ab" fill="none" marker-end="url(#zk-three-arrow)"/><text x="754.5" y="294" text-anchor="middle" style="font-size:9px" fill="#1288ab">proof・公開入力</text><path d="M795 328 H714" stroke="#1288ab" marker-end="url(#zk-three-arrow)"/><text x="754" y="345" text-anchor="middle" style="font-size:10px" fill="#1288ab">検証結果</text><text x="383" y="357" text-anchor="middle" style="font-size:10px" fill="#555555">入力：配置済み回路・秘密のポリシー・現在の状態</text><text x="638" y="369" text-anchor="middle" style="font-size:12px" fill="#1288ab">成功 → 送金</text></g><text x="446" y="396" text-anchor="middle" style="font-size:10px" fill="#666666"></text></g></svg>
+
+<!--
+目安：90秒。
+最初は開発時の段を説明します。Noir回路からACIRを作り、Barretenbergで検証鍵とVerifierのSolidityコードを生成してデプロイします。同じACIRを証明バックエンドにも配置します。Verifierの参照先をSmart Accountに設定する初期準備は図では省略しています。
+[click]
+ポリシー設定時の段を表示します。人が設定し、オフチェーンで生成したcommitmentの登録Txに署名します。秘密のポリシーとsaltはバックエンドに保存します。
+[click]
+送金時の段を表示します。AIは人の送金指示を解釈してMCPを呼び、送金結果を受け取ります。ポリシーやproof、秘密鍵はAIに返しません。バックエンドは現在のオンチェーン状態を取得して証明します。
+事前にポリシーとsaltからcommitmentを作り、コントラクトに登録します。
+送金時は、秘密のポリシーと今回の送金内容・利用状態を使って、BarretenbergがUltraHonkのproofを生成します。条件はNoirで定義しています。
+証明するのは、ポリシーが登録済みcommitmentと一致することと、今回の送金がそのポリシーを満たすことの両方です。
+コントラクト側で実行する金額、送金先、日次利用額などから公開入力を構築して検証します。証明後に金額を変えると検証に失敗します。
+開発時はNoirをACIRへコンパイルし、Barretenbergで検証用コントラクトを生成します。図は実行時の経路です。
+現在時刻に対する有効性はAccount側でも検査します。ZKはOwner署名を置き換えません。
+-->
+
+---
+
+<div class="text-xs tracking-widest uppercase opacity-50 font-mono">Programmable Cryptography — commitmentの中身</div>
+
+# commitmentは、ポリシー全体に結び付く
+
+<div style="display:grid;grid-template-columns:1.8fr 1fr;gap:28px;align-items:center;margin-top:24px">
+<div class="border rounded p-4 text-sm">
+<div class="py-3 border-b"><b style="display:inline-block;width:120px">基本設定</b>schemaVersion・有効期間の上限</div>
+<div class="py-3 border-b"><b style="display:inline-block;width:120px">送金先制限</b>有効フラグ・件数・許可アドレス</div>
+<div class="py-3 border-b"><b style="display:inline-block;width:120px">資産別ルール</b>件数・資産・1回の上限・1日の上限</div>
+<div class="py-3 border-b"><b style="display:inline-block;width:120px">呼出先制限</b>有効フラグ・件数・許可コントラクト</div>
+<div class="py-3"><b style="display:inline-block;width:120px">日次制限 / salt</b>有効フラグ / 秘密のランダム値</div>
+</div>
+<div class="text-center"><div class="text-xs opacity-60">正規化・固定長化</div><div style="font-size:42px;color:#1288ab">65 <span class="text-lg">Fields</span></div><div class="py-3 text-sm opacity-60">↓ Poseidon2 ↓</div><div style="font-size:32px;color:#1288ab">1 <span class="text-lg">commitment</span></div><div class="text-xs pt-2 opacity-60">オンチェーンに登録</div></div>
+</div>
+<div class="border rounded p-4 mt-5 text-center font-mono text-sm" style="border-color:#1288ab">policyCommitment = Poseidon2::hash(policyFields, 65)</div>
+<div class="text-xs opacity-60 pt-3">65個にはsaltを含む。アドレスは整列、未使用枠はゼロ埋め。今回の送金額や累積利用額は別の公開入力。</div>
+
+<!--
+目安：60秒。
+commitmentには、上限額だけでなくポリシー全体が結び付いています。
+許可する送金先、資産ごとの上限、日次上限、許可コントラクト、有効期間の上限などを、決まった順番の65個のFieldに変換します。
+アドレスを並べ替え、使わない枠はゼロで埋めます。saltもこの65個に含みます。
+Poseidon2でハッシュ化した結果の1個の値を登録します。saltは上限などの候補からの推測を困難にします。
+回路内でも同じ計算をします。勝手に上限を緩めたポリシーでは、登録済みcommitmentと一致しません。
+詳細：基本2、送金先18、資産25、呼出先18、日次フラグ1、salt1で合計65。送金先16枠、資産8枠、呼出先16枠。
+実装根拠：5285f00 packages/policy/src/schema.ts のpolicyFields、circuits/spend-limit/src/main.nr のPoseidon2::hash(s, 65)。
 -->
 
 ---
 
 <div class="text-xs tracking-widest uppercase opacity-50 font-mono">デモ — 正常系・異常系</div>
 
-# 境界は「Proofが作れない」段階で閉じる
+# proofを作れても、送金額を書き換えると通らない
 
-<div class="grid grid-cols-2 gap-4 pt-2">
-
-```bash
-# 正常系
-$ pnpm local:payment
-policy  : maxAmount = 0.1 ETH (secret)
-payment : 0.01 ETH -> allowed recipient
-✔ proof generated  (15 public inputs)
-✔ verifier: valid
-✔ dailySpend: 0 -> 0.01 ETH
-✔ balance +0.01 ETH
-```
-
-```bash
-# 異常系
-$ pnpm local:payment --value 1
-policy  : maxAmount = 0.1 ETH (secret)
-payment : 1 ETH -> allowed recipient
-✘ circuit constraint violated
-  "value exceeds max amount"
-✘ proof not generated
-→ transaction未送信・残高変化なし
-```
-
+<div class="text-sm pt-2 pb-4">共通ポリシー：<b>1回の送金上限 0.1 ETH</b></div>
+<div class="grid grid-cols-2 gap-5 text-sm">
+<div class="border rounded p-4"><div class="font-mono pb-3" style="color:#2c8a5c">正常系 — 0.1 ETH → 0.1 ETH</div><div class="border-l-2 pl-3 leading-6">「正常系デモを実行して。<br>デモ送金先に0.1 ETHを送って」</div><div class="text-xs opacity-60 py-4">Claude Code → 正常系MCPツール</div><div class="leading-8">① 0.1 ETHでproof生成<br>② 0.1 ETHで送金を実行<br><b style="color:#2c8a5c">③ 検証成功 → 送金先 +0.1 ETH</b></div></div>
+<div class="border rounded p-4"><div class="font-mono pb-3" style="color:#a8446b">異常系 — 0.1 ETH → 0.2 ETH</div><div class="border-l-2 pl-3 leading-6">「異常系デモを実行して。0.1 ETHの<br>proofで0.2 ETHを送り、拒否を確認して」</div><div class="text-xs opacity-60 py-4">Claude Code → 異常系MCPツール</div><div class="leading-8">① 0.1 ETHでproof生成は成功<br>② MCP内部で送金額を0.2 ETHに変更<br><b style="color:#a8446b">③ 検証失敗 → 送金先の残高変化なし</b></div></div>
 </div>
-
-<div class="grid grid-cols-3 gap-3 pt-4 text-sm">
-  <div class="border rounded p-3">
-    <div class="text-xs opacity-60 font-mono">native + Contract決済</div>
-    <div>同じ日次枠を共有。.03 + .02 + .01 ETH で累積 .06 ETH</div>
-  </div>
-  <div class="border rounded p-3">
-    <div class="text-xs opacity-60 font-mono">ERC-20</div>
-    <div>Token address別に計上。10 + 20 = 30、nativeの累積は不変</div>
-  </div>
-  <div class="border rounded p-3">
-    <div class="text-xs opacity-60 font-mono">Policy更新</div>
-    <div>allowlistから外して戻しても当日の実績を引き継ぐ</div>
-  </div>
-</div>
-
-<div class="border rounded p-3 mt-4 text-sm">
-<b>失敗の理由は返らない。</b> Proof生成の失敗は「拒否された」ではなく「証明できない」。攻撃者から見て、なぜ通らなかったかが観測できない。
-</div>
-
-<div class="border rounded p-3 mt-3 text-sm">
-エージェント経由でも同じ動きになる。自然言語の依頼から<code>pay_native</code> / <code>pay_erc20</code> / <code>pay_contract</code>が呼ばれ、返るのは<b>receiptだけ</b>。証明生成は<span class="font-mono">936ms</span>、テストは<span class="font-mono">187本</span>すべてpass。
-</div>
+<div class="text-xs opacity-60 pt-4">MCP内部で証明後の金額改変を注入するデモ。AI自身が異常動作したことを示すものではない。</div>
 
 <!--
-デモ全体でここまで5分。上限超過はUserOperationを送る前に止まるので、
-オンチェーンには何も残らないことを見せる。
-エージェント経由でも人間が直接叩いた場合と同じ境界が働く。
--->
-
----
-
-<div class="text-xs tracking-widest uppercase opacity-50 font-mono">将来像</div>
-
-# PoCから、エージェントウォレット基盤へ
-
-<div style="display:flex;flex-direction:column;margin-top:0.6rem;">
-  <div style="display:flex;gap:16px;padding:10px 0;border-bottom:1px solid rgba(127,127,127,.25);">
-    <div style="flex:0 0 66px;font-family:monospace;font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:#2c8a5c;padding-top:3px;">現在</div>
-    <div><b>ETH Globalで複数ポリシー対応まで完了</b><br><span class="opacity-60 text-sm">有効期限・送金先allowlist・Token/Contract allowlist・日次累積上限を、native / ERC-20 / Contract決済で実Agentまで通した</span></div>
-  </div>
-  <div style="display:flex;gap:16px;padding:10px 0;border-bottom:1px solid rgba(127,127,127,.25);">
-    <div style="flex:0 0 66px;font-family:monospace;font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;opacity:.55;padding-top:3px;">Next</div>
-    <div><b>攻撃・異常系の包括検証</b><br><span class="opacity-60 text-sm">Prompt Injection由来の不正な送金提案が、オンチェーンで確実に拒否されることを攻撃側の試行として測る</span></div>
-  </div>
-  <div style="display:flex;gap:16px;padding:10px 0;">
-    <div style="flex:0 0 66px;font-family:monospace;font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;opacity:.55;padding-top:3px;">Later</div>
-    <div><b>複数チェーン・複数Agent対応</b><br><span class="opacity-60 text-sm">同じ秘密ポリシーの境界を、複数チェーン・複数エージェントで共有できる基盤にする</span></div>
-  </div>
-</div>
-
-<div class="grid grid-cols-2 gap-4 pt-3 text-sm">
-  <div class="border rounded p-3">
-    <b>明示している限界</b><br>
-    <span class="opacity-70">amount・recipient・dayId・spentBeforeは公開される。観測されたamountから上限の<b>下限</b>は推測できる。</span>
-  </div>
-  <div class="border rounded p-3">
-    <b>既知の制約</b><br>
-    <span class="opacity-70">固定長allowlist（16 / 8 / 16）、資産間の換算をしないこと、逐次実行前提で同時送信を扱わないこと。</span>
-  </div>
-</div>
-
-<div class="border rounded p-4 mt-4">
-<b>Vision —</b> エージェントに鍵を渡さず、証明だけを渡す。人間が境界を決め、エージェントがその内側で自律する。そんなウォレットレイヤーを目指す。
-</div>
-
-<!--
-時間が押していたらこのスライドは飛ばしてクロージングへ。
+目安：デモ前30秒、実演後20秒。
+どちらもClaude Codeに自然言語で指示し、それぞれのMCPツールを呼び出します。
+共通の送金上限は0.1 ETHです。正常系は上限と同額の0.1 ETHでproofを作り、そのまま0.1 ETHを送金します。上限を含む境界値が通ることを確認します。
+異常系は、0.1 ETHのproofを正常に生成した後、MCP内部で送金時の金額だけを0.2 ETHに変更します。proofは作れていますが、実行内容と一致しないため検証で拒否されます。
+これはClaudeの暴走を実証するものではなく、異常系ツールで証明後の改変を注入するデモです。
+ここに示すMCPツールの呼び分けは今回のデモ仕様です。このスライド作成ではMCP実装や実送金は行っていません。
+実演準備：正常系の実行後も日次残額・Account残高に余裕を持たせる。許可送金先、期限、署名、十分なgasを揃え、金額以外を一致させる。
+結果確認：正常系はreceiptと送金先残高+0.1 ETH。異常系はproof生成成功の記録、検証拒否の原因、送金先残高および日次支出の不変を確認する。
+Bundlerのシミュレーション拒否と、実トランザクションのrevertは区別して説明する。失敗時も送信者がgasを支払う場合があるため「全残高が不変」とは言わない。
 -->
 
 ---
