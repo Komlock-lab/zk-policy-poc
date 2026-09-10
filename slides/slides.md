@@ -128,68 +128,28 @@ ORや優先順位を入れると、どの条件で通ったかが観測から推
 
 <div class="text-xs tracking-widest uppercase opacity-50 font-mono">サービス — アーキテクチャ</div>
 
-# 3つのゾーンと、その間の2つの境界
+# 送金の依頼から、証明・検証・実行まで
 
-左から右へ一方向に読む。それぞれの境界で、何が越えるか / 何が越えないかが決まっている。
+秘密PolicyはProver側に留まり、AIモデルには決済結果だけを返す。
 
-<div style="display:grid;grid-template-columns:1fr 112px 1fr 112px 1fr;align-items:stretch;font-size:0.85rem;margin-top:0.8rem;">
-
-  <div style="border:1px solid #a8446b;background:rgba(168,68,107,.07);border-radius:3px;padding:10px;display:flex;flex-direction:column;gap:5px;">
-    <div style="font-family:monospace;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:#a8446b;">① 秘密Policy · Off-chain</div>
-    <div style="border:1px solid rgba(127,127,127,.35);border-radius:2px;padding:5px 8px;line-height:1.35;">Owner<div style="font-family:monospace;font-size:.72rem;opacity:.6;margin-top:2px;line-height:1.45;">Policy CLI · EIP-712署名 + nonce</div></div>
-    <div style="text-align:center;opacity:.45;font-size:.72rem;line-height:1;">↓</div>
-    <div style="border:1px solid rgba(127,127,127,.35);border-radius:2px;padding:5px 8px;line-height:1.35;">秘密Policy<div style="font-family:monospace;font-size:.72rem;color:#a8446b;margin-top:2px;line-height:1.45;">上限 •••• / allowlist •••• / salt ••••</div></div>
-    <div style="text-align:center;opacity:.45;font-size:.72rem;line-height:1;">↓</div>
-    <div style="border:1px solid rgba(127,127,127,.35);border-radius:2px;padding:5px 8px;line-height:1.35;">Policy API + Prover<div style="font-family:monospace;font-size:.72rem;opacity:.6;margin-top:2px;line-height:1.45;">AES-256-GCM復号 → Noir + Barretenberg</div></div>
+<div class="policy-diagram architecture" role="img" aria-label="AIモデルがMCPへ決済を依頼し、ClientがProverから証明を取得する。Clientは証明付きUserOperationを送信し、Accountが検証後に支出を計上して送金する。">
+  <div class="model-flow"><b>Claude Code / Codex</b><span>① 決済を依頼 ↓</span><span>↑ ⑥ 公開receipt</span><small>モデルのcontextに秘密・鍵・proofを出さない</small></div>
+  <div class="architecture-grid">
+    <div class="diagram-node client-node"><div class="diagram-label">エージェント実行環境</div><b>MCP / Payment Client</b><small>pay_native / pay_erc20 / pay_contract</small><div class="node-detail">Proofを取得・照合<br>Owner KeyでUserOperationに署名</div></div>
+    <div class="round-trip"><div class="diagram-arrow">② 決済内容で証明依頼<span>→</span></div><div class="diagram-arrow arrow-back">③ proof + 公開入力<span>←</span></div></div>
+    <div class="diagram-node secret-node"><div class="diagram-label">秘密を扱うOff-chain環境</div><b>Policy API / Prover</b><small>Noir + Barretenberg</small><div class="node-detail">Ownerが設定した秘密Policy<br>上限・allowlist・dailyLimit・salt</div></div>
   </div>
-
-  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;padding:0 8px;text-align:center;">
-    <div style="font-family:monospace;font-size:.68rem;line-height:1.5;color:#1288ab;">proof と<br>15個の公開入力</div>
-    <div style="width:100%;border-top:1px solid #1288ab;"></div>
-    <div style="font-family:monospace;font-size:.68rem;line-height:1.5;color:#a8446b;">✕ 上限 · allowlist<br>dailyLimit · salt</div>
-  </div>
-
-  <div style="border:1px solid rgba(127,127,127,.35);border-radius:3px;padding:10px;display:flex;flex-direction:column;gap:5px;">
-    <div style="font-family:monospace;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;opacity:.6;">② エージェント実行環境</div>
-    <div style="border:1px solid rgba(127,127,127,.35);border-radius:2px;padding:5px 8px;line-height:1.35;">Claude Code / Codex<div style="font-family:monospace;font-size:.72rem;opacity:.6;margin-top:2px;line-height:1.45;">modelのcontextとtranscript</div></div>
-    <div style="text-align:center;opacity:.45;font-size:.72rem;line-height:1;">↓</div>
-    <div style="border:1px solid rgba(127,127,127,.35);border-radius:2px;padding:5px 8px;line-height:1.35;">MCP Server<div style="font-family:monospace;font-size:.72rem;opacity:.6;margin-top:2px;line-height:1.45;">pay_native / pay_erc20 / pay_contract</div></div>
-    <div style="text-align:center;opacity:.45;font-size:.72rem;line-height:1;">↓</div>
-    <div style="border:1px solid rgba(127,127,127,.35);border-radius:2px;padding:5px 8px;line-height:1.35;">Payment Client<div style="font-family:monospace;font-size:.72rem;opacity:.6;margin-top:2px;line-height:1.45;">環境変数のOwner Keyで署名</div></div>
-  </div>
-
-  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;padding:0 8px;text-align:center;">
-    <div style="font-family:monospace;font-size:.68rem;line-height:1.5;color:#1288ab;">UserOperation<br>（proof同梱）</div>
-    <div style="width:100%;border-top:1px solid #1288ab;"></div>
-    <div style="font-family:monospace;font-size:.68rem;line-height:1.5;color:#a8446b;">✕ Owner Key<br>Proof Token</div>
-  </div>
-
-  <div style="border:1px solid #1288ab;background:rgba(18,136,171,.07);border-radius:3px;padding:10px;display:flex;flex-direction:column;gap:5px;">
-    <div style="font-family:monospace;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:#1288ab;">③ On-chain · 公開</div>
-    <div style="border:1px solid rgba(127,127,127,.35);border-radius:2px;padding:5px 8px;line-height:1.35;">ZkPolicyAccount<div style="font-family:monospace;font-size:.72rem;opacity:.6;margin-top:2px;line-height:1.45;">15公開入力を実状態から再構築</div></div>
-    <div style="text-align:center;opacity:.45;font-size:.72rem;line-height:1;">↓</div>
-    <div style="border:1px solid rgba(127,127,127,.35);border-radius:2px;padding:5px 8px;line-height:1.35;">SpendLimitVerifier<div style="font-family:monospace;font-size:.72rem;opacity:.6;margin-top:2px;line-height:1.45;">回路から自動生成</div></div>
-    <div style="text-align:center;opacity:.45;font-size:.72rem;line-height:1;">↓</div>
-    <div style="border:1px solid rgba(127,127,127,.35);border-radius:2px;padding:5px 8px;line-height:1.35;">送金先 / Token / Contract</div>
-  </div>
-
-</div>
-
-<div class="grid grid-cols-2 gap-4 pt-4 text-sm">
-  <div class="border rounded p-3">
-    <div class="text-xs font-mono pb-1" style="color:#1288ab">① → ② の境界</div>
-    エージェント側へ渡るのはproofと公開入力だけ。<b>上限やallowlistの値そのものは越えない。</b>modelのcontextとtranscriptには、秘密もproofも現れない。
-  </div>
-  <div class="border rounded p-3">
-    <div class="text-xs font-mono pb-1" style="color:#1288ab">② → ③ の境界</div>
-    Accountが15個の公開入力を<b>自分で作り直す</b>ため、Client側の申告値は使われない。この境界の途中にBundler（Alto）とEntryPoint v0.8がある。
-  </div>
+  <div class="submission-flow"><span>④ 決済内容 + proofを送信</span><span class="flow-line">↓</span><small>Owner署名付きUserOperation / Bundler（Alto）/ EntryPoint v0.8</small></div>
+  <div class="execution-flow public-node"><div><div class="diagram-label">On-chain</div><b>ZkPolicyAccount</b><small>実行引数と実状態から<br>15個の公開入力を再構築</small></div><span class="flow-symbol">→</span><div><b>Verifier</b><small>⑤ Proofを検証<br>失敗なら実行を拒否</small></div><span class="flow-symbol">成功 →</span><div><b>支出を計上して送金</b><small>native / ERC-20 / Contract</small></div></div>
 </div>
 
 <!--
-ここまでで2分。
-図は左から右へ一方向。ゾーンの間にある2本の線が、この設計のすべて。
-上の行が「越えるもの」、下の行が「越えないもの」。
+サービス全体で2分20秒。①から⑥までを追い、ClientとProverの往復を説明する。
+OwnerはPolicy CLIからEIP-712署名とnonceでPolicyを設定し、CommitmentをAccountへ登録する（設定経路は図から省略）。
+Policy APIはAES-256-GCMで保存したPolicyを復号し、秘密入力としてProverに渡す。
+Owner KeyとProof TokenはHostからClient内部に渡す。モデルには渡さない（ADR-0011）。
+③の公開入力はClientが照合するが、Accountは実行引数・オンチェーン状態から自分で再構築する。
+⑥は成功時の公開receipt。失敗時も秘密値・proofを含まない結果を返す。
 -->
 
 ---
