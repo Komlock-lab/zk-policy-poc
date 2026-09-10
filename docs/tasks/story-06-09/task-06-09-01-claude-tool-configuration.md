@@ -3,7 +3,7 @@ id: task-06-09-01
 type: task
 title: Claude Codeの3決済Tool設定
 story: story-06-09
-status: pending
+status: done
 blocked_by: []
 created: 2026-09-06
 updated: 2026-09-06
@@ -31,8 +31,10 @@ pnpm test:unit
 
 ## 検証結果
 
-未実施。
+- `.claude/settings.json`で3つの型付き決済Toolだけを許可し、Bash deny・既存stdio/環境変数転送を維持。
+- `pnpm test:unit`: 103件成功。Claude設定と共通互換性テストのClaude側だけを更新、Codex側は維持。
+- `pnpm build`: Verifier生成・Contract build・TypeScript成功。3 Toolの実接続は後続Taskで検証。
 
 ## Blocked
 
-実装開始はEpicのPreflight解消後。
+なし。

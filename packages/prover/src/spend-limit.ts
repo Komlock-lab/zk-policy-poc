@@ -9,7 +9,7 @@ import { z } from "zod";
 import {
   computePolicyCommitment,
   fieldElementSchema,
-  parseCircuitAmount,
+  parseCircuitAmount, normalizePolicy, policyFields, paymentPublicInputs, type Policy, type PaymentContext,
 } from "../../policy/src/index.ts";
 
 const circuitArtifactSchema = z.object({
@@ -19,7 +19,7 @@ const circuitArtifactSchema = z.object({
 
 export interface SpendLimitProof {
   proof: Hex;
-  publicInputs: readonly [Hex, Hex];
+  publicInputs: readonly Hex[];
 }
 
 export interface SpendLimitProofInput {
@@ -27,6 +27,8 @@ export interface SpendLimitProofInput {
   maxAmount: bigint;
   salt: bigint;
   policyCommitment?: bigint;
+  policy?: Policy;
+  context: Omit<PaymentContext, "policyCommitment" | "amount">;
 }
 
 const defaultCircuitPath = resolve(
@@ -46,11 +48,11 @@ export async function generateSpendLimitProof(
   const maxAmount = parseCircuitAmount(input.maxAmount);
   const salt = fieldElementSchema.parse(input.salt);
 
-  if (value > maxAmount) {
-    throw new Error("value exceeds max amount");
-  }
-
-  const computedCommitment = await computePolicyCommitment(maxAmount, salt);
+  const policy = normalizePolicy(input.policy ?? { maxAmountWei: maxAmount, salt });
+  const rule = policy.assetRules.find((rule) => rule.asset.toLowerCase() === input.context.asset.toLowerCase());
+  if (!rule) throw new Error("asset is not allowed");
+  if (value > rule.maxAmount) throw new Error("value exceeds max amount");
+  const computedCommitment = await computePolicyCommitment(policy);
   const policyCommitment = fieldElementSchema.parse(
     input.policyCommitment ?? computedCommitment,
   );
@@ -67,11 +69,10 @@ export async function generateSpendLimitProof(
   const backend = new UltraHonkBackend(artifact.bytecode, barretenberg);
 
   try {
+    const expectedPublicInputs = paymentPublicInputs({ ...input.context, amount: value, policyCommitment });
     const { witness } = await noir.execute({
-      value: value.toString(),
-      policy_commitment: policyCommitment.toString(),
-      max_amount: maxAmount.toString(),
-      salt: salt.toString(),
+      public_inputs: expectedPublicInputs.map((v) => BigInt(v).toString()),
+      policy_fields: policyFields(policy).map(String),
     });
     const proofData = await backend.generateProof(witness, {
       verifierTarget: "evm",
@@ -87,22 +88,13 @@ export async function generateSpendLimitProof(
     const publicInputs = proofData.publicInputs.map((publicInput) =>
       fieldToHex(BigInt(publicInput)),
     );
-    const expectedPublicInputs = [fieldToHex(value), fieldToHex(policyCommitment)] as const;
-    const [publicValue, publicCommitment] = publicInputs;
-
-    if (
-      publicInputs.length !== 2 ||
-      publicValue === undefined ||
-      publicCommitment === undefined ||
-      publicValue !== expectedPublicInputs[0] ||
-      publicCommitment !== expectedPublicInputs[1]
-    ) {
+    if (publicInputs.length !== 15 || publicInputs.some((value, index) => value !== expectedPublicInputs[index])) {
       throw new Error("unexpected public input order or value");
     }
 
     return {
       proof: toHex(proofData.proof),
-      publicInputs: [publicValue, publicCommitment],
+      publicInputs,
     };
   } finally {
     await barretenberg.destroy();

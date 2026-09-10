@@ -1,3 +1,5 @@
+import { fixturePaymentContext, fixturePaymentIntent } from "../../../scripts/lib/payment-fixture.ts";
+import { paymentPublicInputs, normalizePolicy } from "../../../packages/policy/src/index.ts";
 import { describe, expect, it, vi } from "vitest";
 import { type Address, type Hex, toHex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
@@ -22,6 +24,7 @@ class FakeChain implements PolicyChainGateway {
   commitment = toHex(0n, { size: 32 });
   transaction?: PolicyTransaction;
 
+  async getPaymentState() { return { dayId: 0n, spentBefore: 0n, blockNumber: 1n }; }
   async getOwner(): Promise<Address> {
     return this.owner;
   }
@@ -72,7 +75,7 @@ function setup() {
     chain,
     Buffer.alloc(32, 1),
     () => 1_000,
-    async (maxAmount, salt) => maxAmount + salt,
+    async (policy) => policy.assetRules[0]!.maxAmount + policy.salt,
   );
   return { repository, chain, service };
 }
@@ -155,7 +158,7 @@ function setupProofPolicy(active = true) {
   chain.commitment = commitment;
   const generateProof = vi.fn(async ({ value }: { value: bigint }) => ({
     proof: "0x1234" as Hex,
-    publicInputs: [toHex(value, { size: 32 }), commitment] as const,
+    publicInputs: paymentPublicInputs({ ...fixturePaymentContext(), amount: value, policyCommitment: BigInt(commitment) }),
   }));
   const service = new PolicyService(
     repository,
@@ -450,7 +453,7 @@ describe("PolicyService token rotation", () => {
       nonce: 2n,
       tokenHash: hashPolicyToken(result.token),
     });
-    await expect(service.createProof({ policyId, token: oldToken, valueWei: "10" })).rejects.toMatchObject({
+    await expect(service.createProof({ policyId, token: oldToken, intent: fixturePaymentIntent(10n) })).rejects.toMatchObject({
       statusCode: 401,
       code: "INVALID_POLICY_TOKEN",
     });
@@ -597,15 +600,15 @@ describe("PolicyService token rotation", () => {
 
   it("does not return a proof authenticated by a token rotated during proving", async () => {
     const state = setupProofPolicy();
-    const generated = deferred<{ proof: Hex; publicInputs: readonly [Hex, Hex] }>();
+    const generated = deferred<{ proof: Hex; publicInputs: Hex[] }>();
     state.generateProof.mockReturnValueOnce(generated.promise);
 
-    const proof = state.service.createProof({ policyId, token: state.token, valueWei: "10" });
+    const proof = state.service.createProof({ policyId, token: state.token, intent: fixturePaymentIntent(10n) });
     await vi.waitFor(() => expect(state.generateProof).toHaveBeenCalledOnce());
     const rotation = await state.service.rotatePolicyToken(await signedTokenRotation());
     generated.resolve({
       proof: "0x1234",
-      publicInputs: [toHex(10n, { size: 32 }), state.commitment],
+      publicInputs: paymentPublicInputs({ ...fixturePaymentContext(), amount: 10n, policyCommitment: BigInt(state.commitment) }),
     });
 
     await expect(proof).rejects.toMatchObject({
@@ -613,7 +616,7 @@ describe("PolicyService token rotation", () => {
       code: "INVALID_POLICY_TOKEN",
     });
     await expect(
-      state.service.createProof({ policyId, token: rotation.token, valueWei: "10" }),
+      state.service.createProof({ policyId, token: rotation.token, intent: fixturePaymentIntent(10n) }),
     ).resolves.toMatchObject({ policyId, policyVersion: 1 });
     state.repository.close();
   });
@@ -633,14 +636,16 @@ describe("PolicyService proof generation", () => {
   it("authenticates, checks active chain state, and returns bound public inputs", async () => {
     const { repository, service, token, commitment, generateProof } = setupProofPolicy();
 
-    await expect(service.createProof({ policyId, token, valueWei: "10" })).resolves.toEqual({
+    await expect(service.createProof({ policyId, token, intent: fixturePaymentIntent(10n) })).resolves.toEqual({
       policyId,
       policyVersion: 1,
       proof: "0x1234",
-      publicInputs: [toHex(10n, { size: 32 }), commitment],
+      publicInputs: paymentPublicInputs({ ...fixturePaymentContext(), amount: 10n, policyCommitment: BigInt(commitment) }),
     });
     expect(generateProof).toHaveBeenCalledWith({
       value: 10n,
+      context: { ...fixturePaymentContext(), amount: 10n },
+      policy: normalizePolicy({ maxAmountWei: 100n, salt: 200n }),
       maxAmount: 100n,
       salt: 200n,
       policyCommitment: 300n,
@@ -654,7 +659,7 @@ describe("PolicyService proof generation", () => {
     const getPolicyState = vi.spyOn(chain, "getPolicyState");
 
     await expect(
-      service.createProof({ policyId, token: `zkp_${"b".repeat(43)}`, valueWei: "10" }),
+      service.createProof({ policyId, token: `zkp_${"b".repeat(43)}`, intent: fixturePaymentIntent(10n) }),
     ).rejects.toMatchObject({ statusCode: 401, code: "INVALID_POLICY_TOKEN" });
     expect(getActive).not.toHaveBeenCalled();
     expect(getPolicyState).not.toHaveBeenCalled();
@@ -665,7 +670,7 @@ describe("PolicyService proof generation", () => {
   it("rejects pending and on-chain mismatched policies before decryption or proving", async () => {
     const pending = setupProofPolicy(false);
     await expect(
-      pending.service.createProof({ policyId, token: pending.token, valueWei: "10" }),
+      pending.service.createProof({ policyId, token: pending.token, intent: fixturePaymentIntent(10n) }),
     ).rejects.toMatchObject({ statusCode: 409, code: "POLICY_NOT_ACTIVE" });
     expect(pending.generateProof).not.toHaveBeenCalled();
     pending.repository.close();
@@ -676,7 +681,7 @@ describe("PolicyService proof generation", () => {
       .prepare("UPDATE policy_versions SET auth_tag = ? WHERE policy_id = ? AND version = 1")
       .run(Buffer.alloc(16), policyId);
     await expect(
-      unconfigured.service.createProof({ policyId, token: unconfigured.token, valueWei: "10" }),
+      unconfigured.service.createProof({ policyId, token: unconfigured.token, intent: fixturePaymentIntent(10n) }),
     ).rejects.toMatchObject({ statusCode: 409, code: "ONCHAIN_POLICY_MISMATCH" });
     expect(unconfigured.generateProof).not.toHaveBeenCalled();
     unconfigured.repository.close();
@@ -684,7 +689,7 @@ describe("PolicyService proof generation", () => {
     const mismatched = setupProofPolicy();
     mismatched.chain.commitment = toHex(301n, { size: 32 });
     await expect(
-      mismatched.service.createProof({ policyId, token: mismatched.token, valueWei: "10" }),
+      mismatched.service.createProof({ policyId, token: mismatched.token, intent: fixturePaymentIntent(10n) }),
     ).rejects.toMatchObject({ statusCode: 409, code: "ONCHAIN_POLICY_MISMATCH" });
     expect(mismatched.generateProof).not.toHaveBeenCalled();
     mismatched.repository.close();
@@ -692,7 +697,7 @@ describe("PolicyService proof generation", () => {
 
   it("rejects an amount above the active limit without proving", async () => {
     const { repository, service, token, generateProof } = setupProofPolicy();
-    await expect(service.createProof({ policyId, token, valueWei: "101" })).rejects.toMatchObject({
+    await expect(service.createProof({ policyId, token, intent: fixturePaymentIntent(101n) })).rejects.toMatchObject({
       statusCode: 422,
       code: "POLICY_LIMIT_EXCEEDED",
     });
@@ -702,13 +707,13 @@ describe("PolicyService proof generation", () => {
 
   it("does not return a stale proof when the active policy changes during proving", async () => {
     const fixture = setupProofPolicy();
-    const generated = deferred<{ proof: Hex; publicInputs: readonly [Hex, Hex] }>();
+    const generated = deferred<{ proof: Hex; publicInputs: Hex[] }>();
     fixture.generateProof.mockReturnValueOnce(generated.promise);
 
     const proof = fixture.service.createProof({
       policyId,
       token: fixture.token,
-      valueWei: "10",
+      intent: fixturePaymentIntent(10n),
     });
     await vi.waitFor(() => expect(fixture.generateProof).toHaveBeenCalledOnce());
     const nextCommitment = toHex(301n, { size: 32 });
@@ -733,7 +738,7 @@ describe("PolicyService proof generation", () => {
     fixture.chain.commitment = nextCommitment;
     generated.resolve({
       proof: "0x1234",
-      publicInputs: [toHex(10n, { size: 32 }), fixture.commitment],
+      publicInputs: paymentPublicInputs({ ...fixturePaymentContext(), amount: 10n, policyCommitment: BigInt(fixture.commitment) }),
     });
 
     await expect(proof).rejects.toMatchObject({
@@ -749,7 +754,7 @@ describe("PolicyService proof generation", () => {
       .prepare("UPDATE policy_versions SET auth_tag = ? WHERE policy_id = ? AND version = 1")
       .run(Buffer.alloc(16), policyId);
     await expect(
-      corrupted.service.createProof({ policyId, token: corrupted.token, valueWei: "10" }),
+      corrupted.service.createProof({ policyId, token: corrupted.token, intent: fixturePaymentIntent(10n) }),
     ).rejects.toMatchObject({ statusCode: 500, code: "POLICY_SECRET_INVALID" });
     expect(corrupted.generateProof).not.toHaveBeenCalled();
     corrupted.repository.close();
@@ -757,7 +762,7 @@ describe("PolicyService proof generation", () => {
     const failedProof = setupProofPolicy();
     failedProof.generateProof.mockRejectedValueOnce(new Error("private witness leaked here"));
     await expect(
-      failedProof.service.createProof({ policyId, token: failedProof.token, valueWei: "10" }),
+      failedProof.service.createProof({ policyId, token: failedProof.token, intent: fixturePaymentIntent(10n) }),
     ).rejects.toMatchObject({ statusCode: 500, code: "PROOF_GENERATION_FAILED" });
     failedProof.repository.close();
   });
@@ -769,10 +774,10 @@ describe("PolicyService proof generation", () => {
     const fixture = setupProofPolicy();
     fixture.generateProof.mockResolvedValueOnce({
       proof: "0x1234",
-      publicInputs: [publicValue, publicCommitment],
+      publicInputs: paymentPublicInputs({ ...fixturePaymentContext(), amount: BigInt(publicValue), policyCommitment: BigInt(publicCommitment) }),
     });
     await expect(
-      fixture.service.createProof({ policyId, token: fixture.token, valueWei: "10" }),
+      fixture.service.createProof({ policyId, token: fixture.token, intent: fixturePaymentIntent(10n) }),
     ).rejects.toMatchObject({ statusCode: 500, code: "PROOF_PUBLIC_INPUT_MISMATCH" });
     fixture.repository.close();
   });

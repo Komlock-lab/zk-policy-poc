@@ -1,3 +1,4 @@
+import { fixturePaymentContext } from "../scripts/lib/payment-fixture.ts";
 import { createPublicClient, http, parseEther } from "viem";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -38,7 +39,7 @@ describe("Phase 1 ZK payment", () => {
     const balanceBefore = await publicClient.getBalance({ address: recipient });
 
     await expect(
-      generateSpendLimitProof({
+      generateSpendLimitProof({ context: fixturePaymentContext(),
         value: parseEther("1"),
         maxAmount: parseEther("0.1"),
         salt: generateSalt(),

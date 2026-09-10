@@ -5,6 +5,8 @@ import {EntryPoint} from "@account-abstraction/contracts/core/EntryPoint.sol";
 import {
     PackedUserOperation
 } from "@account-abstraction/contracts/interfaces/PackedUserOperation.sol";
+import {PolicyPaymentReceiver} from "../src/fixtures/PolicyPaymentReceiver.sol";
+import {PolicyToken} from "../src/fixtures/PolicyToken.sol";
 import {ZkPolicyAccount} from "../src/ZkPolicyAccount.sol";
 import {ISpendLimitVerifier} from "../src/interfaces/ISpendLimitVerifier.sol";
 
@@ -25,6 +27,7 @@ interface Vm {
     function getRecordedLogs() external returns (Log[] memory);
     function prank(address msgSender) external;
     function recordLogs() external;
+    function warp(uint256 timestamp) external;
     function sign(uint256 privateKey, bytes32 digest)
         external
         returns (uint8 v, bytes32 r, bytes32 s);
@@ -34,6 +37,11 @@ contract MockSpendLimitVerifier is ISpendLimitVerifier {
     bool public result = true;
     bytes32 public expectedValue;
     bytes32 public expectedCommitment;
+    bytes32 public expectedInputsHash;
+
+    function configureInputs(bytes32[] calldata inputs) external {
+        expectedInputsHash = keccak256(abi.encode(inputs));
+    }
 
     function configure(bool result_, bytes32 expectedValue_, bytes32 expectedCommitment_) external {
         result = result_;
@@ -42,8 +50,10 @@ contract MockSpendLimitVerifier is ISpendLimitVerifier {
     }
 
     function verify(bytes calldata, bytes32[] calldata publicInputs) external view returns (bool) {
-        return result && publicInputs.length == 2 && publicInputs[0] == expectedValue
-            && publicInputs[1] == expectedCommitment;
+        return result && publicInputs.length == 15 && publicInputs[7] == expectedValue
+            && publicInputs[3] == expectedCommitment
+            && (expectedInputsHash == 0
+                || keccak256(abi.encode(publicInputs)) == expectedInputsHash);
     }
 }
 
@@ -60,6 +70,7 @@ contract ZkPolicyAccountTest {
     bytes32 private constant POLICY_COMMITMENT = bytes32(uint256(1234));
     bytes private constant PROOF = hex"1234";
 
+    event InvoicePaid(bytes32 indexed invoiceId, address indexed payer, uint256 value);
     event PaymentExecuted(address indexed recipient, uint256 value);
     event PolicyCommitmentUpdated(bytes32 previousCommitment, bytes32 newCommitment);
 
@@ -134,7 +145,9 @@ contract ZkPolicyAccountTest {
         verifier.configure(true, bytes32(value), POLICY_COMMITMENT);
         vm.prank(owner);
 
-        account.execute(recipient, value, PROOF);
+        account.execute(
+            recipient, value, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF
+        );
 
         require(recipient.balance == value, "recipient balance mismatch");
         require(address(account).balance == 0, "account balance mismatch");
@@ -149,7 +162,9 @@ contract ZkPolicyAccountTest {
         emit PaymentExecuted(recipient, value);
         vm.prank(address(entryPoint));
 
-        account.executeUserOp(recipient, value, PROOF);
+        account.executeUserOp(
+            recipient, value, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF
+        );
 
         require(recipient.balance == value, "recipient balance mismatch");
     }
@@ -159,8 +174,12 @@ contract ZkPolicyAccountTest {
         uint256 value = 0.01 ether;
         verifier.configure(true, bytes32(value), POLICY_COMMITMENT);
         vm.deal(address(account), 1 ether);
-        PackedUserOperation memory userOp =
-            _userOp(abi.encodeCall(ZkPolicyAccount.executeUserOp, (recipient, value, PROOF)));
+        PackedUserOperation memory userOp = _userOp(
+            abi.encodeCall(
+                ZkPolicyAccount.executeUserOp,
+                (recipient, value, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF)
+            )
+        );
         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
         userOp.signature = _sign(userOpHash, OWNER_PRIVATE_KEY);
         PackedUserOperation[] memory userOps = new PackedUserOperation[](1);
@@ -179,8 +198,12 @@ contract ZkPolicyAccountTest {
         uint256 value = 0.01 ether;
         verifier.configure(true, bytes32(value), POLICY_COMMITMENT);
         vm.deal(address(account), 1 ether);
-        PackedUserOperation memory userOp =
-            _userOp(abi.encodeCall(ZkPolicyAccount.executeUserOp, (recipient, value, PROOF)));
+        PackedUserOperation memory userOp = _userOp(
+            abi.encodeCall(
+                ZkPolicyAccount.executeUserOp,
+                (recipient, value, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF)
+            )
+        );
         userOp.signature = _sign(entryPoint.getUserOpHash(userOp), 0xB0B);
         PackedUserOperation[] memory userOps = new PackedUserOperation[](1);
         userOps[0] = userOp;
@@ -197,7 +220,13 @@ contract ZkPolicyAccountTest {
         vm.expectRevert(abi.encodeWithSelector(ZkPolicyAccount.Unauthorized.selector, caller));
         vm.prank(caller);
 
-        account.execute(payable(address(0xBEEF)), 1, PROOF);
+        account.execute(
+            payable(address(0xBEEF)),
+            1,
+            uint64(block.timestamp),
+            uint64(block.timestamp + 300),
+            PROOF
+        );
     }
 
     function testExecuteUserOpRejectsNonEntryPointCaller() public {
@@ -205,7 +234,13 @@ contract ZkPolicyAccountTest {
         vm.expectRevert(abi.encodeWithSelector(ZkPolicyAccount.Unauthorized.selector, caller));
         vm.prank(caller);
 
-        account.executeUserOp(payable(address(0xBEEF)), 1, PROOF);
+        account.executeUserOp(
+            payable(address(0xBEEF)),
+            1,
+            uint64(block.timestamp),
+            uint64(block.timestamp + 300),
+            PROOF
+        );
     }
 
     function testUpdateRejectsCommitmentOutsideField() public {
@@ -243,7 +278,13 @@ contract ZkPolicyAccountTest {
         vm.expectRevert(abi.encodeWithSelector(ZkPolicyAccount.PolicyNotConfigured.selector));
         vm.prank(owner);
 
-        unconfigured.execute(payable(address(0xBEEF)), 1, PROOF);
+        unconfigured.execute(
+            payable(address(0xBEEF)),
+            1,
+            uint64(block.timestamp),
+            uint64(block.timestamp + 300),
+            PROOF
+        );
     }
 
     function testRejectsUnauthorizedPolicyUpdate() public {
@@ -282,7 +323,9 @@ contract ZkPolicyAccountTest {
         vm.expectRevert(abi.encodeWithSelector(ZkPolicyAccount.InvalidRecipient.selector));
         vm.prank(owner);
 
-        account.execute(payable(address(0)), 1, PROOF);
+        account.execute(
+            payable(address(0)), 1, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF
+        );
     }
 
     function testRejectsAmountOutsideU128() public {
@@ -290,7 +333,13 @@ contract ZkPolicyAccountTest {
         vm.expectRevert(abi.encodeWithSelector(ZkPolicyAccount.AmountOutOfRange.selector, value));
         vm.prank(owner);
 
-        account.execute(payable(address(0xBEEF)), value, PROOF);
+        account.execute(
+            payable(address(0xBEEF)),
+            value,
+            uint64(block.timestamp),
+            uint64(block.timestamp + 300),
+            PROOF
+        );
     }
 
     function testRejectsInvalidProof() public {
@@ -299,7 +348,13 @@ contract ZkPolicyAccountTest {
         vm.expectRevert(abi.encodeWithSelector(ZkPolicyAccount.InvalidProof.selector));
         vm.prank(owner);
 
-        account.execute(payable(address(0xBEEF)), value, PROOF);
+        account.execute(
+            payable(address(0xBEEF)),
+            value,
+            uint64(block.timestamp),
+            uint64(block.timestamp + 300),
+            PROOF
+        );
     }
 
     function testRejectsMismatchedPublicValue() public {
@@ -308,7 +363,13 @@ contract ZkPolicyAccountTest {
         vm.expectRevert(abi.encodeWithSelector(ZkPolicyAccount.InvalidProof.selector));
         vm.prank(owner);
 
-        account.execute(payable(address(0xBEEF)), value, PROOF);
+        account.execute(
+            payable(address(0xBEEF)),
+            value,
+            uint64(block.timestamp),
+            uint64(block.timestamp + 300),
+            PROOF
+        );
     }
 
     function testExecuteUserOpRejectsStaleCommitment() public {
@@ -319,7 +380,13 @@ contract ZkPolicyAccountTest {
         vm.expectRevert(abi.encodeWithSelector(ZkPolicyAccount.InvalidProof.selector));
         vm.prank(address(entryPoint));
 
-        account.executeUserOp(payable(address(0xBEEF)), value, PROOF);
+        account.executeUserOp(
+            payable(address(0xBEEF)),
+            value,
+            uint64(block.timestamp),
+            uint64(block.timestamp + 300),
+            PROOF
+        );
     }
 
     function testExecuteUserOpRejectsMismatchedPublicValue() public {
@@ -328,7 +395,13 @@ contract ZkPolicyAccountTest {
         vm.expectRevert(abi.encodeWithSelector(ZkPolicyAccount.InvalidProof.selector));
         vm.prank(address(entryPoint));
 
-        account.executeUserOp(payable(address(0xBEEF)), value, PROOF);
+        account.executeUserOp(
+            payable(address(0xBEEF)),
+            value,
+            uint64(block.timestamp),
+            uint64(block.timestamp + 300),
+            PROOF
+        );
     }
 
     function testExecuteUserOpRejectsFailedTransfer() public {
@@ -340,7 +413,13 @@ contract ZkPolicyAccountTest {
         vm.expectRevert(abi.encodeWithSelector(ZkPolicyAccount.TransferFailed.selector));
         vm.prank(address(entryPoint));
 
-        account.executeUserOp(payable(address(recipient)), value, PROOF);
+        account.executeUserOp(
+            payable(address(recipient)),
+            value,
+            uint64(block.timestamp),
+            uint64(block.timestamp + 300),
+            PROOF
+        );
 
         require(address(account).balance == accountBalanceBefore, "account balance changed");
         require(address(recipient).balance == 0, "recipient balance changed");
@@ -356,7 +435,13 @@ contract ZkPolicyAccountTest {
         vm.expectRevert(abi.encodeWithSelector(ZkPolicyAccount.TransferFailed.selector));
         vm.prank(owner);
 
-        account.execute(payable(address(recipient)), value, PROOF);
+        account.execute(
+            payable(address(recipient)),
+            value,
+            uint64(block.timestamp),
+            uint64(block.timestamp + 300),
+            PROOF
+        );
 
         require(address(account).balance == accountBalanceBefore, "account balance changed");
         require(address(recipient).balance == recipientBalanceBefore, "recipient balance changed");
@@ -369,9 +454,318 @@ contract ZkPolicyAccountTest {
         verifier.configure(true, bytes32(uint256(value)), POLICY_COMMITMENT);
         vm.prank(owner);
 
-        account.execute(recipient, value, PROOF);
+        account.execute(
+            recipient, value, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF
+        );
 
         require(recipient.balance == value, "recipient balance mismatch");
+    }
+
+    function testExpiryPaymentBindsAllPublicInputsAtDeadline() public {
+        uint64 issuedAt = 172800;
+        uint64 validUntil = issuedAt + 300;
+        vm.warp(validUntil);
+        address payable recipient = payable(address(0xCAFE));
+        uint256 value = 0.01 ether;
+        vm.deal(address(account), value);
+        verifier.configure(true, bytes32(value), POLICY_COMMITMENT);
+        bytes32[] memory inputs = new bytes32[](15);
+        inputs[0] = bytes32(uint256(2));
+        inputs[1] = bytes32(block.chainid);
+        inputs[2] = bytes32(uint256(uint160(address(account))));
+        inputs[3] = POLICY_COMMITMENT;
+        inputs[5] = bytes32(uint256(uint160(address(recipient))));
+        inputs[7] = bytes32(value);
+        inputs[8] = bytes32(uint256(uint160(address(recipient))));
+        inputs[11] = bytes32(uint256(issuedAt));
+        inputs[12] = bytes32(uint256(validUntil));
+        inputs[13] = bytes32(uint256(2));
+        verifier.configureInputs(inputs);
+        vm.prank(owner);
+
+        account.execute(recipient, value, issuedAt, validUntil, PROOF);
+
+        require(recipient.balance == value, "deadline payment balance mismatch");
+    }
+
+    function testExecuteERC20TransfersAndBindsTokenInputs() public {
+        _checkERC20Transfer(100, owner);
+    }
+
+    function testExecuteERC20UserOpTransfersAndBindsTokenInputs() public {
+        _checkERC20Transfer(100, address(entryPoint));
+    }
+
+    function testFuzzERC20TransfersActualAmount(uint128 amount, bool viaEntryPoint) public {
+        _checkERC20Transfer(amount, viaEntryPoint ? address(entryPoint) : owner);
+    }
+
+    function _checkERC20Transfer(uint128 amount, address caller) private {
+        PolicyToken token = new PolicyToken();
+        address recipient = address(0xCAFE);
+        token.mint(address(account), uint256(amount) + 7);
+        verifier.configure(true, bytes32(uint256(amount)), POLICY_COMMITMENT);
+        bytes32[] memory inputs = new bytes32[](15);
+        inputs[0] = bytes32(uint256(2));
+        inputs[1] = bytes32(block.chainid);
+        inputs[2] = bytes32(uint256(uint160(address(account))));
+        inputs[3] = POLICY_COMMITMENT;
+        inputs[4] = bytes32(uint256(1));
+        inputs[5] = bytes32(uint256(uint160(recipient)));
+        inputs[6] = bytes32(uint256(uint160(address(token))));
+        inputs[7] = bytes32(uint256(amount));
+        inputs[8] = bytes32(uint256(uint160(address(token))));
+        inputs[11] = bytes32(block.timestamp);
+        inputs[12] = bytes32(block.timestamp + 300);
+        inputs[13] = bytes32(block.timestamp / 86400);
+        verifier.configureInputs(inputs);
+        vm.prank(caller);
+        if (caller == owner) {
+            account.executeERC20(
+                address(token),
+                recipient,
+                amount,
+                uint64(block.timestamp),
+                uint64(block.timestamp + 300),
+                PROOF
+            );
+        } else {
+            account.executeERC20UserOp(
+                address(token),
+                recipient,
+                amount,
+                uint64(block.timestamp),
+                uint64(block.timestamp + 300),
+                PROOF
+            );
+        }
+        require(token.balanceOf(address(account)) == 7, "account token balance mismatch");
+        require(token.balanceOf(recipient) == amount, "recipient token balance mismatch");
+        (, uint128 spent) = account.getDailySpend(address(token));
+        require(spent == amount, "token spend mismatch");
+        (, uint128 nativeSpent) = account.getDailySpend(address(0));
+        require(nativeSpent == 0, "native spend changed");
+    }
+
+    function testExecuteContractPaysBoundInvoice() public {
+        _checkContractPayment(0.01 ether, keccak256("invoice-owner"), owner);
+    }
+
+    function testExecuteContractUserOpPaysBoundInvoice() public {
+        _checkContractPayment(0.01 ether, keccak256("invoice-entrypoint"), address(entryPoint));
+    }
+
+    function testFuzzContractPaysActualInvoiceAndValue(
+        uint128 value,
+        bytes32 invoiceId,
+        bool viaEntryPoint
+    ) public {
+        _checkContractPayment(value, invoiceId, viaEntryPoint ? address(entryPoint) : owner);
+    }
+
+    function _checkContractPayment(uint128 value, bytes32 invoiceId, address caller) private {
+        PolicyPaymentReceiver receiver = new PolicyPaymentReceiver();
+        vm.deal(address(account), uint256(value) + 7);
+        verifier.configure(true, bytes32(uint256(value)), POLICY_COMMITMENT);
+        bytes32[] memory inputs = new bytes32[](15);
+        inputs[0] = bytes32(uint256(2));
+        inputs[1] = bytes32(block.chainid);
+        inputs[2] = bytes32(uint256(uint160(address(account))));
+        inputs[3] = POLICY_COMMITMENT;
+        inputs[4] = bytes32(uint256(2));
+        inputs[5] = bytes32(uint256(uint160(address(receiver))));
+        inputs[7] = bytes32(uint256(value));
+        inputs[8] = bytes32(uint256(uint160(address(receiver))));
+        inputs[9] = bytes32(uint256(invoiceId) >> 128);
+        inputs[10] = bytes32(uint256(uint128(uint256(invoiceId))));
+        inputs[11] = bytes32(block.timestamp);
+        inputs[12] = bytes32(block.timestamp + 300);
+        inputs[13] = bytes32(block.timestamp / 86400);
+        verifier.configureInputs(inputs);
+        vm.expectEmit(true, true, false, true);
+        emit InvoicePaid(invoiceId, address(account), value);
+        vm.prank(caller);
+        if (caller == owner) {
+            account.executeContract(
+                address(receiver),
+                invoiceId,
+                value,
+                uint64(block.timestamp),
+                uint64(block.timestamp + 300),
+                PROOF
+            );
+        } else {
+            account.executeContractUserOp(
+                address(receiver),
+                invoiceId,
+                value,
+                uint64(block.timestamp),
+                uint64(block.timestamp + 300),
+                PROOF
+            );
+        }
+        require(address(receiver).balance == value, "invoice receiver balance mismatch");
+        require(address(account).balance == 7, "invoice account balance mismatch");
+        (, uint128 spent) = account.getDailySpend(address(0));
+        require(spent == value, "invoice native spend mismatch");
+    }
+
+    function testDailySpendCombinesNativeAndContractAndSeparatesTokens() public {
+        vm.warp(172800);
+        address payable recipient = payable(address(0xCAFE));
+        vm.deal(address(account), 1 ether);
+        _expectStateInputs(0, recipient, address(0), 0.03 ether, 0, 0);
+        vm.prank(owner);
+        account.execute(recipient, 0.03 ether, 172800, 173100, PROOF);
+        _expectStateInputs(0, recipient, address(0), 0.02 ether, 0, 0.03 ether);
+        vm.prank(address(entryPoint));
+        account.executeUserOp(recipient, 0.02 ether, 172800, 173100, PROOF);
+        _assertDailySpend(address(0), 2, 0.05 ether);
+
+        PolicyPaymentReceiver receiver = new PolicyPaymentReceiver();
+        bytes32 invoiceId = keccak256("daily-native-invoice");
+        _expectStateInputs(2, address(receiver), address(0), 0.01 ether, invoiceId, 0.05 ether);
+        vm.prank(address(entryPoint));
+        account.executeContractUserOp(
+            address(receiver), invoiceId, 0.01 ether, 172800, 173100, PROOF
+        );
+        _assertDailySpend(address(0), 2, 0.06 ether);
+        require(recipient.balance == 0.05 ether, "native recipient balance");
+        require(address(receiver).balance == 0.01 ether, "contract recipient balance");
+
+        PolicyToken first = new PolicyToken();
+        PolicyToken second = new PolicyToken();
+        first.mint(address(account), 100);
+        second.mint(address(account), 100);
+        _expectStateInputs(1, recipient, address(first), 10, 0, 0);
+        vm.prank(owner);
+        account.executeERC20(address(first), recipient, 10, 172800, 173100, PROOF);
+        _expectStateInputs(1, recipient, address(second), 20, 0, 0);
+        vm.prank(address(entryPoint));
+        account.executeERC20UserOp(address(second), recipient, 20, 172800, 173100, PROOF);
+        _expectStateInputs(1, recipient, address(first), 5, 0, 10);
+        vm.prank(address(entryPoint));
+        account.executeERC20UserOp(address(first), recipient, 5, 172800, 173100, PROOF);
+        _assertDailySpend(address(first), 2, 15);
+        _assertDailySpend(address(second), 2, 20);
+        _assertDailySpend(address(0), 2, 0.06 ether);
+        require(
+            first.balanceOf(recipient) == 15 && second.balanceOf(recipient) == 20,
+            "token recipients"
+        );
+
+        vm.warp(259200);
+        _assertDailySpend(address(0), 3, 0);
+        _assertDailySpend(address(first), 3, 0);
+        _expectStateInputs(0, recipient, address(0), 0.04 ether, 0, 0);
+        vm.prank(owner);
+        account.execute(recipient, 0.04 ether, 259200, 259500, PROOF);
+        _assertDailySpend(address(0), 3, 0.04 ether);
+        require(recipient.balance == 0.09 ether, "next day recipient balance");
+    }
+
+    function testFuzzDailySpendTracksSequentialAmounts(uint64 first, uint64 second, bool nextDay)
+        public
+    {
+        vm.warp(172800);
+        address payable recipient = payable(address(0xCAFE));
+        vm.deal(address(account), uint256(first) + second);
+        _expectStateInputs(0, recipient, address(0), first, 0, 0);
+        vm.prank(owner);
+        account.execute(recipient, first, 172800, 173100, PROOF);
+        if (nextDay) vm.warp(259200);
+        uint128 previous = nextDay ? 0 : first;
+        _expectStateInputs(0, recipient, address(0), second, 0, previous);
+        vm.prank(address(entryPoint));
+        account.executeUserOp(
+            recipient, second, uint64(block.timestamp), uint64(block.timestamp + 300), PROOF
+        );
+        _assertDailySpend(address(0), nextDay ? 3 : 2, previous + second);
+        require(recipient.balance == uint256(first) + second, "sequential recipient balance");
+    }
+
+    function _assertDailySpend(address asset, uint64 expectedDay, uint128 expectedSpent)
+        private
+        view
+    {
+        (uint64 day, uint128 spent) = account.getDailySpend(asset);
+        require(day == expectedDay && spent == expectedSpent, "daily spend mismatch");
+    }
+
+    function _expectStateInputs(
+        uint8 kind,
+        address recipient,
+        address asset,
+        uint128 value,
+        bytes32 invoiceId,
+        uint128 spentBefore
+    ) private {
+        verifier.configure(true, bytes32(uint256(value)), POLICY_COMMITMENT);
+        bytes32[] memory inputs = new bytes32[](15);
+        inputs[0] = bytes32(uint256(2));
+        inputs[1] = bytes32(block.chainid);
+        inputs[2] = bytes32(uint256(uint160(address(account))));
+        inputs[3] = POLICY_COMMITMENT;
+        inputs[4] = bytes32(uint256(kind));
+        inputs[5] = bytes32(uint256(uint160(recipient)));
+        inputs[6] = bytes32(uint256(uint160(asset)));
+        inputs[7] = bytes32(uint256(value));
+        inputs[8] = bytes32(uint256(uint160(kind == 1 ? asset : recipient)));
+        inputs[9] = bytes32(uint256(invoiceId) >> 128);
+        inputs[10] = bytes32(uint256(uint128(uint256(invoiceId))));
+        inputs[11] = bytes32(block.timestamp);
+        inputs[12] = bytes32(block.timestamp + 300);
+        inputs[13] = bytes32(block.timestamp / 86400);
+        inputs[14] = bytes32(uint256(spentBefore));
+        verifier.configureInputs(inputs);
+    }
+
+    function testPolicyUpdatePreservesNativeAndTokenSpend() public {
+        vm.warp(172800);
+        address payable recipient = payable(address(0xCAFE));
+        vm.deal(address(account), 1 ether);
+        PolicyToken token = new PolicyToken();
+        token.mint(address(account), 100);
+        verifier.configure(true, bytes32(uint256(0.05 ether)), POLICY_COMMITMENT);
+        vm.prank(owner);
+        account.execute(recipient, 0.05 ether, 172800, 173100, PROOF);
+        verifier.configure(true, bytes32(uint256(10)), POLICY_COMMITMENT);
+        vm.prank(address(entryPoint));
+        account.executeERC20UserOp(address(token), recipient, 10, 172800, 173100, PROOF);
+
+        bytes32 updatedCommitment = bytes32(uint256(5678));
+        vm.prank(owner);
+        account.updatePolicyCommitment(updatedCommitment);
+        require(account.policyCommitment() == updatedCommitment, "updated commitment mismatch");
+        _assertDailySpend(address(0), 2, 0.05 ether);
+        _assertDailySpend(address(token), 2, 10);
+        verifier.configure(true, bytes32(uint256(0.02 ether)), updatedCommitment);
+        vm.prank(address(entryPoint));
+        account.executeUserOp(recipient, 0.02 ether, 172800, 173100, PROOF);
+        verifier.configure(true, bytes32(uint256(20)), updatedCommitment);
+        vm.prank(owner);
+        account.executeERC20(address(token), recipient, 20, 172800, 173100, PROOF);
+        _assertDailySpend(address(0), 2, 0.07 ether);
+        _assertDailySpend(address(token), 2, 30);
+        require(recipient.balance == 0.07 ether, "updated native recipient balance");
+        require(token.balanceOf(recipient) == 30, "updated token recipient balance");
+    }
+
+    function testFuzzPolicyUpdatePreservesDailySpend(uint64 first, uint64 second) public {
+        vm.warp(172800);
+        address payable recipient = payable(address(0xCAFE));
+        vm.deal(address(account), uint256(first) + second);
+        verifier.configure(true, bytes32(uint256(first)), POLICY_COMMITMENT);
+        vm.prank(owner);
+        account.execute(recipient, first, 172800, 173100, PROOF);
+        bytes32 updatedCommitment = bytes32(uint256(5678));
+        vm.prank(owner);
+        account.updatePolicyCommitment(updatedCommitment);
+        _assertDailySpend(address(0), 2, first);
+        verifier.configure(true, bytes32(uint256(second)), updatedCommitment);
+        vm.prank(address(entryPoint));
+        account.executeUserOp(recipient, second, 172800, 173100, PROOF);
+        _assertDailySpend(address(0), 2, uint128(first) + second);
     }
 
     function _userOp(bytes memory callData) private view returns (PackedUserOperation memory) {
@@ -403,7 +797,7 @@ contract ZkPolicyAccountTest {
             if (
                 logs[i].emitter == address(account) && logs[i].topics.length == 2
                     && logs[i].topics[0] == signature
-                    && logs[i].topics[1] == bytes32(uint256(uint160(recipient)))
+                    && logs[i].topics[1] == bytes32(uint256(uint160(address(recipient))))
                     && abi.decode(logs[i].data, (uint256)) == value
             ) return true;
         }

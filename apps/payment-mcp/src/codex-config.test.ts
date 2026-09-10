@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
 
 describe("Codex project payment configuration", () => {
-  it("connects only pay_native and forwards credentials by environment name", async () => {
+  it("connects only the three payment tools and forwards credentials by environment name", async () => {
     const config = await readFile(".codex/config.toml", "utf8");
     expect(config).toBe(`[features]
 shell_tool = false
@@ -15,7 +15,7 @@ enabled = true
 required = false
 startup_timeout_sec = 30
 tool_timeout_sec = 120
-enabled_tools = ["pay_native"]
+enabled_tools = ["pay_native", "pay_erc20", "pay_contract"]
 env_vars = [
   "POLICY_API_URL",
   "POLICY_RPC_URL",
@@ -28,6 +28,12 @@ env_vars = [
 ]
 
 [mcp_servers.payment.tools.pay_native]
+approval_mode = "approve"
+
+[mcp_servers.payment.tools.pay_erc20]
+approval_mode = "approve"
+
+[mcp_servers.payment.tools.pay_contract]
 approval_mode = "approve"
 `);
     expect(config).not.toMatch(/0x[0-9a-fA-F]{64}/);

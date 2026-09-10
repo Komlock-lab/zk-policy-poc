@@ -1,3 +1,7 @@
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+import { decryptPolicySecret } from "../apps/policy-api/src/crypto.ts";
+import { normalizePolicy } from "../packages/policy/src/index.ts";
 import { readdir, readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -13,7 +17,6 @@ import {
 import { privateKeyToAccount } from "viem/accounts";
 import { foundry } from "viem/chains";
 import { z } from "zod";
-import { createAndActivatePolicy } from "../apps/policy-cli/src/create-policy.ts";
 import { createPolicyChainGateway, zkPolicyAccountAbi } from "../apps/policy-api/src/chain.ts";
 import { PolicyRepository } from "../apps/policy-api/src/repository.ts";
 import { buildPolicyApi } from "../apps/policy-api/src/server.ts";
@@ -72,14 +75,16 @@ describe("initial policy registration", () => {
     const app = buildPolicyApi(new PolicyService(repository, chain, Buffer.alloc(32, 1)));
     const apiUrl = await app.listen({ host: "127.0.0.1", port: 0 });
     try {
-      const result = await createAndActivatePolicy({
-        apiUrl,
-        rpcUrl: anvil.rpcUrl,
-        accountAddress,
-        ownerPrivateKey: OWNER_PRIVATE_KEY,
-        maxAmountWei: parseEther("0.1"),
-        deadline: Math.floor(Date.now() / 1_000) + 600,
-      });
+      const { stdout } = await promisify(execFile)(process.execPath,
+        ["--import", "tsx", "apps/policy-cli/src/index.ts", parseEther("0.1").toString(), "300"],
+        { env: { ...process.env, POLICY_API_URL: apiUrl, POLICY_RPC_URL: anvil.rpcUrl,
+          POLICY_ACCOUNT_ADDRESS: accountAddress, POLICY_OWNER_PRIVATE_KEY: OWNER_PRIVATE_KEY } });
+      const result = z.object({ policyId: z.string().uuid(), policyVersion: z.literal(1), token: z.string() }).parse(JSON.parse(stdout));
+      const active = repository.getActive(result.policyId)!;
+      const secret = normalizePolicy(decryptPolicySecret(active, Buffer.alloc(32, 1), result.policyId, 1));
+      expect(secret.maxValiditySeconds).toBe(300n);
+      expect(secret.assetRules[0]!.maxAmount).toBe(parseEther("0.1"));
+      expect(active.ciphertext.toString("utf8")).not.toContain("maxValiditySeconds");
       const [configured, commitment] = await Promise.all([
         publicClient.readContract({ address: accountAddress, abi: zkPolicyAccountAbi, functionName: "policyConfigured" }),
         publicClient.readContract({ address: accountAddress, abi: zkPolicyAccountAbi, functionName: "policyCommitment" }),

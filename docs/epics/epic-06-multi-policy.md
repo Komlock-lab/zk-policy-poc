@@ -2,7 +2,7 @@
 id: epic-06
 type: epic
 title: 複数ポリシー対応
-status: approved
+status: review
 error_acceptance: deferred
 error_acceptance_reason: Phase 5を飛ばし正常系の複数条件決済を優先する
 error_acceptance_authorization: 2026-09-06 ユーザー指定「異常系は今考えなくていい」「いまの案でプランニング、実装して」
@@ -100,15 +100,15 @@ AgentへPolicy本文、Owner Key、API Token、Proofを公開しない。MCPの�
 
 | ID | Story | Depends on | Status |
 | --- | --- | --- | --- |
-| [story-06-01](../stories/epic-06/story-06-01-owner-registers-expiring-policy.md) | Ownerが有効期限付きPolicyを登録して決済する | なし | approved |
-| [story-06-02](../stories/epic-06/story-06-02-owner-updates-recipient-allowlist.md) | Ownerが許可送金先を更新して決済する | story-06-01 | approved |
-| [story-06-03](../stories/epic-06/story-06-03-user-pays-allowed-erc20.md) | 利用者が許可ERC-20を送金する | story-06-02 | approved |
-| [story-06-04](../stories/epic-06/story-06-04-user-pays-allowed-contract.md) | 利用者が許可Contractへ請求ID付きで支払う | story-06-03 | approved |
-| [story-06-05](../stories/epic-06/story-06-05-user-pays-with-daily-budget.md) | 利用者が日次予算内で続けて支払う | story-06-04 | approved |
-| [story-06-06](../stories/epic-06/story-06-06-owner-updates-daily-budget.md) | Ownerが当日の支出を維持して日次上限を更新する | story-06-05 | approved |
-| [story-06-09](../stories/epic-06/story-06-09-user-pays-with-claude-code.md) | 利用者がClaude Codeから複合Policyで支払う | story-06-06 | approved |
-| [story-06-10](../stories/epic-06/story-06-10-user-pays-with-codex.md) | 利用者がCodexから複合Policyで支払う | story-06-06 | approved |
-| [story-06-11](../stories/epic-06/story-06-11-developer-verifies-multi-policy.md) | Developerがフェーズ6全体の正常系を再現する | story-06-09, story-06-10 | approved |
+| [story-06-01](../stories/epic-06/story-06-01-owner-registers-expiring-policy.md) | Ownerが有効期限付きPolicyを登録して決済する | なし | done |
+| [story-06-02](../stories/epic-06/story-06-02-owner-updates-recipient-allowlist.md) | Ownerが許可送金先を更新して決済する | story-06-01 | done |
+| [story-06-03](../stories/epic-06/story-06-03-user-pays-allowed-erc20.md) | 利用者が許可ERC-20を送金する | story-06-02 | done |
+| [story-06-04](../stories/epic-06/story-06-04-user-pays-allowed-contract.md) | 利用者が許可Contractへ請求ID付きで支払う | story-06-03 | done |
+| [story-06-05](../stories/epic-06/story-06-05-user-pays-with-daily-budget.md) | 利用者が日次予算内で続けて支払う | story-06-04 | done |
+| [story-06-06](../stories/epic-06/story-06-06-owner-updates-daily-budget.md) | Ownerが当日の支出を維持して日次上限を更新する | story-06-05 | done |
+| [story-06-09](../stories/epic-06/story-06-09-user-pays-with-claude-code.md) | 利用者がClaude Codeから複合Policyで支払う | story-06-06 | done |
+| [story-06-10](../stories/epic-06/story-06-10-user-pays-with-codex.md) | 利用者がCodexから複合Policyで支払う | story-06-06 | done |
+| [story-06-11](../stories/epic-06/story-06-11-developer-verifies-multi-policy.md) | Developerがフェーズ6全体の正常系を再現する | story-06-09, story-06-10 | done |
 
 ## 依存グラフ
 
@@ -133,33 +133,31 @@ chain ID 31337、非forkのローカル環境、fixture資産を使用する。�
 
 ## 承認と実装開始条件
 
-2026-09-06のユーザー指示「いまの案でプランニング、実装して」を現在案の承認および計画詳細化・実装の指示として記録する。2026-09-06の追加指定「Risk Score不要」「PoCだから正常系だけでOK」「他に懸念なければ実装して」を反映。実装対象ADRは3件accepted、Risk Score ADRはrejected。Storyはapproved、Taskはpending。追加の設計判断はない。
+2026-09-06のユーザー指示「いまの案でプランニング、実装して」を現在案の承認および計画詳細化・実装の指示として記録する。2026-09-06の追加指定「Risk Score不要」「PoCだから正常系だけでOK」「他に懸念なければ実装して」を反映。実装対象ADRは3件accepted、Risk Score ADRはrejected。承認時点でStoryはapproved、Taskはpending。追加の設計判断はない。
 
 正常系のみの計画はEpicの明示的な延期理由・承認根拠をvalidate-planningで検証する。既存Epicの異常系AC要件は維持する。
 
 ## Preflight
 
-2026-09-06に実施し、明示的run-epic指定後にも再確認。ユーザーの通常ターミナルではGitHub接続・認証が正常。このセッション内のGit書込制限で停止している。製品実装は未開始。
+2026-09-06のrun-epic再開でGit権限制限を権限昇格により解消。
 
-- ローカルmain HEAD: 29ab9e3（Phase 4 Epic PR #19のmerge）。
-- bash scripts/check-toolchain.sh: 成功。
-- .git書込確認: fs.access(W_OK)がEPERM。現在の環境ではGitメタデータが読み取り専用。
-- ユーザーの通常ターミナルでgit ls-remote origin refs/heads/main成功。remote mainは29ab9e31f3c915472d0a7c9a83d1790f32d09c1eでローカルHEADと一致する。
-- ユーザーの通常ターミナルでgh auth status成功（takupeso）。このセッション内の認証エラーからトークン失効とは判断しない。
-- 実操作git branch epic/epic-06-multi-policy mainは失敗。refs/heads/epic/epic-06-multi-policy.lock作成がOperation not permitted。ブランチは作成されていない。
-- このセッションで利用可能な実行ツールにはGit操作の権限昇格を要求する引数がない。
-- 既存ユーザー変更: .codex/config.toml、apps/payment-mcp/src/codex-config.test.ts。変更・破棄していない。
-- 作業ツリーに計画変更があり、clean preflightは未達。Git書込回復後、計画変更だけをcommitし、既存ユーザー変更を保持した別worktreeで実装する。
-- Git/ネットワーク事前条件で停止したため、localhostサービス起動・全テスト・push/PR作成は未確認。
-
-再開条件: Git書込とGitHub通信・認証が利用可能な環境で、計画を保存し最新mainを確認してから、run-epicの残りのPreflightを行う。権限を回避する目的のコード変更は行わない。
-
-再開時の実行指定: `run-epic docs/epics/epic-06-multi-policy.md`。
+- 元worktreeの未コミット変更はすべて保持。承認済み計画40ファイルをEpic専用worktreeへコピーしcommit。
+- 最新mainはlocal/remoteとも29ab9e31f3c915472d0a7c9a83d1790f32d09c1e。
+- Epic branch/worktree/commit/push成功。GitHub認証正常。
+- 作業場所: /private/tmp/zk-policy-epic-06。計画保存後のworktreeはclean。
+- Node 23.3.0をPATHで明示し、bash scripts/check-toolchain.sh成功。pnpm install --frozen-lockfile成功。
+- Nargo依存キャッシュ書込は権限昇格で許可。pnpm test成功: Circuit 4、Contract 28、unit 93、E2E 22。実Agent E2E 5件は通常コマンドでskip、成功には含めない。
+- localhostのPolicy API・非fork Anvil（chain ID 31337）・実Altoで既存E2E成功。
+- baselineログ: /private/tmp/epic-06-preflight-tests.log。
+- 固定CLI（Claude Code 2.1.260、Codex 0.153.2）を専用PATHで使用し、RUN_CLAUDE_CODE_E2E=1 RUN_CODEX_E2E=1 NODE_OPTIONS=--experimental-sqlite pnpm exec vitest run e2e/claude-code-payment.test.ts e2e/codex-payment.test.ts成功（既存5 tests、skipなし）。ログ: /private/tmp/epic-06-baseline-agent-tests.log。
 
 ## Delivery
 
-- Epic PR: 未作成
-- 計画確定。製品コードは未変更。実装はPreflight解消待ち。
-- 計画検証: node scripts/validate-planning.mjs成功（112 documents）。
-- 計画検証ルールのテスト: node --test scripts/validate-planning.test.mjs成功（9 tests）。
-- Phase 6の36文書の相対リンク確認成功。git diff --check成功。
+- 全9 Story・22 Task done。Story PR #21〜#29をEpicへ統合済み。
+- [統合監査](../audits/epic-06-multi-policy.md): passed、CRITICAL/HIGH 0、MEDIUM/LOW 0。
+- 最終quality gate（`41761a4`）: build/typecheck、Circuit 11、Contract 39、unit 103、local E2E 27、実Claude 2・実Codex 5成功。実Agentの通常skipは別実行で確認。
+- 回路ACIR 4314 / Brillig 87、Proof 8000 bytes、生成936 ms（単発実測）。
+- planning validator 113 documents、validator test 9件、相対リンク33文書、対象Solidity format、diff check成功。
+- 元worktreeの未コミット計画40ファイルとCodex既存2変更を保持。mainは29ab9e3のまま。
+- 保持worktree: `/private/tmp/zk-policy-epic-06`、`/private/tmp/zk-policy-story-06-*`。support用detached worktreeも保持。
+- 最終Epic PR: [#30](https://github.com/Komlock-lab/zk-policy-poc/pull/30)（base main、未merge）。

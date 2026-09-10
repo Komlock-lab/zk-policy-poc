@@ -11,7 +11,7 @@ AIエージェントが提案したトランザクションに対し、秘密の
 | 3 | [epic-03: ERC-4337対応](epics/epic-03-erc4337.md) | review |
 | 4 | [epic-04: Claude Code・Codex接続](epics/epic-04-agent-integration.md) | approved |
 | 5 | 攻撃・異常系の検証 | 今回はスキップ |
-| 6 | [epic-06: 複数ポリシー対応](epics/epic-06-multi-policy.md) | approved（実装前条件の解消待ち） |
+| 6 | [epic-06: 複数ポリシー対応](epics/epic-06-multi-policy.md) | in-progress |
 
 ## 1. 単一条件のZK PoC
 

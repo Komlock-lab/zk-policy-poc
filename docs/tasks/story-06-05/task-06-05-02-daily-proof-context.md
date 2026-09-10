@@ -3,7 +3,7 @@ id: task-06-05-02
 type: task
 title: 日次上限の回路と最新context取得
 story: story-06-05
-status: pending
+status: done
 blocked_by: [task-06-05-01]
 created: 2026-09-06
 updated: 2026-09-06
@@ -31,8 +31,12 @@ pnpm test:circuit; pnpm generate:verifier; pnpm benchmark:circuit; pnpm test:uni
 
 ## 検証結果
 
-未実施。
+- `pnpm test:circuit`: 11件成功。選択assetの1回上限と日次上限をANDで拘束し、上限ちょうどのnative/Tokenを検証。
+- `pnpm generate:verifier` と `pnpm benchmark:circuit`: 成功。daily有効の実Proofは8,000 bytes、生成937 ms。
+- `pnpm test:unit`: 102件成功。正規化後の資産別dailyLimitとCommitment列を確認。
+- `NODE_OPTIONS=--experimental-sqlite pnpm exec vitest run e2e/daily-payment.test.ts`: 1件成功。実Alto receipt後の0.03累積を次のProof公開入力に使用し、Proof生成のみでは累積不変、その後0.02支払いで0.05。
+- 既存APIの同一block指定context取得とClientのreceipt待機を再確認し、変更不要と判断。
 
 ## Blocked
 
-実装開始はEpicのPreflight解消後。
+なし。

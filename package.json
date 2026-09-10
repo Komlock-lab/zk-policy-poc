@@ -12,6 +12,7 @@
     "build": "pnpm generate:verifier && pnpm build:contracts && pnpm typecheck",
     "build:circuit": "cd circuits/spend-limit && nargo compile",
     "build:contracts": "forge build --root contracts",
+    "check:repo": "bash scripts/check-repo.sh",
     "check:toolchain": "bash scripts/check-toolchain.sh",
     "generate:verifier": "bash scripts/generate-verifier.sh",
     "info:circuit": "cd circuits/spend-limit && nargo info",
@@ -30,6 +31,8 @@
     "test:e2e": "NODE_OPTIONS=--experimental-sqlite vitest run e2e",
     "test:unit": "NODE_OPTIONS=--experimental-sqlite vitest run apps packages scripts/lib",
     "typecheck": "tsc --noEmit",
+    "policy:pay-erc20": "NODE_OPTIONS=--experimental-sqlite tsx apps/policy-cli/src/pay-erc20.ts",
+    "policy:pay-contract": "NODE_OPTIONS=--experimental-sqlite tsx apps/policy-cli/src/pay-contract.ts",
     "demo:claude": "bash demos/claude-payment/start.sh",
     "demo:check": "bash demos/claude-payment/start.sh --self-test"
   },

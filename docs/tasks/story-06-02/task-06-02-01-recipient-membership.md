@@ -3,7 +3,7 @@ id: task-06-02-01
 type: task
 title: recipient allowlistの回路制約
 story: story-06-02
-status: pending
+status: done
 blocked_by: []
 created: 2026-09-06
 updated: 2026-09-06
@@ -31,8 +31,8 @@ pnpm test:circuit; pnpm generate:verifier; pnpm benchmark:circuit
 
 ## 検証結果
 
-未実施。
+2026-09-06: `pnpm test:circuit`成功（既存4件とrecipient追加・最大16件末尾所属の正常系2件、計6件）。`pnpm generate:verifier`成功。`pnpm benchmark:circuit`成功: 2,606 ACIR opcodes、main Brillig 87、Proof 8,000 bytes、生成・ローカル検証746 ms。`NODE_OPTIONS=--experimental-sqlite pnpm exec vitest run e2e/recipient-policy-update.test.ts`成功（1 test、Aおよび更新後Bに対する実Proofを生成・検証）。秘密recipientの有効長・address域・昇順・重複なし・zero paddingを拘束し、false経路も維持。ログ: `/private/tmp/story02-benchmark.log`、`/private/tmp/story02-recipient-e2e.log`。
 
 ## Blocked
 
-実装開始はEpicのPreflight解消後。
+なし。

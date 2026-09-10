@@ -3,7 +3,7 @@ id: story-06-03
 type: story
 title: 利用者が許可ERC-20を送金する
 epic: epic-06
-status: approved
+status: done
 depends_on: [story-06-02]
 adrs: [adr-0012, adr-0013]
 created: 2026-09-06
@@ -56,14 +56,25 @@ updated: 2026-09-06
 
 | ID | Task | Status |
 | --- | --- | --- |
-| [task-06-03-01](../../tasks/story-06-03/task-06-03-01-asset-policy-circuit.md) | assetルール選択とToken入力の拘束 | pending |
-| [task-06-03-02](../../tasks/story-06-03/task-06-03-02-erc20-execution.md) | Accountの標準ERC-20送金 | pending |
-| [task-06-03-03](../../tasks/story-06-03/task-06-03-03-erc20-client-mcp.md) | ERC-20のAPI・Client・MCP接続 | pending |
+| [task-06-03-01](../../tasks/story-06-03/task-06-03-01-asset-policy-circuit.md) | assetルール選択とToken入力の拘束 | done |
+| [task-06-03-02](../../tasks/story-06-03/task-06-03-02-erc20-execution.md) | Accountの標準ERC-20送金 | done |
+| [task-06-03-03](../../tasks/story-06-03/task-06-03-03-erc20-client-mcp.md) | ERC-20のAPI・Client・MCP接続 | done |
 
 ## 検証結果
 
-未実施。
+2026-09-06: 実装・ship-story検証完了。Epic統合待ちのためin-progressを維持。
+
+- AC-1: `e2e/erc20-payment.test.ts`がrecipientと標準PolicyTokenを登録した新DB・新Accountで、直接実行10、実CLI/Alto 20、実stdio MCP `pay_erc20`/Alto 30最小単位を送金。Account残高1000→990→970→940とrecipient残高0→10→30→60、各successful receiptとERC20PaymentExecutedを確認。
+- 同じPolicyでnative上限1・Token上限100を選択し、native 1 weiとERC-20の10/20/30最小単位を別の上限で実Proof検証。API/Client/Accountの15公開入力と型付きcalldataが一致。
+- `pnpm test`成功: build/Verifier再生成/typecheck、Circuit 7、Contract 32（既存29＋ERC-20正常系3、fuzz各256 runs）、unit 99、E2E 24。実Agent 5件はskipされ成功に数えない。
+- `pnpm benchmark:circuit`成功: 2,619 ACIR opcodes、main Brillig 87、Proof 8,000 bytes、生成・ローカル検証747 ms。`forge inspect --root contracts HonkVerifier deployedBytecode`でruntime 15,938 bytes。
+- `forge fmt --check contracts/src/ZkPolicyAccount.sol contracts/src/fixtures/PolicyToken.sol contracts/test/ZkPolicyAccount.t.sol`、`git diff --check`、`node scripts/validate-planning.mjs`成功。
+- Scope/architecture/securityの独立レビューとrootの最終レビューでCRITICAL/HIGH残件なし。Owner認証とPolicy検証の分離、標準transferのみ、秘密非露出、検証・累積更新→外部呼出し順を維持。
+- Agent固有allow設定はStory06-09/10まで据え置き。新規異常系はユーザー指定どおり延期。新設計・外部資料由来の知識はなくWiki/ADR変更なし。
+- ログ: `/private/tmp/story03-full-test.log`、`/private/tmp/story03-erc20-e2e.log`、`/private/tmp/story03-benchmark.log`。
 
 ## Blocked
 
-実装前条件はEpicのPreflightを参照。計画は承認済みだが実装開始前。
+なし。Story PRのmergeとdone遷移はrun-epicが担当。
+
+統合: Story PR #23をEpicへmerge。Epic上の`pnpm test`も成功（Circuit 7 / Contract 32 / unit 99 / E2E 24）。ログ: `/private/tmp/epic-06-layer2-tests.log`。

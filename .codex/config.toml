@@ -9,7 +9,7 @@ enabled = true
 required = false
 startup_timeout_sec = 30
 tool_timeout_sec = 120
-enabled_tools = ["pay_native"]
+enabled_tools = ["pay_native", "pay_erc20", "pay_contract"]
 env_vars = [
   "POLICY_API_URL",
   "POLICY_RPC_URL",
@@ -22,4 +22,10 @@ env_vars = [
 ]
 
 [mcp_servers.payment.tools.pay_native]
+approval_mode = "approve"
+
+[mcp_servers.payment.tools.pay_erc20]
+approval_mode = "approve"
+
+[mcp_servers.payment.tools.pay_contract]
 approval_mode = "approve"

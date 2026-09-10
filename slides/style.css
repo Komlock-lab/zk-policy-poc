@@ -1,0 +1,23 @@
+.slidev-layout h1 {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.slidev-layout table {
+  font-size: 0.82em;
+}
+
+.slidev-layout th {
+  text-align: left;
+  opacity: 0.6;
+  font-weight: 500;
+}
+
+.slidev-layout td,
+.slidev-layout th {
+  padding: 0.3rem 0.5rem;
+}
+
+.slidev-layout code {
+  font-size: 0.9em;
+}

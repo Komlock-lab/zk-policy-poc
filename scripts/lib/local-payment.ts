@@ -8,7 +8,7 @@ import {
   createPublicClient,
   createWalletClient,
   http,
-  parseEther,
+  parseEther, toHex, zeroAddress,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { foundry } from "viem/chains";
@@ -94,7 +94,7 @@ export async function runLocalPayment(input: LocalPaymentInput): Promise<LocalPa
   }
 
   const policyCommitment = await computePolicyCommitment(maxAmount, salt);
-  const proof = await generateSpendLimitProof({ value, maxAmount, salt, policyCommitment });
+
   const entryPointArtifact = await findArtifact("EntryPoint");
   const verifierArtifact = await findArtifact("HonkVerifier");
   const accountArtifact = await findArtifact("ZkPolicyAccount");
@@ -134,7 +134,7 @@ export async function runLocalPayment(input: LocalPaymentInput): Promise<LocalPa
     abi: accountArtifact.abi,
     address: accountReceipt.contractAddress,
     functionName: "updatePolicyCommitment",
-    args: [proof.publicInputs[1]],
+    args: [toHex(policyCommitment, { size: 32 })],
   });
   await publicClient.waitForTransactionReceipt({ hash: policyUpdateHash });
 
@@ -144,12 +144,19 @@ export async function runLocalPayment(input: LocalPaymentInput): Promise<LocalPa
   });
   await publicClient.waitForTransactionReceipt({ hash: fundingHash });
 
+  const block = await publicClient.getBlock();
+  const issuedAt = block.timestamp;
+  const validUntil = issuedAt + 300n;
+  const proof = await generateSpendLimitProof({ value, maxAmount, salt, policyCommitment, context: {
+    kind: 0, chainId: 31337n, account: accountReceipt.contractAddress, recipient: recipientAddress, asset: zeroAddress,
+    target: recipientAddress, invoiceId: toHex(0n, { size: 32 }), issuedAt, validUntil, dayId: issuedAt / 86400n, spentBefore: 0n,
+  } });
   const recipientBalanceBefore = await publicClient.getBalance({ address: recipientAddress });
   const transactionHash = await walletClient.writeContract({
     abi: accountArtifact.abi,
     address: accountReceipt.contractAddress,
     functionName: "execute",
-    args: [recipientAddress, value, proof.proof],
+    args: [recipientAddress, value, issuedAt, validUntil, proof.proof],
   });
   const paymentReceipt = await publicClient.waitForTransactionReceipt({ hash: transactionHash });
   if (paymentReceipt.status !== "success") {

@@ -3,7 +3,7 @@ id: task-06-01-01
 type: task
 title: 複合Policyと公開入力の共通定義
 story: story-06-01
-status: pending
+status: done
 blocked_by: []
 created: 2026-09-06
 updated: 2026-09-06
@@ -31,8 +31,8 @@ pnpm test:unit; pnpm typecheck
 
 ## 検証結果
 
-未実施。
+2026-09-06: `pnpm test:unit`成功（95 tests）、`pnpm typecheck`成功。`packages/policy/src/schema.test.ts`とNoirの既知ベクトルは65 Fieldに対して同じCommitment `8681856271876768858477722514944831047648970978592868574920873064906263226319`を確認。15公開入力の順序も検証。
 
 ## Blocked
 
-実装開始はEpicのPreflight解消後。
+なし。

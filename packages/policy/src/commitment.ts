@@ -1,14 +1,10 @@
 import { randomBytes } from "node:crypto";
 
 import { Barretenberg } from "@aztec/bb.js";
-import { z } from "zod";
 
-import { parseCircuitAmount } from "./amount.ts";
+import { normalizePolicy, policyFields, BN254_FIELD_MODULUS } from "./schema.ts";
 
-export const BN254_FIELD_MODULUS =
-  21_888_242_871_839_275_222_246_405_745_257_275_088_548_364_400_416_034_343_698_204_186_575_808_495_617n;
-
-export const fieldElementSchema = z.bigint().min(0n).lt(BN254_FIELD_MODULUS);
+export { BN254_FIELD_MODULUS, fieldElementSchema } from "./schema.ts";
 
 export function generateSalt(): bigint {
   while (true) {
@@ -27,15 +23,14 @@ function bytesToField(value: Uint8Array): bigint {
 
 export async function computePolicyCommitment(
   maxAmountInput: unknown,
-  saltInput: unknown,
+  saltInput?: unknown,
 ): Promise<bigint> {
-  const maxAmount = parseCircuitAmount(maxAmountInput);
-  const salt = fieldElementSchema.parse(saltInput);
+  const policy = normalizePolicy(typeof maxAmountInput === "bigint" ? { maxAmountWei: maxAmountInput, salt: saltInput } : maxAmountInput);
   const barretenberg = await Barretenberg.new({ threads: 1 });
 
   try {
     const { hash } = await barretenberg.poseidon2Hash({
-      inputs: [fieldToBytes(maxAmount), fieldToBytes(salt)],
+      inputs: policyFields(policy).map(fieldToBytes),
     });
     return bytesToField(hash);
   } finally {
