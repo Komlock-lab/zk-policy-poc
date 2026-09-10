@@ -128,228 +128,85 @@ ORや優先順位を入れると、どの条件で通ったかが観測から推
 
 <div class="text-xs tracking-widest uppercase opacity-50 font-mono">サービス — アーキテクチャ</div>
 
-# 3つのゾーンと、その間の2つの境界
+# 送金の依頼から、証明・検証・実行まで
 
-左から右へ一方向に読む。それぞれの境界で、何が越えるか / 何が越えないかが決まっている。
+秘密PolicyはProver側に留まり、AIモデルには決済結果だけを返す。
 
-<div style="display:grid;grid-template-columns:1fr 112px 1fr 112px 1fr;align-items:stretch;font-size:0.85rem;margin-top:0.8rem;">
-
-  <div style="border:1px solid #a8446b;background:rgba(168,68,107,.07);border-radius:3px;padding:10px;display:flex;flex-direction:column;gap:5px;">
-    <div style="font-family:monospace;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:#a8446b;">① 秘密Policy · Off-chain</div>
-    <div style="border:1px solid rgba(127,127,127,.35);border-radius:2px;padding:5px 8px;line-height:1.35;">Owner<div style="font-family:monospace;font-size:.72rem;opacity:.6;margin-top:2px;line-height:1.45;">Policy CLI · EIP-712署名 + nonce</div></div>
-    <div style="text-align:center;opacity:.45;font-size:.72rem;line-height:1;">↓</div>
-    <div style="border:1px solid rgba(127,127,127,.35);border-radius:2px;padding:5px 8px;line-height:1.35;">秘密Policy<div style="font-family:monospace;font-size:.72rem;color:#a8446b;margin-top:2px;line-height:1.45;">上限 •••• / allowlist •••• / salt ••••</div></div>
-    <div style="text-align:center;opacity:.45;font-size:.72rem;line-height:1;">↓</div>
-    <div style="border:1px solid rgba(127,127,127,.35);border-radius:2px;padding:5px 8px;line-height:1.35;">Policy API + Prover<div style="font-family:monospace;font-size:.72rem;opacity:.6;margin-top:2px;line-height:1.45;">AES-256-GCM復号 → Noir + Barretenberg</div></div>
+<div class="policy-diagram architecture" role="img" aria-label="AIモデルがMCPへ決済を依頼し、ClientがProverから証明を取得する。Clientは証明付きUserOperationを送信し、Accountが検証後に支出を計上して送金する。">
+  <div class="model-flow"><b>Claude Code / Codex</b><span>① 決済を依頼 ↓</span><span>↑ ⑥ 公開receipt</span><small>モデルのcontextに秘密・鍵・proofを出さない</small></div>
+  <div class="architecture-grid">
+    <div class="diagram-node client-node"><div class="diagram-label">エージェント実行環境</div><b>MCP / Payment Client</b><small>pay_native / pay_erc20 / pay_contract</small><div class="node-detail">Proofを取得・照合<br>Owner KeyでUserOperationに署名</div></div>
+    <div class="round-trip"><div class="diagram-arrow">② 決済内容で証明依頼<span>→</span></div><div class="diagram-arrow arrow-back">③ proof + 公開入力<span>←</span></div></div>
+    <div class="diagram-node secret-node"><div class="diagram-label">秘密を扱うOff-chain環境</div><b>Policy API / Prover</b><small>Noir + Barretenberg</small><div class="node-detail">Ownerが設定した秘密Policy<br>上限・allowlist・dailyLimit・salt</div></div>
   </div>
-
-  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;padding:0 8px;text-align:center;">
-    <div style="font-family:monospace;font-size:.68rem;line-height:1.5;color:#1288ab;">proof と<br>15個の公開入力</div>
-    <div style="width:100%;border-top:1px solid #1288ab;"></div>
-    <div style="font-family:monospace;font-size:.68rem;line-height:1.5;color:#a8446b;">✕ 上限 · allowlist<br>dailyLimit · salt</div>
-  </div>
-
-  <div style="border:1px solid rgba(127,127,127,.35);border-radius:3px;padding:10px;display:flex;flex-direction:column;gap:5px;">
-    <div style="font-family:monospace;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;opacity:.6;">② エージェント実行環境</div>
-    <div style="border:1px solid rgba(127,127,127,.35);border-radius:2px;padding:5px 8px;line-height:1.35;">Claude Code / Codex<div style="font-family:monospace;font-size:.72rem;opacity:.6;margin-top:2px;line-height:1.45;">modelのcontextとtranscript</div></div>
-    <div style="text-align:center;opacity:.45;font-size:.72rem;line-height:1;">↓</div>
-    <div style="border:1px solid rgba(127,127,127,.35);border-radius:2px;padding:5px 8px;line-height:1.35;">MCP Server<div style="font-family:monospace;font-size:.72rem;opacity:.6;margin-top:2px;line-height:1.45;">pay_native / pay_erc20 / pay_contract</div></div>
-    <div style="text-align:center;opacity:.45;font-size:.72rem;line-height:1;">↓</div>
-    <div style="border:1px solid rgba(127,127,127,.35);border-radius:2px;padding:5px 8px;line-height:1.35;">Payment Client<div style="font-family:monospace;font-size:.72rem;opacity:.6;margin-top:2px;line-height:1.45;">環境変数のOwner Keyで署名</div></div>
-  </div>
-
-  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;padding:0 8px;text-align:center;">
-    <div style="font-family:monospace;font-size:.68rem;line-height:1.5;color:#1288ab;">UserOperation<br>（proof同梱）</div>
-    <div style="width:100%;border-top:1px solid #1288ab;"></div>
-    <div style="font-family:monospace;font-size:.68rem;line-height:1.5;color:#a8446b;">✕ Owner Key<br>Proof Token</div>
-  </div>
-
-  <div style="border:1px solid #1288ab;background:rgba(18,136,171,.07);border-radius:3px;padding:10px;display:flex;flex-direction:column;gap:5px;">
-    <div style="font-family:monospace;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:#1288ab;">③ On-chain · 公開</div>
-    <div style="border:1px solid rgba(127,127,127,.35);border-radius:2px;padding:5px 8px;line-height:1.35;">ZkPolicyAccount<div style="font-family:monospace;font-size:.72rem;opacity:.6;margin-top:2px;line-height:1.45;">15公開入力を実状態から再構築</div></div>
-    <div style="text-align:center;opacity:.45;font-size:.72rem;line-height:1;">↓</div>
-    <div style="border:1px solid rgba(127,127,127,.35);border-radius:2px;padding:5px 8px;line-height:1.35;">SpendLimitVerifier<div style="font-family:monospace;font-size:.72rem;opacity:.6;margin-top:2px;line-height:1.45;">回路から自動生成</div></div>
-    <div style="text-align:center;opacity:.45;font-size:.72rem;line-height:1;">↓</div>
-    <div style="border:1px solid rgba(127,127,127,.35);border-radius:2px;padding:5px 8px;line-height:1.35;">送金先 / Token / Contract</div>
-  </div>
-
-</div>
-
-<div class="grid grid-cols-2 gap-4 pt-4 text-sm">
-  <div class="border rounded p-3">
-    <div class="text-xs font-mono pb-1" style="color:#1288ab">① → ② の境界</div>
-    エージェント側へ渡るのはproofと公開入力だけ。<b>上限やallowlistの値そのものは越えない。</b>modelのcontextとtranscriptには、秘密もproofも現れない。
-  </div>
-  <div class="border rounded p-3">
-    <div class="text-xs font-mono pb-1" style="color:#1288ab">② → ③ の境界</div>
-    Accountが15個の公開入力を<b>自分で作り直す</b>ため、Client側の申告値は使われない。この境界の途中にBundler（Alto）とEntryPoint v0.8がある。
-  </div>
+  <div class="submission-flow"><span>④ 決済内容 + proofを送信</span><span class="flow-line">↓</span><small>Owner署名付きUserOperation / Bundler（Alto）/ EntryPoint v0.8</small></div>
+  <div class="execution-flow public-node"><div><div class="diagram-label">On-chain</div><b>ZkPolicyAccount</b><small>実行引数と実状態から<br>15個の公開入力を再構築</small></div><span class="flow-symbol">→</span><div><b>Verifier</b><small>⑤ Proofを検証<br>失敗なら実行を拒否</small></div><span class="flow-symbol">成功 →</span><div><b>支出を計上して送金</b><small>native / ERC-20 / Contract</small></div></div>
 </div>
 
 <!--
-ここまでで2分。
-図は左から右へ一方向。ゾーンの間にある2本の線が、この設計のすべて。
-上の行が「越えるもの」、下の行が「越えないもの」。
+サービス全体で2分20秒。①から⑥までを追い、ClientとProverの往復を説明する。
+OwnerはPolicy CLIからEIP-712署名とnonceでPolicyを設定し、CommitmentをAccountへ登録する（設定経路は図から省略）。
+Policy APIはAES-256-GCMで保存したPolicyを復号し、秘密入力としてProverに渡す。
+Owner KeyとProof TokenはHostからClient内部に渡す。モデルには渡さない（ADR-0011）。
+③の公開入力はClientが照合するが、Accountは実行引数・オンチェーン状態から自分で再構築する。
+⑥は成功時の公開receipt。失敗時も秘密値・proofを含まない結果を返す。
 -->
 
 ---
 
-<div class="text-xs tracking-widest uppercase opacity-50 font-mono">Programmable Cryptography — 何を証明し、どう強制するか</div>
+<div class="text-xs tracking-widest uppercase opacity-50 font-mono">Programmable Cryptography — 証明と決済の結びつき</div>
 
-# 65個の秘密に対する充足を、15個の公開だけで示す
+# 秘密の条件を証明し、実際の決済で検証する
 
-単に秘密を隠すのではなく、秘密のデータに対する計算そのものを検証可能にする。
+同じproofでも、送金額・送金先・累積支出が変われば検証は通らない。
 
-<div class="grid grid-cols-2 gap-5 text-sm pt-1">
-
-<div>
-<div class="text-xs uppercase tracking-wider font-mono pb-1" style="color:#a8446b">policy_fields[65] — Circuitだけが見る</div>
-
-| 位置 | 内容 |
-| --- | --- |
-| `s[1]` | maxValiditySeconds |
-| `s[4..19]` | recipients[16]（昇順） |
-| `s[21..44]` | assets[8] × (asset, maxAmount, dailyLimit) |
-| `s[47..62]` | contracts[16]（昇順） |
-| `s[64]` | **salt**（秘密乱数） |
-
-<div class="text-xs pt-2">
-<code>policyCommitment = Poseidon2(65個すべて)</code><br>
-<span class="opacity-60">上限額は候補が少なく総当たりで復元できるため、saltをCommitmentに含めている。</span>
-</div>
+<div class="policy-diagram proof-diagram" role="img" aria-label="秘密Policy65要素と公開入力15要素からProofを生成する。Accountは実際の決済とオンチェーン状態から公開入力を再構築し、同じProofをVerifierで検証する。">
+  <div class="proof-row"><div class="proof-source secret-node"><div class="diagram-label">Off-chain / 秘密入力65要素</div><b>秘密Policy + salt</b><small>上限・allowlist・日次上限・有効期間</small></div><span class="flow-symbol">→</span><div class="proof-check"><b>Circuit / Prover</b><small>全条件のANDを証明<br>Commitmentの一致も確認</small></div><span class="flow-symbol">→</span><div class="proof-result"><b>Proof</b><small>条件を満たす証明</small></div></div>
+  <div class="proof-bridge"><span>＋ 決済内容・公開状態（15要素）</span><span class="proof-transfer">同じproofをVerifierへ</span></div>
+  <div class="proof-row"><div class="proof-source public-node"><div class="diagram-label">On-chain / 公開入力15要素</div><b>Accountが再構築</b><small>実際の決済内容 + 登録Commitment<br>chainId・account・当日の累積支出など</small></div><span class="flow-symbol">→</span><div class="proof-check"><b>Verifier</b><small>Proofと再構築した入力で検証<br>不一致なら実行を拒否</small></div><span class="flow-symbol">→</span><div class="proof-result"><b>計上・送金</b><small>検証成功時だけ実行</small></div></div>
 </div>
 
-<div>
-<div class="text-xs uppercase tracking-wider font-mono pb-1" style="color:#1288ab">public_inputs[15] — Verifierに渡る</div>
-
-| Index | 内容 |
-| --- | --- |
-| `1-3` | chainId / account / **policyCommitment** |
-| `4-6` | kind（native/ERC-20/contract）/ recipient / asset |
-| `7-8` | amount / target |
-| `9-10` | invoiceId（上位・下位128bit） |
-| `11-14` | issuedAt / validUntil / dayId / spentBefore |
-
-<div class="text-xs pt-2">
-<b>決済の全構成要素が公開入力に入る。</b><br>
-<span class="opacity-60">1つでも変えるとProofは通らない（transaction binding）。</span>
-</div>
-</div>
-
-</div>
-
-<div class="grid grid-cols-2 gap-5 text-sm pt-3">
-
-<div>
-<div class="text-xs uppercase tracking-wider opacity-60 font-mono pb-1">回路が証明すること — すべてAND</div>
-
-- **allowlist照合** — 有効長だけをOR集約。昇順・重複なしを`lt`で強制
-- **asset別1回上限** — 公開`asset`と一致する行でのみ`amount <= maxAmount`
-- **日次累積** — `spentBefore + amount <= dailyLimit`
-- **有効期限** — `validUntil - issuedAt <= maxValiditySeconds`
-- **Commitment照合** — `Poseidon2::hash(s, 65) == p[3]`
-
-</div>
-
-<div>
-<div class="text-xs uppercase tracking-wider opacity-60 font-mono pb-1">Accountが強制すること</div>
-
-```solidity
-publicInputs[1]  = block.chainid;
-publicInputs[3]  = policyCommitment;
-publicInputs[14] = spentBefore;
-if (!verifier.verify(proof, publicInputs))
-    revert InvalidProof();
-dailySpend[asset] = ... // 送金より前
-```
-
-<div class="text-xs opacity-70 pt-1">
-Clientが渡すのは<b>proofだけ</b>。実行のたびに<code>spentBefore</code>が進むため、<b>同じproofは二度通らない</b>。
-</div>
-</div>
-
-</div>
-
-<div class="grid grid-cols-3 gap-3 pt-3 text-sm">
-  <div class="border rounded p-3">
-    <div class="text-xs opacity-60 font-mono pb-1">非開示</div>
-    ポリシーの内容はエージェントにも第三者にも露出しない
-  </div>
-  <div class="border rounded p-3">
-    <div class="text-xs opacity-60 font-mono pb-1">検証者不要</div>
-    オンチェーンで第三者の判定を挟まずに検証が完結する
-  </div>
-  <div class="border rounded p-3">
-    <div class="text-xs opacity-60 font-mono pb-1">リプレイ耐性</div>
-    <code>spentBefore</code>の更新により同じProofは二度と通らない
-  </div>
-</div>
+<div class="binding-example"><b>送金額を改ざんした例</b><span>Proof生成時 <strong>0.01 ETH</strong></span><span>≠</span><span>実行時 <strong>1 ETH</strong></span><span class="stop-text">× 検証失敗</span></div>
+<div class="diagram-caption">Policyの固定：<code>policyCommitment = Poseidon2(policy_fields[65])</code>。秘密のsaltも含める。</div>
 
 <!--
-ここが1分。
-「Proofが正しい」ことと「そのProofがこの決済のものである」ことは別の問題で、
-後者はAccountが公開入力を自分で組み立てることでしか保証できない。
+ここは1分。上段は秘密の条件を満たす証明を作る処理、下段はその証明を実際の決済に結びつける処理。
+Clientから受け取る決済引数とproofを使い、Accountが公開入力を構築する。ClientのpublicInputs配列は受け取らない。
+回路の全条件：allowlist照合、asset別amount <= maxAmount、spentBefore + amount <= dailyLimit、validUntil - issuedAt <= maxValiditySeconds、Commitment一致。
+有効化されたallowlistの要素一致はOR集約するが、Policyの条件間はAND。昇順・重複なしをltで強制する。
+Policy索引：s[1] maxValiditySeconds、s[4..19] recipients[16]、s[21..44] assets[8]×(asset,maxAmount,dailyLimit)、s[47..62] contracts[16]、s[64] salt。
+公開入力索引：0 schemaVersion、1 chainId、2 account、3 policyCommitment、4 kind、5 recipient、6 asset、7 amount、8 target、9–10 invoiceId、11 issuedAt、12 validUntil、13 dayId、14 spentBefore。
+Accountはblock.timestampで期限を確認し、検証後にdailySpendを更新してから外部送金する。現在の累積支出が変われば古い公開入力のproofは使えない。
+上限額は候補が少ないため、Commitmentに秘密のsaltを含めて総当たりでの推測を困難にする。
+正本：docs/adr/adr-0012-composite-policy-schema.md、docs/adr/adr-0014-onchain-daily-spend.md、contracts/src/ZkPolicyAccount.sol。
 -->
 
 ---
 
 <div class="text-xs tracking-widest uppercase opacity-50 font-mono">デモ — 正常系・異常系</div>
 
-# 境界は「Proofが作れない」段階で閉じる
+# 送金が進む経路と、止まる場所
 
-<div class="grid grid-cols-2 gap-4 pt-2">
+説明用の設定：1回上限 0.1 ETH。許可済み送金先を使い、ほかの条件は充足。
 
-```bash
-# 正常系
-$ pnpm local:payment
-policy  : maxAmount = 0.1 ETH (secret)
-payment : 0.01 ETH -> allowed recipient
-✔ proof generated  (15 public inputs)
-✔ verifier: valid
-✔ dailySpend: 0 -> 0.01 ETH
-✔ balance +0.01 ETH
-```
-
-```bash
-# 異常系
-$ pnpm local:payment --value 1
-policy  : maxAmount = 0.1 ETH (secret)
-payment : 1 ETH -> allowed recipient
-✘ circuit constraint violated
-  "value exceeds max amount"
-✘ proof not generated
-→ transaction未送信・残高変化なし
-```
-
+<div class="policy-diagram outcome-diagram" role="img" aria-label="正常な0.01 ETHは証明生成とAccount検証を経て送金する。1 ETHの上限超過は証明生成で停止する。証明後に金額を変更するとAccount検証で停止する。">
+  <div class="outcome-heading"><span>決済の提案</span><span></span><span>Off-chain / Proof生成</span><span></span><span>On-chain / Account検証</span><span></span><span>送金結果</span></div>
+  <div class="outcome-row"><div><b>正常</b><small>0.01 ETH</small></div><span class="flow-symbol">→</span><div class="pass-stage">✓ 生成成功</div><span class="flow-symbol">→</span><div class="pass-stage">✓ 検証成功</div><span class="flow-symbol">→</span><div><b class="pass-text">0.01 ETH送金</b><small>累積 0 → 0.01 ETH</small></div></div>
+  <div class="outcome-row"><div><b>上限超過</b><small>1 ETH</small></div><span class="flow-symbol">→</span><div class="stop-stage">× 証明できない<small>上限条件を満たさない</small></div><span></span><div class="inactive-stage">未送信</div><span></span><div><b>送金なし</b><small>残高変化なし</small></div></div>
+  <div class="outcome-row"><div><b>証明後の改ざん</b><small>0.01 ETHで依頼</small></div><span class="flow-symbol">→</span><div class="pass-stage">✓ 生成成功</div><div class="tamper-step">1 ETHへ変更<span>→</span></div><div class="stop-stage">× 検証失敗<small>証明と実行内容が不一致</small></div><span></span><div><b>送金なし</b><small>Accountが拒否</small></div></div>
 </div>
 
-<div class="grid grid-cols-3 gap-3 pt-4 text-sm">
-  <div class="border rounded p-3">
-    <div class="text-xs opacity-60 font-mono">native + Contract決済</div>
-    <div>同じ日次枠を共有。.03 + .02 + .01 ETH で累積 .06 ETH</div>
-  </div>
-  <div class="border rounded p-3">
-    <div class="text-xs opacity-60 font-mono">ERC-20</div>
-    <div>Token address別に計上。10 + 20 = 30、nativeの累積は不変</div>
-  </div>
-  <div class="border rounded p-3">
-    <div class="text-xs opacity-60 font-mono">Policy更新</div>
-    <div>allowlistから外して戻しても当日の実績を引き継ぐ</div>
-  </div>
-</div>
-
-<div class="border rounded p-3 mt-4 text-sm">
-<b>失敗の理由は返らない。</b> Proof生成の失敗は「拒否された」ではなく「証明できない」。攻撃者から見て、なぜ通らなかったかが観測できない。
-</div>
-
-<div class="border rounded p-3 mt-3 text-sm">
-エージェント経由でも同じ動きになる。自然言語の依頼から<code>pay_native</code> / <code>pay_erc20</code> / <code>pay_contract</code>が呼ばれ、返るのは<b>receiptだけ</b>。証明生成は<span class="font-mono">936ms</span>、テストは<span class="font-mono">187本</span>すべてpass。
-</div>
+<div class="diagram-caption">3行目はtransaction bindingの防御を示す模式図。包括的な攻撃検証は今後の対象。</div>
+<div class="demo-summary"><b>Agent経由でも同じ経路</b><span>MCPが証明生成と送信を担い、モデルには秘密・proofを含まない結果を返す。</span></div>
 
 <!--
-デモ全体でここまで5分。上限超過はUserOperationを送る前に止まるので、
-オンチェーンには何も残らないことを見せる。
-エージェント経由でも人間が直接叩いた場合と同じ境界が働く。
+デモは50秒。正常系の送金と上限超過で止まる場所を見せ、改ざんは模式図として説明する。
+正常系の実行コマンド：pnpm local:payment。上限超過：pnpm local:payment --value 1。
+上限や理由を説明するラベルは発表用。秘密Policyや制約の詳細をAgentのresponseに返すことを意味しない。
+3行目は期待するtransaction bindingの動作を図示したもの。今回新たに攻撃シナリオを実行したという意味ではない。
+補足の正常系：nativeとContractは同じ日次枠で.03 + .02 + .01 = .06 ETH。ERC-20はToken address別に10 + 20 = 30。Policy更新でallowlistから外して戻しても当日の実績を引き継ぐ。
+既存のaudit-06記録：Proof生成936ms（単発実測）、Circuit 11、Contract 39、unit 103、local E2E 27、実Claude 2・実Codex 5。合計187件。今回のスライド変更で再計測した数値ではない。
+正本：docs/audits/epic-06-multi-policy.md、docs/security/threat-model.md。
 -->
 
 ---
@@ -385,7 +242,7 @@ payment : 1 ETH -> allowed recipient
 </div>
 
 <div class="border rounded p-4 mt-4">
-<b>Vision —</b> エージェントに鍵を渡さず、証明だけを渡す。人間が境界を決め、エージェントがその内側で自律する。そんなウォレットレイヤーを目指す。
+<b>Vision —</b> モデルに鍵を見せず、実行Clientが証明を取得する。人間が境界を決め、エージェントがその内側で自律する。そんなウォレットレイヤーを目指す。
 </div>
 
 <!--
@@ -399,7 +256,7 @@ class: text-left
 
 # 人間が境界を決め、エージェントがその内側で自律する。
 
-秘密のポリシーは誰にも渡らない。エージェントに渡るのは、条件を満たしたという証明だけ。
+秘密のポリシーはOwner／Prover側に留まり、Smart Accountが証明を検証して決済する。
 
 <div class="pt-8 text-sm font-mono opacity-60">
 GitHub: Komlock-lab / zk-policy-poc<br>

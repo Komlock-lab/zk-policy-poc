@@ -21,3 +21,82 @@
 .slidev-layout code {
   font-size: 0.9em;
 }
+
+.policy-diagram {
+  font-size: 15px;
+  line-height: 1.45;
+  margin-top: 14px;
+}
+
+.policy-diagram small {
+  display: block;
+  font-size: 12px;
+  line-height: 1.5;
+  margin-top: 4px;
+}
+
+.diagram-label {
+  font-family: monospace;
+  font-size: 12px;
+  margin-bottom: 5px;
+}
+
+.secret-node {
+  background: rgb(168 68 107 / 7%);
+  border-left: 3px solid #a8446b;
+}
+
+.public-node {
+  background: rgb(18 136 171 / 7%);
+  border-left: 3px solid #1288ab;
+}
+
+.model-flow {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed rgb(127 127 127 / 45%);
+}
+
+.model-flow small { margin: 0 0 0 auto; }
+.architecture-grid { display: grid; grid-template-columns: 1fr 190px 1fr; margin-top: 12px; }
+.diagram-node { padding: 10px 14px; }
+.client-node { border-left: 3px solid #777; }
+.node-detail { margin-top: 10px; font-size: 13px; }
+.round-trip { display: flex; flex-direction: column; justify-content: center; gap: 12px; }
+.diagram-arrow { color: #1288ab; font-size: 12px; text-align: center; }
+.diagram-arrow span { display: block; position: relative; font-size: 27px; line-height: 20px; text-align: right; }
+.diagram-arrow span::before { content: ""; position: absolute; top: 50%; left: 0; right: 15px; border-top: 1px solid; }
+.arrow-back span { text-align: left; }
+.arrow-back span::before { left: 15px; right: 0; }
+.submission-flow { display: flex; align-items: center; gap: 14px; padding: 11px 0; font-size: 13px; }
+.submission-flow small { margin: 0; }
+.flow-line { font-size: 25px; color: #1288ab; }
+.execution-flow { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; }
+.flow-symbol { color: #1288ab; text-align: center; font-size: 18px; }
+.proof-row { display: grid; grid-template-columns: 1.5fr 40px 1fr 40px .65fr; align-items: center; }
+.proof-source { padding: 14px; }
+.proof-check { padding: 10px 0; }
+.proof-result { padding: 10px 0; }
+.proof-bridge { display: flex; justify-content: space-between; font-size: 12px; padding: 8px 6px 14px 14px; color: #1288ab; }
+.proof-transfer { position: relative; width: 50%; border-top: 1px solid; border-left: 1px solid; text-align: center; padding-top: 4px; margin-top: 4px; }
+.proof-transfer::after { content: "↓"; position: absolute; left: -6px; bottom: -13px; font-size: 18px; }
+.binding-example { display: flex; align-items: center; justify-content: space-between; border-top: 1px solid rgb(127 127 127 / 30%); margin-top: 22px; padding-top: 14px; font-size: 14px; }
+.diagram-caption { font-size: 12px; line-height: 1.5; margin-top: 14px; opacity: .75; }
+.outcome-heading, .outcome-row { display: grid; grid-template-columns: 130px 24px 145px 88px 172px 24px 1fr; align-items: center; }
+.outcome-heading { font-size: 12px; padding-bottom: 9px; opacity: .7; }
+.outcome-row { min-height: 83px; border-top: 1px solid rgb(127 127 127 / 25%); }
+.pass-stage, .stop-stage { padding: 8px; border-left: 3px solid; }
+.pass-stage { color: #2c8a5c; background: rgb(44 138 92 / 7%); }
+.stop-stage { color: #a8446b; background: rgb(168 68 107 / 7%); }
+.pass-text { color: #2c8a5c; }
+.stop-text { color: #a8446b; }
+.inactive-stage { opacity: .5; padding-left: 8px; }
+.tamper-step { font-size: 11px; text-align: center; color: #a8446b; }
+.tamper-step span { display: block; font-size: 23px; }
+.demo-summary { display: flex; flex-direction: column; gap: 5px; margin-top: 18px; font-size: 14px; }
+
+.dark .diagram-arrow, .dark .flow-symbol, .dark .flow-line, .dark .proof-bridge { color: #65bdd7; }
+.dark .pass-stage, .dark .pass-text { color: #7bcca3; }
+.dark .stop-stage, .dark .stop-text, .dark .tamper-step { color: #e899ba; }
