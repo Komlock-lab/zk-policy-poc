@@ -49,3 +49,7 @@ pnpm dev
 pnpm build   # dist/に静的ページを出力
 pnpm export  # PDFを出力（Playwrightが必要）
 ```
+
+## 公開
+
+`main`に`slides/`の変更がpushされると、`.github/workflows/deploy-slides.yml`がビルドしてGitHub Pagesに自動デプロイする（`https://komlock-lab.github.io/zk-policy-poc/`）。初回のみ、リポジトリのSettings → PagesでSourceを「GitHub Actions」に設定する必要がある。
