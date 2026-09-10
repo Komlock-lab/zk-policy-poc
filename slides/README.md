@@ -6,9 +6,11 @@
 
 ```sh
 cd slides
-pnpm install
+pnpm install --ignore-workspace
 pnpm dev
 ```
+
+ルートに`pnpm-workspace.yaml`があり`slides`はそこに含まれないため、`--ignore-workspace`を付けないと依存関係が一切インストールされない。
 
 `pnpm dev`はブラウザでプレビューを開く。保存すると自動で更新される。
 
