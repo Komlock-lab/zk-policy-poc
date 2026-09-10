@@ -4,6 +4,14 @@
 
 開発順序は[ロードマップ](docs/roadmap.md)、現在の実装範囲は[Phase 1 Epic](docs/epics/epic-01-zk-payment.md)を参照してください。
 
+## Claude Codeでの正常系・異常系デモ
+
+起動・自然言語プロンプト・期待結果・終了手順は[デモ手順書](demos/claude-payment/README.md)を参照してください。
+
+```bash
+pnpm demo:claude
+```
+
 ## アーキテクチャ
 
 ```mermaid

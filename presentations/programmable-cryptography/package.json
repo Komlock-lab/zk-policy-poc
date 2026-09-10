@@ -1,0 +1,14 @@
+{
+  "name": "zk-policy-slides",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "slidev slides.md --port 3030",
+    "build": "slidev build slides.md",
+    "preview": "node build-preview.mjs"
+  },
+  "devDependencies": {
+    "@slidev/cli": "52.19.1",
+    "@slidev/theme-default": "^0.25.0"
+  }
+}

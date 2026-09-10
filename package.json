@@ -29,7 +29,9 @@
     "test:contracts": "forge test --root contracts",
     "test:e2e": "NODE_OPTIONS=--experimental-sqlite vitest run e2e",
     "test:unit": "NODE_OPTIONS=--experimental-sqlite vitest run apps packages scripts/lib",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "demo:claude": "bash demos/claude-payment/start.sh",
+    "demo:check": "bash demos/claude-payment/start.sh --self-test"
   },
   "dependencies": {
     "@aztec/bb.js": "5.2.0",
