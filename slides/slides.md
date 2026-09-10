@@ -26,7 +26,7 @@ ZK Proofで送金の境界を強制するSmart Account基盤
 </div>
 
 <!--
-【構成】サービス（概要・目的・アーキテクチャ）2分 → ZK説明 1分 → デモ 2分。
+【構成】5分尺。サービス（概要・目的・アーキテクチャ）2分20秒 → Programmable Cryptography 1分 → デモ（正常系・異常系・Agent経由）50秒 → 将来像（ETH Global）40秒。
 
 このPoCは「AIエージェントに財布を持たせる」ことを、
 人間の都度承認ではなく暗号的な境界で成立させられるかを検証したもの。
@@ -63,7 +63,7 @@ Claude Code / Codexが自然言語の依頼から生成した送金を、秘密�
   </div>
 </div>
 
-<div class="grid grid-cols-3 gap-4 pt-4 text-sm">
+<div class="grid grid-cols-2 gap-4 pt-4 text-sm">
   <div>
     <div class="text-xs opacity-60 font-mono pb-1">対応する決済</div>
     native送金 / ERC-20転送 / Contractのinvoice決済（<code>pay(bytes32)</code>）の3種別
@@ -71,10 +71,6 @@ Claude Code / Codexが自然言語の依頼から生成した送金を、秘密�
   <div>
     <div class="text-xs opacity-60 font-mono pb-1">エージェントへの入口</div>
     MCPの3 Tool — <code>pay_native</code> / <code>pay_erc20</code> / <code>pay_contract</code>
-  </div>
-  <div>
-    <div class="text-xs opacity-60 font-mono pb-1">進捗</div>
-    Phase 1〜4 done、Phase 6 複数ポリシー対応まで実Agentで疎通済み
   </div>
 </div>
 
@@ -198,9 +194,11 @@ ORや優先順位を入れると、どの条件で通ったかが観測から推
 
 ---
 
-<div class="text-xs tracking-widest uppercase opacity-50 font-mono">ZK — 何を証明し、どう強制するか</div>
+<div class="text-xs tracking-widest uppercase opacity-50 font-mono">Programmable Cryptography — 何を証明し、どう強制するか</div>
 
 # 65個の秘密に対する充足を、15個の公開だけで示す
+
+単に秘密を隠すのではなく、秘密のデータに対する計算そのものを検証可能にする。
 
 <div class="grid grid-cols-2 gap-5 text-sm pt-1">
 
@@ -272,6 +270,21 @@ Clientが渡すのは<b>proofだけ</b>。実行のたびに<code>spentBefore</c
 
 </div>
 
+<div class="grid grid-cols-3 gap-3 pt-3 text-sm">
+  <div class="border rounded p-3">
+    <div class="text-xs opacity-60 font-mono pb-1">非開示</div>
+    ポリシーの内容はエージェントにも第三者にも露出しない
+  </div>
+  <div class="border rounded p-3">
+    <div class="text-xs opacity-60 font-mono pb-1">検証者不要</div>
+    オンチェーンで第三者の判定を挟まずに検証が完結する
+  </div>
+  <div class="border rounded p-3">
+    <div class="text-xs opacity-60 font-mono pb-1">リプレイ耐性</div>
+    <code>spentBefore</code>の更新により同じProofは二度と通らない
+  </div>
+</div>
+
 <!--
 ここが1分。
 「Proofが正しい」ことと「そのProofがこの決済のものである」ことは別の問題で、
@@ -329,70 +342,14 @@ payment : 1 ETH -> allowed recipient
 <b>失敗の理由は返らない。</b> Proof生成の失敗は「拒否された」ではなく「証明できない」。攻撃者から見て、なぜ通らなかったかが観測できない。
 </div>
 
+<div class="border rounded p-3 mt-3 text-sm">
+エージェント経由でも同じ動きになる。自然言語の依頼から<code>pay_native</code> / <code>pay_erc20</code> / <code>pay_contract</code>が呼ばれ、返るのは<b>receiptだけ</b>。証明生成は<span class="font-mono">936ms</span>、テストは<span class="font-mono">187本</span>すべてpass。
+</div>
+
 <!--
-デモ前半。上限超過はUserOperationを送る前に止まるので、
+デモ全体でここまで5分。上限超過はUserOperationを送る前に止まるので、
 オンチェーンには何も残らないことを見せる。
--->
-
----
-
-<div class="text-xs tracking-widest uppercase opacity-50 font-mono">デモ — Agent経由と実測</div>
-
-# エージェントは秘密に一度も触れずに決済を終える
-
-<div class="grid grid-cols-2 gap-5 pt-2">
-
-<div class="text-sm">
-
-- **3 Toolがそれぞれ1回。** 自然言語の依頼から`pay_native` / `pay_erc20` / `pay_contract`が呼ばれ、上限内は追加承認なしに成功する
-- **返すのはreceiptだけ。** policyId / version / userOpHash / txHash / status。proofも秘密値もtranscriptに現れない
-- **Hostの権限を絞る。** credentialを持つHostではClaude CodeのBashをdeny、Codexのshellを無効化する
-- **拒否は定型化。** 応答は`PAYMENT_REJECTED`固定。上限に近い値を投げて反応を見るoracleにさせない
-
-</div>
-
-<div class="grid grid-cols-2 gap-3 text-sm">
-
-<div>
-<div class="text-xs uppercase tracking-wider opacity-60 font-mono pb-1">複合Policy回路</div>
-
-| | |
-| --- | ---: |
-| ACIR | 4,314 |
-| Brillig | 87 |
-| Proof | 8,000 B |
-| 生成 | 936 ms |
-
-</div>
-
-<div>
-<div class="text-xs uppercase tracking-wider opacity-60 font-mono pb-1">テスト（全pass）</div>
-
-| | |
-| --- | ---: |
-| Circuit | 11 |
-| Contract | 39 |
-| unit | 103 |
-| E2E | 27 |
-| 実Agent | 7 |
-
-</div>
-
-</div>
-
-</div>
-
-<div class="border rounded p-3 mt-4 text-sm" style="border-color:#2c8a5c">
-<b style="color:#2c8a5c">audit-06 · passed</b> ── CRITICAL/HIGH 0件、MEDIUM/LOW 0件、修正iteration 0。ADR・ZK・Contract・API/秘密の4分野を独立レビュー。
-</div>
-
-<div class="text-xs opacity-50 pt-3 font-mono">
-固定版: nargo 1.0.0-beta.26 / bb 5.2.0 / forge 1.5.1 / EntryPoint v0.8 + Alto / 非fork Anvil chain 31337
-</div>
-
-<!--
-デモ後半。ここまでで5分。
-実Agent E2Eはtool_useを構造化して検査している。
+エージェント経由でも人間が直接叩いた場合と同じ境界が働く。
 -->
 
 ---
@@ -404,7 +361,7 @@ payment : 1 ETH -> allowed recipient
 <div style="display:flex;flex-direction:column;margin-top:0.6rem;">
   <div style="display:flex;gap:16px;padding:10px 0;border-bottom:1px solid rgba(127,127,127,.25);">
     <div style="flex:0 0 66px;font-family:monospace;font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:#2c8a5c;padding-top:3px;">現在</div>
-    <div><b>複数ポリシー対応まで完了</b><br><span class="opacity-60 text-sm">有効期限・送金先allowlist・Token/Contract allowlist・日次累積上限を、native / ERC-20 / Contract決済で実Agentまで通した</span></div>
+    <div><b>ETH Globalで複数ポリシー対応まで完了</b><br><span class="opacity-60 text-sm">有効期限・送金先allowlist・Token/Contract allowlist・日次累積上限を、native / ERC-20 / Contract決済で実Agentまで通した</span></div>
   </div>
   <div style="display:flex;gap:16px;padding:10px 0;border-bottom:1px solid rgba(127,127,127,.25);">
     <div style="flex:0 0 66px;font-family:monospace;font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;opacity:.55;padding-top:3px;">Next</div>
