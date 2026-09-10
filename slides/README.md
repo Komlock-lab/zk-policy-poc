@@ -54,4 +54,6 @@ pnpm export  # PDFを出力（Playwrightが必要）
 
 ## 公開
 
-`main`に`slides/`の変更がpushされると、`.github/workflows/deploy-slides.yml`がビルドしてGitHub Pagesに自動デプロイする（`https://komlock-lab.github.io/zk-policy-poc/`）。`configure-pages`に`enablement: true`を渡しているため、リポジトリ側でPagesを事前に有効化しておく必要はない。
+`main`に`slides/`の変更がpushされると、`.github/workflows/deploy-slides.yml`がビルドしてGitHub Pagesに自動デプロイする（`https://komlock-lab.github.io/zk-policy-poc/`）。
+
+初回のみ、リポジトリのSettings → PagesでSourceを「GitHub Actions」に設定する必要がある。Pagesサイトの新規作成はリポジトリ管理者権限が要る操作で、ワークフローの標準`GITHUB_TOKEN`では`pages: write`を与えても実行できない（`configure-pages`に`enablement: true`を渡しても「Resource not accessible by integration」で失敗する）。一度Source設定さえ済ませれば、以降のデプロイ自体は標準`GITHUB_TOKEN`で問題なく動く。
