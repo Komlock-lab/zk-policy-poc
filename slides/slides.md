@@ -132,44 +132,44 @@ ORや優先順位を入れると、どの条件で通ったかが観測から推
 
 左から右へ一方向に読む。それぞれの境界で、何が越えるか / 何が越えないかが決まっている。
 
-<div style="display:grid;grid-template-columns:1fr 106px 1fr 106px 1fr;align-items:stretch;font-size:0.78rem;margin-top:0.8rem;">
+<div style="display:grid;grid-template-columns:1fr 112px 1fr 112px 1fr;align-items:stretch;font-size:0.85rem;margin-top:0.8rem;">
 
   <div style="border:1px solid #a8446b;background:rgba(168,68,107,.07);border-radius:3px;padding:10px;display:flex;flex-direction:column;gap:5px;">
-    <div style="font-family:monospace;font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:#a8446b;">① 秘密Policy · Off-chain</div>
-    <div style="border:1px solid rgba(127,127,127,.35);border-radius:2px;padding:5px 8px;line-height:1.35;">Owner<div style="font-family:monospace;font-size:.58rem;opacity:.6;margin-top:2px;line-height:1.45;">Policy CLI · EIP-712署名 + nonce</div></div>
-    <div style="text-align:center;opacity:.45;font-size:.65rem;line-height:1;">↓</div>
-    <div style="border:1px solid rgba(127,127,127,.35);border-radius:2px;padding:5px 8px;line-height:1.35;">秘密Policy<div style="font-family:monospace;font-size:.58rem;color:#a8446b;margin-top:2px;line-height:1.45;">上限 •••• / allowlist •••• / salt ••••</div></div>
-    <div style="text-align:center;opacity:.45;font-size:.65rem;line-height:1;">↓</div>
-    <div style="border:1px solid rgba(127,127,127,.35);border-radius:2px;padding:5px 8px;line-height:1.35;">Policy API + Prover<div style="font-family:monospace;font-size:.58rem;opacity:.6;margin-top:2px;line-height:1.45;">AES-256-GCM復号 → Noir + Barretenberg</div></div>
+    <div style="font-family:monospace;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:#a8446b;">① 秘密Policy · Off-chain</div>
+    <div style="border:1px solid rgba(127,127,127,.35);border-radius:2px;padding:5px 8px;line-height:1.35;">Owner<div style="font-family:monospace;font-size:.72rem;opacity:.6;margin-top:2px;line-height:1.45;">Policy CLI · EIP-712署名 + nonce</div></div>
+    <div style="text-align:center;opacity:.45;font-size:.72rem;line-height:1;">↓</div>
+    <div style="border:1px solid rgba(127,127,127,.35);border-radius:2px;padding:5px 8px;line-height:1.35;">秘密Policy<div style="font-family:monospace;font-size:.72rem;color:#a8446b;margin-top:2px;line-height:1.45;">上限 •••• / allowlist •••• / salt ••••</div></div>
+    <div style="text-align:center;opacity:.45;font-size:.72rem;line-height:1;">↓</div>
+    <div style="border:1px solid rgba(127,127,127,.35);border-radius:2px;padding:5px 8px;line-height:1.35;">Policy API + Prover<div style="font-family:monospace;font-size:.72rem;opacity:.6;margin-top:2px;line-height:1.45;">AES-256-GCM復号 → Noir + Barretenberg</div></div>
   </div>
 
   <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;padding:0 8px;text-align:center;">
-    <div style="font-family:monospace;font-size:.57rem;line-height:1.5;color:#1288ab;">proof と<br>15個の公開入力</div>
+    <div style="font-family:monospace;font-size:.68rem;line-height:1.5;color:#1288ab;">proof と<br>15個の公開入力</div>
     <div style="width:100%;border-top:1px solid #1288ab;"></div>
-    <div style="font-family:monospace;font-size:.57rem;line-height:1.5;color:#a8446b;">✕ 上限 · allowlist<br>dailyLimit · salt</div>
+    <div style="font-family:monospace;font-size:.68rem;line-height:1.5;color:#a8446b;">✕ 上限 · allowlist<br>dailyLimit · salt</div>
   </div>
 
   <div style="border:1px solid rgba(127,127,127,.35);border-radius:3px;padding:10px;display:flex;flex-direction:column;gap:5px;">
-    <div style="font-family:monospace;font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;opacity:.6;">② エージェント実行環境</div>
-    <div style="border:1px solid rgba(127,127,127,.35);border-radius:2px;padding:5px 8px;line-height:1.35;">Claude Code / Codex<div style="font-family:monospace;font-size:.58rem;opacity:.6;margin-top:2px;line-height:1.45;">modelのcontextとtranscript</div></div>
-    <div style="text-align:center;opacity:.45;font-size:.65rem;line-height:1;">↓</div>
-    <div style="border:1px solid rgba(127,127,127,.35);border-radius:2px;padding:5px 8px;line-height:1.35;">MCP Server<div style="font-family:monospace;font-size:.58rem;opacity:.6;margin-top:2px;line-height:1.45;">pay_native / pay_erc20 / pay_contract</div></div>
-    <div style="text-align:center;opacity:.45;font-size:.65rem;line-height:1;">↓</div>
-    <div style="border:1px solid rgba(127,127,127,.35);border-radius:2px;padding:5px 8px;line-height:1.35;">Payment Client<div style="font-family:monospace;font-size:.58rem;opacity:.6;margin-top:2px;line-height:1.45;">環境変数のOwner Keyで署名</div></div>
+    <div style="font-family:monospace;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;opacity:.6;">② エージェント実行環境</div>
+    <div style="border:1px solid rgba(127,127,127,.35);border-radius:2px;padding:5px 8px;line-height:1.35;">Claude Code / Codex<div style="font-family:monospace;font-size:.72rem;opacity:.6;margin-top:2px;line-height:1.45;">modelのcontextとtranscript</div></div>
+    <div style="text-align:center;opacity:.45;font-size:.72rem;line-height:1;">↓</div>
+    <div style="border:1px solid rgba(127,127,127,.35);border-radius:2px;padding:5px 8px;line-height:1.35;">MCP Server<div style="font-family:monospace;font-size:.72rem;opacity:.6;margin-top:2px;line-height:1.45;">pay_native / pay_erc20 / pay_contract</div></div>
+    <div style="text-align:center;opacity:.45;font-size:.72rem;line-height:1;">↓</div>
+    <div style="border:1px solid rgba(127,127,127,.35);border-radius:2px;padding:5px 8px;line-height:1.35;">Payment Client<div style="font-family:monospace;font-size:.72rem;opacity:.6;margin-top:2px;line-height:1.45;">環境変数のOwner Keyで署名</div></div>
   </div>
 
   <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;padding:0 8px;text-align:center;">
-    <div style="font-family:monospace;font-size:.57rem;line-height:1.5;color:#1288ab;">UserOperation<br>（proof同梱）</div>
+    <div style="font-family:monospace;font-size:.68rem;line-height:1.5;color:#1288ab;">UserOperation<br>（proof同梱）</div>
     <div style="width:100%;border-top:1px solid #1288ab;"></div>
-    <div style="font-family:monospace;font-size:.57rem;line-height:1.5;color:#a8446b;">✕ Owner Key<br>Proof Token</div>
+    <div style="font-family:monospace;font-size:.68rem;line-height:1.5;color:#a8446b;">✕ Owner Key<br>Proof Token</div>
   </div>
 
   <div style="border:1px solid #1288ab;background:rgba(18,136,171,.07);border-radius:3px;padding:10px;display:flex;flex-direction:column;gap:5px;">
-    <div style="font-family:monospace;font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:#1288ab;">③ On-chain · 公開</div>
-    <div style="border:1px solid rgba(127,127,127,.35);border-radius:2px;padding:5px 8px;line-height:1.35;">ZkPolicyAccount<div style="font-family:monospace;font-size:.58rem;opacity:.6;margin-top:2px;line-height:1.45;">15公開入力を実状態から再構築</div></div>
-    <div style="text-align:center;opacity:.45;font-size:.65rem;line-height:1;">↓</div>
-    <div style="border:1px solid rgba(127,127,127,.35);border-radius:2px;padding:5px 8px;line-height:1.35;">SpendLimitVerifier<div style="font-family:monospace;font-size:.58rem;opacity:.6;margin-top:2px;line-height:1.45;">回路から自動生成</div></div>
-    <div style="text-align:center;opacity:.45;font-size:.65rem;line-height:1;">↓</div>
+    <div style="font-family:monospace;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:#1288ab;">③ On-chain · 公開</div>
+    <div style="border:1px solid rgba(127,127,127,.35);border-radius:2px;padding:5px 8px;line-height:1.35;">ZkPolicyAccount<div style="font-family:monospace;font-size:.72rem;opacity:.6;margin-top:2px;line-height:1.45;">15公開入力を実状態から再構築</div></div>
+    <div style="text-align:center;opacity:.45;font-size:.72rem;line-height:1;">↓</div>
+    <div style="border:1px solid rgba(127,127,127,.35);border-radius:2px;padding:5px 8px;line-height:1.35;">SpendLimitVerifier<div style="font-family:monospace;font-size:.72rem;opacity:.6;margin-top:2px;line-height:1.45;">回路から自動生成</div></div>
+    <div style="text-align:center;opacity:.45;font-size:.72rem;line-height:1;">↓</div>
     <div style="border:1px solid rgba(127,127,127,.35);border-radius:2px;padding:5px 8px;line-height:1.35;">送金先 / Token / Contract</div>
   </div>
 
@@ -360,19 +360,15 @@ payment : 1 ETH -> allowed recipient
 
 <div style="display:flex;flex-direction:column;margin-top:0.6rem;">
   <div style="display:flex;gap:16px;padding:10px 0;border-bottom:1px solid rgba(127,127,127,.25);">
-    <div style="flex:0 0 66px;font-family:monospace;font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:#2c8a5c;padding-top:3px;">現在</div>
+    <div style="flex:0 0 66px;font-family:monospace;font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:#2c8a5c;padding-top:3px;">現在</div>
     <div><b>ETH Globalで複数ポリシー対応まで完了</b><br><span class="opacity-60 text-sm">有効期限・送金先allowlist・Token/Contract allowlist・日次累積上限を、native / ERC-20 / Contract決済で実Agentまで通した</span></div>
   </div>
   <div style="display:flex;gap:16px;padding:10px 0;border-bottom:1px solid rgba(127,127,127,.25);">
-    <div style="flex:0 0 66px;font-family:monospace;font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;opacity:.55;padding-top:3px;">Next</div>
+    <div style="flex:0 0 66px;font-family:monospace;font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;opacity:.55;padding-top:3px;">Next</div>
     <div><b>攻撃・異常系の包括検証</b><br><span class="opacity-60 text-sm">Prompt Injection由来の不正な送金提案が、オンチェーンで確実に拒否されることを攻撃側の試行として測る</span></div>
   </div>
-  <div style="display:flex;gap:16px;padding:10px 0;border-bottom:1px solid rgba(127,127,127,.25);">
-    <div style="flex:0 0 66px;font-family:monospace;font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;opacity:.55;padding-top:3px;">Next</div>
-    <div><b>Safe Module経路（zk-bound）との接続検討</b><br><span class="opacity-60 text-sm">自作Accountで得た実行境界の理解を、本番寄りの実行境界へつなげる</span></div>
-  </div>
   <div style="display:flex;gap:16px;padding:10px 0;">
-    <div style="flex:0 0 66px;font-family:monospace;font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;opacity:.55;padding-top:3px;">Later</div>
+    <div style="flex:0 0 66px;font-family:monospace;font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;opacity:.55;padding-top:3px;">Later</div>
     <div><b>複数チェーン・複数Agent対応</b><br><span class="opacity-60 text-sm">同じ秘密ポリシーの境界を、複数チェーン・複数エージェントで共有できる基盤にする</span></div>
   </div>
 </div>
@@ -409,11 +405,3 @@ class: text-left
 GitHub: Komlock-lab / zk-policy-poc<br>
 設計判断は docs/adr/ ・ 脅威モデルは docs/security/threat-model.md
 </div>
-
-<style>
-h1 { font-weight: 700; letter-spacing: -0.02em; font-size: 1.9rem; margin-bottom: 0.6rem; }
-table { font-size: 0.82em; }
-th { text-align: left; opacity: 0.6; font-weight: 500; }
-td, th { padding: 0.3rem 0.5rem; }
-code { font-size: 0.9em; }
-</style>
