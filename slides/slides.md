@@ -40,47 +40,37 @@ ZK Proofで送金の境界を強制するSmart Account基盤
 
 Claude Code / Codexが自然言語の依頼から生成した送金を、秘密の支出ポリシーに対するProofで検証し、条件を満たすときだけERC-4337 Smart Accountが実行する。
 
-<div class="grid grid-cols-4 gap-3 pt-3 text-sm">
-  <div class="border rounded p-3">
-    <div class="text-xs opacity-60 font-mono pb-1">1回あたり上限</div>
-    <div class="font-semibold">asset別に設定</div>
-    <div class="text-xs opacity-60">native / Tokenごとに別の上限</div>
+<div class="flow-diagram" role="img" aria-label="人がAIエージェントに送金を依頼し、AIが秘密ポリシーへの適合を証明し、Smart Accountが証明を検証できたときだけ送金を実行する">
+  <div class="flow-step">
+    <div class="flow-icon opacity-70"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="7" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg></div>
+    <div class="flow-title">人</div>
+    <div class="flow-desc">自然言語で依頼</div>
   </div>
-  <div class="border rounded p-3">
-    <div class="text-xs opacity-60 font-mono pb-1">有効期限</div>
-    <div class="font-semibold">issuedAt 〜 validUntil</div>
-    <div class="text-xs opacity-60">窓の長さ自体を秘密に持つ</div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-step">
+    <div class="flow-icon opacity-70"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="8" width="14" height="11" rx="3"/><circle cx="9.5" cy="13.5" r="1.2" fill="currentColor" stroke="none"/><circle cx="14.5" cy="13.5" r="1.2" fill="currentColor" stroke="none"/><path d="M12 8V4"/><circle cx="12" cy="3" r="1.2" fill="currentColor" stroke="none"/></svg></div>
+    <div class="flow-title">AIエージェント</div>
+    <div class="flow-desc">Claude Code / Codex</div>
   </div>
-  <div class="border rounded p-3">
-    <div class="text-xs opacity-60 font-mono pb-1">allowlist</div>
-    <div class="font-semibold">送金先 / Token / Contract</div>
-    <div class="text-xs opacity-60">最大 16 / 8 / 16 件</div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-step">
+    <div class="flow-icon accent-pink"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></div>
+    <div class="flow-title">ZK Proof</div>
+    <div class="flow-desc">秘密ポリシーへの適合を証明</div>
   </div>
-  <div class="border rounded p-3">
-    <div class="text-xs opacity-60 font-mono pb-1">日次累積上限</div>
-    <div class="font-semibold">UTC 1日・asset別</div>
-    <div class="text-xs opacity-60">実支出をAccountが計上</div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-step highlight">
+    <div class="flow-icon accent-blue"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l7 3v5c0 5-3.2 8.5-7 10-3.8-1.5-7-5-7-10V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg></div>
+    <div class="flow-title">Smart Account</div>
+    <div class="flow-desc">検証成功のときだけ送金</div>
   </div>
-</div>
-
-<div class="grid grid-cols-2 gap-4 pt-4 text-sm">
-  <div>
-    <div class="text-xs opacity-60 font-mono pb-1">対応する決済</div>
-    native送金 / ERC-20転送 / Contractのinvoice決済（<code>pay(bytes32)</code>）の3種別
-  </div>
-  <div>
-    <div class="text-xs opacity-60 font-mono pb-1">エージェントへの入口</div>
-    MCPの3 Tool — <code>pay_native</code> / <code>pay_erc20</code> / <code>pay_contract</code>
-  </div>
-</div>
-
-<div class="text-sm opacity-70 pt-4">
-条件はORや優先順位を持たず、すべてANDで単一のCommitmentに合成する。どの条件で通ったかが観測から推測できないようにするため。
 </div>
 
 <!--
-複数条件は「1つのPolicyに含まれる複数条件のAND」と定義した（ADR-0012）。
-ORや優先順位を入れると、どの条件で通ったかが観測から推測できてしまう。
+条件は1回あたり上限（asset別）、有効期限（issuedAt〜validUntil）、allowlist（送金先/Token/Contract）、日次累積上限（UTC 1日・asset別）の4種類。
+対応する決済：native送金 / ERC-20転送 / Contractのinvoice決済（pay(bytes32)）の3種別。
+エージェントへの入口：MCPの3 Tool — pay_native / pay_erc20 / pay_contract。
+複数条件は「1つのPolicyに含まれる複数条件のAND」と定義した（ADR-0012）。ORや優先順位を入れると、どの条件で通ったかが観測から推測できてしまう。
 -->
 
 ---
@@ -91,32 +81,27 @@ ORや優先順位を入れると、どの条件で通ったかが観測から推
 
 エージェントに財布を持たせられない理由は、資金の大きさではなくルールの置き場所にある。
 
-<div class="grid grid-cols-2 gap-6 pt-3">
-
-<div class="border rounded p-4 opacity-80">
-<div class="text-xs uppercase tracking-wider opacity-60 font-mono pb-2">従来のガードレール</div>
-
-- ルールが**プロンプトやアプリコード**の中にある
-- エージェント自身がルールの中身を読める
-- Prompt Injectionや実装バグで迂回の余地が残る
-- 都度の人間承認に戻すと、自律性そのものが失われる
-
-</div>
-
-<div class="border rounded p-4" style="border-color:#1288ab">
-<div class="text-xs uppercase tracking-wider font-mono pb-2" style="color:#1288ab">ZK Policyのガードレール</div>
-
-- ルールは**Off-chainの秘密**のまま保持する
-- エージェントにもオンチェーンにも中身を見せない
-- 「条件を満たした」ことだけをZK Proofで証明する
-- 検証はEVM上で完結し、第三者の判定を挟まない
-
-</div>
-
+<div class="guardrail-compare" role="img" aria-label="従来のガードレールはエージェントからルールが見え回避できる。ZK Policyのガードレールはルールを秘密のまま隠し証明だけを通す">
+  <div class="guardrail-panel">
+    <div class="guardrail-label accent-pink">従来のガードレール</div>
+    <div class="guardrail-visual">
+      <div class="guardrail-agent opacity-80"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="7" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg><span>エージェント</span></div>
+      <div class="guardrail-gap open accent-pink"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 7.8-1.2"/></svg><span class="gap-caption">見える・回避できる</span></div>
+      <div class="guardrail-rule accent-pink"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 7.8-1.2"/></svg><span>ルール</span></div>
+    </div>
+  </div>
+  <div class="guardrail-panel">
+    <div class="guardrail-label accent-blue">ZK Policyのガードレール</div>
+    <div class="guardrail-visual">
+      <div class="guardrail-agent opacity-80"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="7" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg><span>エージェント</span></div>
+      <div class="guardrail-gap closed accent-blue"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span class="gap-caption">証明だけが通る</span></div>
+      <div class="guardrail-rule accent-blue"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span>秘密のルール</span></div>
+    </div>
+  </div>
 </div>
 
 <div class="border rounded p-3 mt-5 text-sm">
-<b>信頼の置き場所を変える。</b> エージェントを信頼して守らせるのではなく、エージェントが何を提案してもAccountが実行しない構造にする。境界は「守るべきルール」ではなく<b>「実行できない領域」</b>になる。
+<b>信頼の置き場所を変える。</b> 境界は「守るべきルール」ではなく<b>「実行できない領域」</b>になる。
 </div>
 
 <!--
