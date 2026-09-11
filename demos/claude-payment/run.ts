@@ -17,6 +17,8 @@ import { buildPolicyApi } from "../../apps/policy-api/src/server.ts";
 import { createPolicyChainGateway } from "../../apps/policy-api/src/chain.ts";
 import { createAndActivatePolicy } from "../../apps/policy-cli/src/create-policy.ts";
 
+import { formatDemoGuide } from "./output.ts";
+
 let phase = "startup";
 async function main() {
   const policyInput = policySchema.omit({ salt: true }).parse(JSON.parse(await readFile("demos/claude-payment/policy.json", "utf8")));
@@ -59,7 +61,6 @@ async function main() {
       policyId: policy.policyId, token: policy.token, recipient });
     const args = ["--experimental-sqlite", "--import", "tsx", "demos/claude-payment/server.ts"];
     const env = Object.fromEntries(Object.entries({ ...process.env, DEMO_CONFIG: demoConfig }).filter((e): e is [string, string] => e[1] !== undefined));
-    console.log(JSON.stringify({ rpcUrl: anvil.rpcUrl, accountAddress, recipient, maxAmountEth: "0.1", results: process.cwd() + "/demo-results.jsonl" }, null, 2));
     if (process.argv.includes("--self-test")) {
       phase = "MCP end-to-end verification";
       const client = new Client({ name: "demo-check", version: "1.0.0" });
@@ -82,9 +83,12 @@ async function main() {
     } else {
       phase = "Claude Code";
       await writeFile("demo-mcp.json", JSON.stringify({ mcpServers: { "zk-policy-demo": { command: process.execPath, args } } }, null, 2));
-      console.log("正常系の入力文:", (await readFile("demos/claude-payment/prompts/normal.txt", "utf8")).replaceAll("{{recipient}}", recipient));
-      console.log("異常系の入力文:", (await readFile("demos/claude-payment/prompts/abnormal.txt", "utf8")).replaceAll("{{recipient}}", recipient));
-      console.log("正常系→異常系の順に入力し、完了したら /exit。Anvilは終了時に停止します。");
+      console.log(formatDemoGuide({
+        rpcUrl: anvil.rpcUrl, accountAddress, recipient,
+        resultsPath: process.cwd() + "/demo-results.jsonl",
+        normalPrompt: (await readFile("demos/claude-payment/prompts/normal.txt", "utf8")).replaceAll("{{recipient}}", recipient),
+        abnormalPrompt: (await readFile("demos/claude-payment/prompts/abnormal.txt", "utf8")).replaceAll("{{recipient}}", recipient),
+      }, Boolean(process.stdout.isTTY) && process.env.NO_COLOR === undefined));
       const code = await new Promise<number | null>((resolve, reject) => {
         child = spawn("claude", ["--tools", "", "--strict-mcp-config", "--mcp-config", "demo-mcp.json", "--setting-sources", "",
           "--allowedTools", "mcp__zk-policy-demo__demo_pay_valid", "mcp__zk-policy-demo__demo_pay_tampered_amount"], { cwd: process.cwd(), env, stdio: "inherit" });

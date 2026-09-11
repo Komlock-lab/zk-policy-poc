@@ -252,11 +252,9 @@ layout: center
 class: text-left
 ---
 
-# 人間が境界を決め、エージェントがその内側で自律する。
+# 人間が境界を決め、
+# エージェントがその内側で自律する。
 
-秘密のポリシーは誰にも渡らない。エージェントに渡るのは、条件を満たしたという証明だけ。
-
-<div class="pt-8 text-sm font-mono opacity-60">
-GitHub: Komlock-lab / zk-policy-poc<br>
-設計判断は docs/adr/ ・ 脅威モデルは docs/security/threat-model.md
+<div>
+秘密のポリシーは誰にも渡らない。<br>エージェントに渡るのは、条件を満たしたという証明だけ。
 </div>
