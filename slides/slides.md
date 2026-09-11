@@ -33,6 +33,8 @@ ZK Proofで送金の境界を強制するSmart Account基盤
 -->
 
 ---
+class: flex flex-col justify-center
+---
 
 <div class="text-xs tracking-widest uppercase opacity-50 font-mono">サービス — 概要</div>
 
@@ -74,41 +76,48 @@ Claude Code / Codexが自然言語の依頼から生成した送金を、秘密�
 -->
 
 ---
+class: flex flex-col justify-center
+---
 
 <div class="text-xs tracking-widest uppercase opacity-50 font-mono">サービス — 目的</div>
 
-# ガードレールが「読める場所」にある限り、越えられる
+# ルールを明かさず、証明できた場合だけ実行できる
 
-エージェントに財布を持たせられない理由は、資金の大きさではなくルールの置き場所にある。
+企業でAIエージェントの活用が進むと、購買や決済の「実行」まで任せるようになる。
 
-<div class="guardrail-compare" role="img" aria-label="従来のガードレールはエージェントからルールが見え回避できる。ZK Policyのガードレールはルールを秘密のまま隠し証明だけを通す">
-  <div class="guardrail-panel">
-    <div class="guardrail-label accent-pink">従来のガードレール</div>
-    <div class="guardrail-visual">
-      <div class="guardrail-agent opacity-80"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="7" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg><span>エージェント</span></div>
-      <div class="guardrail-gap open accent-pink"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 7.8-1.2"/></svg><span class="gap-caption">見える・回避できる</span></div>
-      <div class="guardrail-rule accent-pink"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 7.8-1.2"/></svg><span>ルール</span></div>
-    </div>
+<div class="choice-grid" role="img" aria-label="社内の機密ルールをそのまま渡すと漏えいと迂回のリスクが生まれる。毎回人が承認していては自動化が進まない。ZK Policyはルールを明かさず、条件を満たしたと証明できた場合だけ実行できる">
+  <div class="choice-card">
+    <div class="choice-icon accent-pink"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 7.8-1.2"/></svg></div>
+    <div class="choice-title">ルールをそのまま渡す</div>
+    <div class="choice-desc">社内の機密ルールがエージェントに渡る</div>
+    <div class="choice-verdict accent-pink">✕ 漏えい・迂回のリスク</div>
   </div>
-  <div class="guardrail-panel">
-    <div class="guardrail-label accent-blue">ZK Policyのガードレール</div>
-    <div class="guardrail-visual">
-      <div class="guardrail-agent opacity-80"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="7" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg><span>エージェント</span></div>
-      <div class="guardrail-gap closed accent-blue"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span class="gap-caption">証明だけが通る</span></div>
-      <div class="guardrail-rule accent-blue"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span>秘密のルール</span></div>
-    </div>
+  <div class="choice-card">
+    <div class="choice-icon opacity-60"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="7" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg></div>
+    <div class="choice-title">毎回、人が承認する</div>
+    <div class="choice-desc">実行のたびに人の判断へ戻す</div>
+    <div class="choice-verdict opacity-60">✕ 自動化が進まない</div>
+  </div>
+  <div class="choice-card highlight">
+    <div class="choice-icon accent-blue"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l7 3v5c0 5-3.2 8.5-7 10-3.8-1.5-7-5-7-10V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg></div>
+    <div class="choice-title">ZK Policy</div>
+    <div class="choice-desc">ルールは明かさず、条件を満たしたことだけを証明する</div>
+    <div class="choice-verdict accent-blue">✓ 証明できた場合だけ実行</div>
   </div>
 </div>
 
 <div class="border rounded p-3 mt-5 text-sm">
-<b>信頼の置き場所を変える。</b> 境界は「守るべきルール」ではなく<b>「実行できない領域」</b>になる。
+<b>信頼の置き場所を変える。</b> ルールを「守らせる」のではなく、<b>「証明がなければ実行できない」</b>構造にする。
 </div>
 
 <!--
-ここが目的の核心。
-守らせるのではなく、実行できなくする。
+企業でAIエージェントの活用が進むと、購買や決済の実行まで任せるようになります。
+しかし、社内の機密ルールをそのまま渡すのはリスクがあり、毎回人が承認していては自動化が進みません。
+そこで私たちは、ルールを明かさず、条件を満たしたと証明できた場合だけ実行できる仕組みを作りました。
 -->
 
+---
+class: flex flex-col justify-center
 ---
 
 <div class="text-xs tracking-widest uppercase opacity-50 font-mono">サービス — アーキテクチャ</div>
@@ -117,24 +126,42 @@ Claude Code / Codexが自然言語の依頼から生成した送金を、秘密�
 
 「0.01 ETHを送って」という依頼が、実行されるまで。
 
-<div class="payment-map" role="img" aria-label="AIが0.01 ETHの送金を依頼する。実行Clientが秘密Policyを持つProverへ証明を依頼し、Proofを受け取る。Clientが送金内容とProofをウォレットへ送り、ウォレットが検証に成功した場合だけ送金する。証明できなければClientは送信せず、検証に失敗すればウォレットは送金しない。">
-  <div class="map-policy"><div class="map-kicker">人間が決めたルールを秘密に保持</div><b>② 条件を満たす証明を作る</b><span>上限・許可された送金先・日次予算</span><small>Policy API / Prover</small></div>
-  <div class="map-exchange"><div><span>証明を依頼</span><b>↑</b></div><div><span>Proofを返す</span><b>↓</b></div></div>
-  <div class="map-agent map-actor"><div class="map-kicker">① 送金を依頼</div><b>AI Agent</b><span>「0.01 ETHを<br>送って」</span><small>Claude Code / Codex</small></div>
-  <div class="map-intent map-arrow"><span>送金内容</span><b>→</b></div>
-  <div class="map-client map-actor"><div class="map-kicker">証明の取得と送信</div><b>実行Client</b><span>送金内容に<br>Proofを添える</span><small>MCP / Payment Client</small></div>
-  <div class="map-proof map-arrow"><span>送金内容<br>＋ Proof</span><b>→</b></div>
-  <div class="map-account map-actor"><div class="map-kicker">③ 証明を検証</div><b>ウォレット</b><span>この送金の証明か<br>実行内容で確認</span><small>Smart Account + Verifier</small></div>
-  <div class="map-success map-arrow"><span>成功</span><b>→</b></div>
-  <div class="map-recipient map-actor"><div class="map-kicker">④ 送金</div><b>送金先</b><span>0.01 ETH</span></div>
-  <div class="map-no-proof map-stop"><b>↓</b><span>証明できない<br><strong>送信しない</strong></span></div>
-  <div class="map-rejected map-stop"><b>↓</b><span>検証に失敗<br><strong>送金しない</strong></span></div>
+<div class="flow-diagram" role="img" aria-label="AIエージェントが実行Clientに送金を依頼し、実行Clientが秘密Policyから証明を取得し、Smart Accountが証明を検証できたときだけ送金先へ送金する">
+  <div class="flow-step">
+    <div class="flow-icon opacity-70"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="8" width="14" height="11" rx="3"/><circle cx="9.5" cy="13.5" r="1.2" fill="currentColor" stroke="none"/><circle cx="14.5" cy="13.5" r="1.2" fill="currentColor" stroke="none"/><path d="M12 8V4"/><circle cx="12" cy="3" r="1.2" fill="currentColor" stroke="none"/></svg></div>
+    <div class="flow-title">AIエージェント</div>
+    <div class="flow-desc">「0.01 ETHを送って」</div>
+  </div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-step">
+    <div class="flow-icon opacity-70"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 11l18-8-8 18-2-8-8-2z"/></svg></div>
+    <div class="flow-title">実行Client</div>
+    <div class="flow-desc">Proofを取得して送信</div>
+  </div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-step">
+    <div class="flow-icon accent-pink"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></div>
+    <div class="flow-title">秘密Policy</div>
+    <div class="flow-desc">条件を満たす証明を生成</div>
+  </div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-step highlight">
+    <div class="flow-icon accent-blue"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l7 3v5c0 5-3.2 8.5-7 10-3.8-1.5-7-5-7-10V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg></div>
+    <div class="flow-title">Smart Account</div>
+    <div class="flow-desc">Proofを検証</div>
+  </div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-step">
+    <div class="flow-icon accent-green"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg></div>
+    <div class="flow-title">送金先</div>
+    <div class="flow-desc">検証成功のときだけ着金</div>
+  </div>
 </div>
 
-<div class="map-caption">秘密のルールはProver側に留まり、AIには決済結果だけが返る。</div>
+<div class="text-sm opacity-60 mt-3">秘密のルールはProver側に留まり、AIには決済結果だけが返る。</div>
 
 <!--
-サービス全体で2分20秒。まず中央の送金経路を左から右へ追い、次にClientの上にある秘密Policyと証明の往復を説明する。
+サービス全体で2分20秒。左から右へ、AIエージェント→実行Client→秘密Policy→Smart Account→送金先の順に追う。
 ① AIが送金内容をMCPへ渡す。例の0.01 ETHは説明用の金額であり、送金可否は設定したPolicy全体に依存する。
 ② ClientがPolicy API / Proverへ証明を依頼する。Ownerが設定した秘密Policyを使い、全条件の充足を証明する。満たさなければ正常な証明を作れず、Clientは送信しない。
 ③ ClientがOwner署名付きUserOperationをBundler（Alto）とEntryPoint v0.8経由でAccountへ送信する。Accountは実行引数と実状態から15個の公開入力を再構築し、Verifierを呼び出す。ClientのpublicInputs配列をそのまま検証に使わない。
