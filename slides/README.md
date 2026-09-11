@@ -22,7 +22,7 @@ pnpm dev
 | --- | --- | --- |
 | 1 | タイトル | — |
 | 2 | 概要 — エージェントの送金をZK Proofで検証してから実行する | サービス（2分20秒） |
-| 3 | 目的 — ガードレールが読める場所にある限り越えられる | サービス（2分20秒） |
+| 3 | 目的 — ルールを明かさず、証明できた場合だけ実行できる | サービス（2分20秒） |
 | 4 | アーキテクチャ — 秘密のルールで証明し、ウォレットが送金を許可する | サービス（2分20秒） |
 | 5 | Programmable Cryptography — 65個の秘密に対する充足を15個の公開だけで示す | Programmable Cryptography（1分） |
 | 6 | デモ — 正常系・異常系・Agent経由 | デモ（50秒） |
@@ -60,4 +60,6 @@ pnpm export  # PDFを出力（Playwrightが必要）
 
 ## 図の凡例（2・3・4枚目）
 
-2枚目と4枚目（`.flow-diagram`）、3枚目（`.guardrail-compare`）は、インラインSVGのシンプルなアイコン（人・AI・鍵・盾など）で状態を示す一目でわかる図にしている。色は`.accent-pink`（秘密・非公開）/`.accent-blue`（検証・公開）/`.accent-green`（成功・着金）で統一し、ダークモードの色は`style.css`側で上書きする。各スライドのfrontmatterに`class: flex flex-col justify-center`を付け、内容をスライド縦方向の中央に寄せている。
+2枚目と4枚目（`.flow-diagram`）、3枚目（`.choice-grid`）は、インラインSVGのシンプルなアイコン（人・AI・鍵・盾など）で状態を示す一目でわかる図にしている。色は`.accent-pink`（秘密・非公開・却下）/`.accent-blue`（検証・採用）/`.accent-green`（成功・着金）で統一し、ダークモードの色は`style.css`側で上書きする。各スライドのfrontmatterに`class: flex flex-col justify-center`を付け、内容をスライド縦方向の中央に寄せている。
+
+3枚目の`.choice-grid`は「ルールをそのまま渡す」「毎回人が承認する」「ZK Policy」の3択を横並びにし、採用する選択肢だけ`.highlight`を付ける。発表ナレーションの3文に1枚ずつ対応させているので、ナレーションを変えるときはカードの見出しと判定（✕/✓）も合わせる。
