@@ -51,7 +51,7 @@
 }
 
 /* Architecture: the proof round trip stays inside the local execution boundary. */
-.architecture-map { display: grid; grid-template-columns: 166px 30px 290px 120px 1fr; grid-template-rows: 28px 68px 122px 48px 108px; margin-top: 14px; font-size: 13px; line-height: 1.5; }
+.architecture-map { display: grid; grid-template-columns: 166px 30px 290px 120px 1fr; grid-template-rows: 28px 50px 138px 32px 132px; margin-top: 14px; font-size: 13px; line-height: 1.5; }
 .architecture-zone { border-bottom: 1px solid rgb(127 127 127 / 35%); font-size: 14px; font-weight: 700; }
 .architecture-zone span { margin-left: 8px; font-size: 11px; font-weight: 400; }
 .architecture-ai-zone { grid-column: 1; }
@@ -67,22 +67,24 @@
 .architecture-transport { grid-area: 3 / 4; align-self: center; text-align: center; font-size: 11px; }
 .architecture-transport span { display: block; }
 .architecture-transport-arrow { font-size: 27px; line-height: 1; color: #1288ab; }
-.architecture-account { grid-area: 3 / 5 / 5 / 6; padding: 10px 14px; margin-top: 10px; background: rgb(18 136 171 / 6%); border: 1px solid #1288ab; border-radius: 6px; }
+.architecture-account { grid-area: 3 / 5; padding: 10px 14px; margin-top: 10px; background: rgb(18 136 171 / 6%); border: 1px solid #1288ab; border-radius: 6px; }
 .architecture-entry { font-size: 12px; border-bottom: 1px solid rgb(18 136 171 / 25%); padding-bottom: 5px; margin-bottom: 7px; }
 .architecture-entry span { margin-left: 12px; }
 .architecture-account .architecture-detail { line-height: 1.4; }
 .architecture-result { grid-area: 4 / 1 / 6 / 2; align-self: start; padding-top: 13px; font-size: 12px; }
 .architecture-proof-link { grid-area: 4 / 3; display: flex; align-items: center; justify-content: space-around; color: #a8446b; }
 .architecture-prover { grid-area: 5 / 3; padding: 10px 12px; border: 1px solid #a8446b; border-radius: 6px; background: rgb(168 68 107 / 5%); }
-.architecture-secret { font-size: 12px; margin-top: 8px; }
-.architecture-secret span { display: block; font-size: 11px; margin-top: 2px; }
-.architecture-recipient { grid-area: 5 / 5; text-align: center; padding-top: 12px; }
-.architecture-recipient b { display: block; font-size: 18px; margin-top: 9px; }
-.architecture-recipient span { font-size: 12px; }
+.architecture-zk-step { display: flex; align-items: baseline; gap: 9px; margin-top: 5px; font-size: 14px; }
+.architecture-zk-step span { font-size: 11px; }
+.architecture-witness { font-size: 11px; margin-top: 3px; }
+.architecture-verify-link { grid-area: 4 / 5; display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: #1288ab; }
+.architecture-verifier { grid-area: 5 / 5; padding: 10px 14px; border: 1px solid #1288ab; border-radius: 6px; background: rgb(18 136 171 / 6%); }
+.architecture-payment { margin-top: 9px; font-size: 12px; }
 .architecture-takeaway { margin-top: 17px; padding-top: 10px; border-top: 1px solid rgb(127 127 127 / 25%); font-size: 12px; }
 .dark .architecture-prover { border-color: #d98098; }
 .dark .architecture-proof-link { color: #d98098; }
-.dark .architecture-account { border-color: #65bdd7; }
+.dark .architecture-account, .dark .architecture-verifier { border-color: #65bdd7; }
+.dark .architecture-verify-link { color: #65bdd7; }
 .dark .architecture-request, .dark .architecture-transport-arrow { color: #65bdd7; }
 
 .architecture-owner { grid-area: 2 / 1; align-self: center; font-size: 13px; }

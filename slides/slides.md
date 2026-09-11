@@ -124,7 +124,7 @@ class: flex flex-col justify-center
 
 # 秘密のルールを登録し、ZKで送金を検証する
 
-<div class="architecture-map" role="img" aria-label="事前にOwnerが秘密のルールをPolicy APIに保存し、そのcommitmentをSmart Accountに登録する。送金時は、1 AIが金額と宛先を送金処理サーバーへ依頼、2 送金処理サーバーがPolicy APIとProverに証明を依頼して受け取る、3 サーバーがOwner署名と証明を付けBundlerへ送信、4 EntryPoint経由でSmart Accountが署名と証明を検証し、成功時だけ送金先に送金する。秘密のルールは証明基盤に留まり、AIへは決済結果が返る。">
+<div class="architecture-map" role="img" aria-label="事前にOwnerが秘密Policyとsaltから作るcommitmentをSmart Accountに登録する。1 AIが送金処理サーバーへ依頼。2 Policy APIとProverが秘密Policyと公開入力を使ってNoir回路を実行し、witnessを生成。BarretenbergがUltraHonk証明を作ってサーバーに返す。3 サーバーがOwner署名と証明を付けBundlerへ送信。4 EntryPoint経由でSmart Accountが署名を確認し、commitment・送金内容・利用状態から公開入力を構成する。Accountが別コントラクトのUltraHonk Verifierへ証明と公開入力を渡し、検証結果を受け取る。Verifierは同じNoir回路に対応する検証鍵を使う。成功時だけAccountが送金先へ送金する。">
   <div class="architecture-zone architecture-ai-zone">利用者・AI</div>
   <div class="architecture-zone architecture-local-zone">送金処理サーバー <span>オフチェーン</span></div>
   <div class="architecture-zone architecture-chain-zone accent-blue">ブロックチェーン</div>
@@ -145,24 +145,30 @@ class: flex flex-col justify-center
     <div class="architecture-action accent-blue">③ Owner署名 + 証明を付けて送信</div>
   </div>
   <div class="architecture-transport">
-    <div>送金内容 + 証明</div>
+    <div>送金内容<br>+ UltraHonk証明</div>
     <div class="architecture-transport-arrow" aria-hidden="true">→</div>
     <b>Bundler</b><span>送信を中継</span>
   </div>
   <div class="architecture-account">
     <div class="architecture-entry">EntryPoint <span>↓ 呼び出し</span></div>
-    <div class="architecture-action accent-blue">④ 検証して実行</div>
-    <div class="architecture-name">Smart Account</div>
-    <div class="architecture-detail">資金を保管 / Owner署名を確認<br><b>登録済みcommitment + 送金内容</b><br>を使い、Verifierで証明を検証</div>
+    <div class="architecture-name">④ Smart Account</div>
+    <div class="architecture-detail">資金を保管 / Owner署名を確認<br>commitment・送金内容・利用状態から<br><b>公開入力を構成して検証を依頼</b></div>
   </div>
   <div class="architecture-result"><span aria-hidden="true">←</span> 決済結果がAIへ戻る</div>
   <div class="architecture-proof-link"><span>↓ ② 証明を依頼</span><span>↑ 証明を返す</span></div>
   <div class="architecture-prover">
     <div class="architecture-name">Policy API / Prover</div>
-    <div class="architecture-detail">登録内容との一致 + 送金条件への適合を証明</div>
-    <div class="architecture-secret accent-pink"><b>登録時と同じPolicy + saltを使用</b><span>Noir回路で条件を定義 / Barretenbergで証明</span></div>
+    <div class="architecture-detail accent-pink">秘密Policy + salt と公開入力を使用</div>
+    <div class="architecture-zk-step"><b>Noir回路</b><span>commitmentの一致・送金条件を定義</span></div>
+    <div class="architecture-witness">↓ 実行してwitness（計算の証跡）を生成</div>
+    <div class="architecture-zk-step"><b>UltraHonk</b><span>Barretenbergが証明を生成</span></div>
   </div>
-  <div class="architecture-recipient"><div class="accent-green">↓ 検証成功時だけ送金</div><b>送金先</b><span>人・店舗・コントラクト</span></div>
+  <div class="architecture-verify-link"><span>↓ 証明 + 公開入力</span><span>↑ 検証結果</span></div>
+  <div class="architecture-verifier">
+    <div class="architecture-name">UltraHonk Verifier</div>
+    <div class="architecture-detail">証明を検証するSolidityコントラクト<br>同じNoir回路から作った検証鍵を使用</div>
+    <div class="architecture-payment accent-green"><b>成功：Account → 送金先</b><br>失敗：送金しない</div>
+  </div>
 </div>
 
 <div class="architecture-takeaway"><b>ZKで示すこと：</b>「登録したルールを、この送金が満たす」。<span class="accent-pink">ルールとsaltは非公開</span>、送金内容・commitment・証明は公開。</div>
@@ -175,7 +181,10 @@ class: flex flex-col justify-center
 ③ 送金処理サーバーがOwner署名付きUserOperationをBundler（Alto、オフチェーン）へ送る。送金内容とproofはcalldata、Owner署名はsignatureに入る。BundlerはEntryPoint v0.8へ中継する。
 ④ AccountはvalidationでOwner署名を確認し、executionで実行引数と実状態から公開入力を再構築してVerifierを呼ぶ。ClientのpublicInputs配列をそのまま使わない。検証成功後に累積支出を計上して送金する。ZKはOwner署名の代わりではない。
 送金処理サーバーからAIへは公開receiptまたはサニタイズしたエラーを返す。秘密Policy・Owner Key・Proof Token・proofはモデルに渡さない。Owner KeyとProof Tokenは送金処理サーバーが扱い、秘密Policyは証明バックエンドが扱う。
-対応決済はnative / ERC-20 / Contract。図では処理の役割を優先してVerifierをAccount内の説明に含めたが、実装では別コントラクト。
+Noirは条件を書く言語で、実行時にはコンパイル済み回路と入力からwitnessを生成する。witnessは計算の証跡であり、公開しない。BarretenbergのUltraHonkBackendがwitnessを使ってEVM向けUltraHonk証明を生成する。UltraHonkは証明方式、Barretenbergはその実装である。
+開発時はnargo compileでNoir回路をコンパイルし、bb write_vkで検証鍵、bb write_solidity_verifierでSolidity Verifierを生成する。ProverとVerifierは同じ回路に対応する。VerifierはAccountとは別コントラクトで、成功・失敗をAccountへ返す。送金するのはAccount。
+対応決済はnative / ERC-20 / Contract。開発時のビルド経路と状態取得RPCは省略し、実行時の接続を図示する。
+実装根拠：packages/prover/src/spend-limit.ts（Noir.execute、UltraHonkBackend.generateProof）、scripts/generate-verifier.sh、docs/adr/adr-0003-commitment-and-proving-system.md。
 根拠：docs/adr/adr-0009-owner-userop-and-zk-proof-separation.md、docs/adr/adr-0011-autonomous-policy-authorization-and-secret-boundary.md、docs/adr/adr-0012-composite-policy-schema.md。
 -->
 

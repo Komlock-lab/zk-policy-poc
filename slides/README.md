@@ -64,4 +64,4 @@ pnpm export  # PDFを出力（Playwrightが必要）
 
 3枚目の`.choice-grid`は「ルールをそのまま渡す」「毎回人が承認する」「ZK Policy」の3択を横並びにし、採用する選択肢だけ`.highlight`を付ける。発表ナレーションの3文に1枚ずつ対応させているので、ナレーションを変えるときはカードの見出しと判定（✕/✓）も合わせる。
 
-4枚目（`.architecture-map`）はAI・送金処理サーバー・ブロックチェーンの境界を固定gridで示す。上段にOwnerによるPolicy + salt → Poseidon2 → commitment登録の事前設定、図中に①依頼→②証明の往復→③署名付き送信→④検証と送金を配置する。秘密PolicyはAPI / Prover内のデータとして示し、Bundlerはオフチェーン、EntryPointとSmart Accountはオンチェーンに置く。状態取得のRPCなど詳細はプレゼンターノートに記載する。アーキテクチャ用CSSは専用クラスに限定する。
+4枚目（`.architecture-map`）はAI・送金処理サーバー・ブロックチェーンの境界を固定gridで示す。上段にOwnerによるPolicy + salt → Poseidon2 → commitment登録の事前設定、図中に①依頼→②証明の往復→③署名付き送信→④検証と送金を配置する。証明基盤はNoir回路の実行によるwitness生成と、BarretenbergによるUltraHonk証明生成を示す。チェーン側はAccountとUltraHonk Verifierを別コントラクトとして配置し、証明・公開入力の受け渡しと検証結果の戻りを示す。ProverとVerifierは同じNoir回路に対応する。秘密PolicyはAPI / Prover内のデータとして示し、Bundlerはオフチェーン、EntryPoint・Account・Verifierはオンチェーンに置く。状態取得RPCと検証鍵・Verifierの生成手順はプレゼンターノートに記載する。アーキテクチャ用CSSは専用クラスに限定する。
