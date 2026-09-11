@@ -31,7 +31,7 @@ pnpm dev
 
 時間配分はスライド面に出さず、各スライド末尾の`<!-- -->`コメント（Slidevのプレゼンターノート）に書いている。数値と仕様は`docs/`を正本とし、実装を変更したときはスライド側の記述も更新する。
 
-図はmermaidを使わず、gridとflexのHTMLで組んでいる。ノード数が増えると自動レイアウトの矢印が交差して読めなくなったため、配置を固定した。図を足すときも同じ方針で書く。4枚目の図は`style.css`の`.payment-map`と`map-`で始まる専用クラスで配置し、ラベルと矢印をHTMLのまま編集できる。
+図はmermaidを使わず、gridとflexのHTMLで組んでいる。ノード数が増えると自動レイアウトの矢印が交差して読めなくなったため、配置を固定した。図を足すときも同じ方針で書く。
 
 見出し・表・コードの共通スタイルは`style.css`に置き、Slidevが自動で全スライドに読み込む。スライドごとの`<style>`ブロックはそのスライドにしかかからないので、共通スタイルをそこに書かない。
 
@@ -58,6 +58,6 @@ pnpm export  # PDFを出力（Playwrightが必要）
 
 初回のみ、リポジトリのSettings → PagesでSourceを「GitHub Actions」に設定する必要がある。Pagesサイトの新規作成はリポジトリ管理者権限が要る操作で、ワークフローの標準`GITHUB_TOKEN`では`pages: write`を与えても実行できない（`configure-pages`に`enablement: true`を渡しても「Resource not accessible by integration」で失敗する）。一度Source設定さえ済ませれば、以降のデプロイ自体は標準`GITHUB_TOKEN`で問題なく動く。
 
-## 図の凡例（2・3枚目）
+## 図の凡例（2・3・4枚目）
 
-2枚目（`.flow-diagram`）と3枚目（`.guardrail-compare`）はインラインSVGのシンプルなアイコン（人・AI・鍵）で状態を示す一目でわかる図にしている。色は`.accent-pink`（秘密・非公開）/`.accent-blue`（検証・公開）で統一し、ダークモードの色は`style.css`側で上書きする。
+2枚目と4枚目（`.flow-diagram`）、3枚目（`.guardrail-compare`）は、インラインSVGのシンプルなアイコン（人・AI・鍵・盾など）で状態を示す一目でわかる図にしている。色は`.accent-pink`（秘密・非公開）/`.accent-blue`（検証・公開）/`.accent-green`（成功・着金）で統一し、ダークモードの色は`style.css`側で上書きする。各スライドのfrontmatterに`class: flex flex-col justify-center`を付け、内容をスライド縦方向の中央に寄せている。
