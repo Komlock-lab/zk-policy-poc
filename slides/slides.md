@@ -66,22 +66,11 @@ Claude Code / Codexが自然言語の依頼から生成した送金を、秘密�
   </div>
 </div>
 
-<div class="condition-tags">
-  <span class="condition-tag">1回あたり上限<b>asset別に設定</b></span>
-  <span class="condition-tag">有効期限<b>issuedAt〜validUntil</b></span>
-  <span class="condition-tag">allowlist<b>送金先 / Token / Contract</b></span>
-  <span class="condition-tag">日次累積上限<b>UTC 1日・asset別</b></span>
-</div>
-
-<div class="text-sm opacity-70 pt-4">
-条件はORや優先順位を持たず、すべてANDで単一のCommitmentに合成する。どの条件で通ったかが観測から推測できないようにするため。
-</div>
-
 <!--
+条件は1回あたり上限（asset別）、有効期限（issuedAt〜validUntil）、allowlist（送金先/Token/Contract）、日次累積上限（UTC 1日・asset別）の4種類。
 対応する決済：native送金 / ERC-20転送 / Contractのinvoice決済（pay(bytes32)）の3種別。
 エージェントへの入口：MCPの3 Tool — pay_native / pay_erc20 / pay_contract。
-複数条件は「1つのPolicyに含まれる複数条件のAND」と定義した（ADR-0012）。
-ORや優先順位を入れると、どの条件で通ったかが観測から推測できてしまう。
+複数条件は「1つのPolicyに含まれる複数条件のAND」と定義した（ADR-0012）。ORや優先順位を入れると、どの条件で通ったかが観測から推測できてしまう。
 -->
 
 ---
@@ -100,10 +89,6 @@ ORや優先順位を入れると、どの条件で通ったかが観測から推
       <div class="guardrail-gap open accent-pink"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 7.8-1.2"/></svg><span class="gap-caption">見える・回避できる</span></div>
       <div class="guardrail-rule accent-pink"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 7.8-1.2"/></svg><span>ルール</span></div>
     </div>
-    <ul class="guardrail-points">
-      <li>プロンプトやアプリコードの中にある</li>
-      <li>Prompt Injectionや実装バグで迂回できる</li>
-    </ul>
   </div>
   <div class="guardrail-panel">
     <div class="guardrail-label accent-blue">ZK Policyのガードレール</div>
@@ -112,21 +97,17 @@ ORや優先順位を入れると、どの条件で通ったかが観測から推
       <div class="guardrail-gap closed accent-blue"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span class="gap-caption">証明だけが通る</span></div>
       <div class="guardrail-rule accent-blue"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span>秘密のルール</span></div>
     </div>
-    <ul class="guardrail-points">
-      <li>Off-chainの秘密のまま保持する</li>
-      <li>「満たした」ことだけをProofで証明する</li>
-    </ul>
   </div>
 </div>
 
 <div class="border rounded p-3 mt-5 text-sm">
-<b>信頼の置き場所を変える。</b> エージェントを信頼して守らせるのではなく、エージェントが何を提案してもAccountが実行しない構造にする。境界は「守るべきルール」ではなく<b>「実行できない領域」</b>になる。
+<b>信頼の置き場所を変える。</b> 境界は「守るべきルール」ではなく<b>「実行できない領域」</b>になる。
 </div>
 
 <!--
 ここが目的の核心。守らせるのではなく、実行できなくする。
-従来側の補足：都度の人間承認に戻すと自律性そのものが失われる。
-ZK Policy側の補足：検証はEVM上で完結し、第三者の判定を挟まない。
+従来側の補足：ルールはプロンプトやアプリコードの中にあり、Prompt Injectionや実装バグで迂回できる。都度の人間承認に戻すと自律性そのものが失われる。
+ZK Policy側の補足：ルールはOff-chainの秘密のまま保持し、「満たした」ことだけをProofで証明する。検証はEVM上で完結し、第三者の判定を挟まない。
 -->
 
 ---
@@ -135,7 +116,7 @@ ZK Policy側の補足：検証はEVM上で完結し、第三者の判定を挟�
 
 # 送金の依頼から、証明・検証・実行まで
 
-秘密PolicyはProver側に留まり、AIモデルには決済結果だけを返す。
+秘密PolicyIsProver側に留まり、AIモデルには決済結果だけを返す。
 
 <div class="policy-diagram architecture" role="img" aria-label="AIモデルがMCPへ決済を依頼し、ClientがProverから証明を取得する。Clientは証明付きUserOperationを送信し、Accountが検証後に支出を計上して送金する。">
   <div class="model-flow"><b>Claude Code / Codex</b><span>① 決済を依頼 ↓</span><span>↑ ⑥ 公開receipt</span><small>モデルのcontextに秘密・鍵・proofを出さない</small></div>
