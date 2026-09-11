@@ -4,6 +4,7 @@ DEMO_SOURCE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEMO_ROOT="$(git -C "$DEMO_SOURCE" rev-parse --show-toplevel)"
 DEMO_REV=5285f00ee11206adba421002944ac1aa0f69a8f6
 export PATH="$HOME/.nvm/versions/node/v23.3.0/bin:$HOME/.nargo/bin:$HOME/.bb:$HOME/.foundry/bin:$HOME/.local/bin:$PATH"
+printf "\n────────────────────────────────────────────────────────────────\n  起動ログ / ツールチェーン・ビルド・ローカル環境の準備\n────────────────────────────────────────────────────────────────\n\n"
 bash "$DEMO_ROOT/scripts/check-toolchain.sh"
 command -v anvil >/dev/null
 if [[ ! -d "$DEMO_ROOT/node_modules" ]]; then
@@ -14,6 +15,7 @@ if [[ "${1:-}" != "--self-test" && "${1:-}" != "--prepare-only" ]]; then command
 mkdir -p "$DEMO_SOURCE/.runtime"
 DEMO_RUN="$(mktemp -d "$DEMO_SOURCE/.runtime/run-XXXXXX")"
 git -C "$DEMO_ROOT" archive "$DEMO_REV" | tar -x -C "$DEMO_RUN"
+cp "$DEMO_ROOT/scripts/lib/anvil.ts" "$DEMO_RUN/scripts/lib/anvil.ts"
 mkdir -p "$DEMO_RUN/demos/claude-payment"
 cp "$DEMO_SOURCE/"*.ts "$DEMO_SOURCE/tsconfig.json" "$DEMO_SOURCE/policy.json" "$DEMO_RUN/demos/claude-payment/"
 cp -R "$DEMO_SOURCE/prompts" "$DEMO_RUN/demos/claude-payment/"

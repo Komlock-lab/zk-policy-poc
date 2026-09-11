@@ -51,7 +51,7 @@ pnpm demo:claude
 次の処理が自動で進みます。
 
 1. ツールチェーン確認と型検査・ビルド
-2. Anvil起動
+2. Anvil起動（RPC URL: `http://127.0.0.1:8545`、固定ポート）
 3. Verifier・Smart Accountなどのデプロイ
 4. ポリシー登録・有効化
 5. Smart Accountへのテスト用ETH 2 ETHの入金
@@ -87,7 +87,54 @@ Claudeが`demo_pay_tampered_amount`を1回呼び出します。
 
 proofの有効期限切れやガス不足などを、期待した異常系の成功として扱いません。Claudeに表示された証明対象金額・実行金額・トランザクション結果・残高差分を確認してください。
 
-## 6. 終了・結果確認・再実行
+## 6. castでRPCから正常系・異常系を確認
+
+両方のデモを実行した後、Claude Codeを終了せず、別のターミナルを開きます。
+AnvilのRPC URLは固定で`http://127.0.0.1:8545`です。`/exit`するとAnvilが停止するため、その前に確認してください。
+
+リポジトリ直下で、起動時に表示された結果ファイルのパスを指定します。
+`run-XXXXXX`は今回の実行ディレクトリに置き換えてください。過去の実行のハッシュは再起動後のAnvilでは照会できません。
+
+```bash
+cd /Users/takumaabe/workspace/zk-policy-poc
+DEMO_RPC_URL=http://127.0.0.1:8545
+DEMO_RESULTS=demos/claude-payment/.runtime/run-XXXXXX/demo-results.jsonl
+
+NORMAL_TX=$(node -e 'const fs = require("node:fs"); const rows = fs.readFileSync(process.argv[1], "utf8").trim().split("\n").map(JSON.parse); console.log(rows.find(row => row.scenario === "normal").transactionHash);' "$DEMO_RESULTS")
+TAMPERED_TX=$(node -e 'const fs = require("node:fs"); const rows = fs.readFileSync(process.argv[1], "utf8").trim().split("\n").map(JSON.parse); console.log(rows.find(row => row.scenario === "tampered_amount").transactionHash);' "$DEMO_RESULTS")
+```
+
+結果ファイルはハッシュの取得に使い、成否は次のコマンドでRPCから取得したレシートを確認します。
+
+正常系：
+
+```bash
+cast receipt "$NORMAL_TX" --rpc-url "$DEMO_RPC_URL"
+```
+
+`status`が`1 (success)`であることを確認します。
+
+異常系：
+
+```bash
+cast receipt "$TAMPERED_TX" --rpc-url "$DEMO_RPC_URL"
+```
+
+`status`が`0 (failed)`であることを確認します。これは金額改ざんによりトランザクションがrevertした期待どおりの結果です。
+`cast receipt`自体の終了コードではなく、レシートの`status`で判定してください。
+レシートだけではrevertの原因までは確定できないため、金額改ざんの検証結果はデモの出力と併せて確認します。
+
+標準の送金先の残高もRPCで確認できます。
+
+```bash
+cast balance 0x0000000000000000000000000000000000001234 \
+  --ether --rpc-url "$DEMO_RPC_URL"
+```
+
+新しいデモ環境で正常系→異常系を各1回実行した場合、期待残高は`0.1 ETH`です。
+正常系で0.1 ETH増え、異常系では増えません。送金先を変更した場合は、起動時に表示されたアドレスへ置き換えてください。
+
+## 7. 終了・結果確認・再実行
 
 Claude Codeに入力します。
 
@@ -115,6 +162,7 @@ demos/claude-payment/.runtime/run-XXXXXX/demo-results.jsonl
 
 型検査・シェル構文チェックは通過しています。2026-09-10、利用者の手元でClaude Code経由の正常系の送金成功と異常系のrevertを確認した旨の報告を受けています。作成環境ではNargoの依存キャッシュ書き込みとAnvil起動が制限されるため、作成者による実行の再確認は行っていません。別環境では`pnpm demo:check`で事前確認してください。
 
+- ポート8545が使用中：既存のAnvilなどを終了してから再実行してください。別ポートへの自動切り替えは行いません。
 - バージョン不一致：表示された要求バージョンへ合わせてください。
 - `node_modules`がない：リポジトリ直下で`pnpm install --frozen-lockfile`を実行してください。
 - Nargoのキャッシュ書き込み・Anvil起動の権限エラー：ローカルサービス起動とキャッシュ書き込みが許可された通常のターミナルで実行してください。
