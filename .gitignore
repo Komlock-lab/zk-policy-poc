@@ -15,3 +15,8 @@ vk
 
 .env
 .DS_Store
+
+/presentations/*/dist/
+/presentations/*/preview.html
+/slides/dist/
+/demos/claude-payment/.runtime/
