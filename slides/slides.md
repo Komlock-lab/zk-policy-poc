@@ -9,6 +9,7 @@ transition: slide-left
 lineNumbers: false
 mdc: false
 ---
+
 <div class="text-xs tracking-widest uppercase opacity-50 font-mono">Komlock-lab / zk-policy-poc</div>
 
 # ZK Policy Enforcement Layer
@@ -179,6 +180,7 @@ class: flex flex-col justify-center
 -->
 
 ---
+
 <div class="text-xs tracking-widest uppercase opacity-50 font-mono">Programmable Cryptography — ZKシーケンス</div>
 
 # 回路を用意し、ルールを登録し、送金を検証する
@@ -201,6 +203,7 @@ class: flex flex-col justify-center
 -->
 
 ---
+
 <div class="text-xs tracking-widest uppercase opacity-50 font-mono">デモ — 正常系・異常系</div>
 
 # proofを作れても、送金額を書き換えると通らない
