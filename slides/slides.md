@@ -128,28 +128,36 @@ ORや優先順位を入れると、どの条件で通ったかが観測から推
 
 <div class="text-xs tracking-widest uppercase opacity-50 font-mono">サービス — アーキテクチャ</div>
 
-# 送金の依頼から、証明・検証・実行まで
+# 秘密のルールで証明し、ウォレットが送金を許可する
 
-秘密PolicyはProver側に留まり、AIモデルには決済結果だけを返す。
+「0.01 ETHを送って」という依頼が、実行されるまで。
 
-<div class="policy-diagram architecture" role="img" aria-label="AIモデルがMCPへ決済を依頼し、ClientがProverから証明を取得する。Clientは証明付きUserOperationを送信し、Accountが検証後に支出を計上して送金する。">
-  <div class="model-flow"><b>Claude Code / Codex</b><span>① 決済を依頼 ↓</span><span>↑ ⑥ 公開receipt</span><small>モデルのcontextに秘密・鍵・proofを出さない</small></div>
-  <div class="architecture-grid">
-    <div class="diagram-node client-node"><div class="diagram-label">エージェント実行環境</div><b>MCP / Payment Client</b><small>pay_native / pay_erc20 / pay_contract</small><div class="node-detail">Proofを取得・照合<br>Owner KeyでUserOperationに署名</div></div>
-    <div class="round-trip"><div class="diagram-arrow">② 決済内容で証明依頼<span>→</span></div><div class="diagram-arrow arrow-back">③ proof + 公開入力<span>←</span></div></div>
-    <div class="diagram-node secret-node"><div class="diagram-label">秘密を扱うOff-chain環境</div><b>Policy API / Prover</b><small>Noir + Barretenberg</small><div class="node-detail">Ownerが設定した秘密Policy<br>上限・allowlist・dailyLimit・salt</div></div>
-  </div>
-  <div class="submission-flow"><span>④ 決済内容 + proofを送信</span><span class="flow-line">↓</span><small>Owner署名付きUserOperation / Bundler（Alto）/ EntryPoint v0.8</small></div>
-  <div class="execution-flow public-node"><div><div class="diagram-label">On-chain</div><b>ZkPolicyAccount</b><small>実行引数と実状態から<br>15個の公開入力を再構築</small></div><span class="flow-symbol">→</span><div><b>Verifier</b><small>⑤ Proofを検証<br>失敗なら実行を拒否</small></div><span class="flow-symbol">成功 →</span><div><b>支出を計上して送金</b><small>native / ERC-20 / Contract</small></div></div>
+<div class="payment-map" role="img" aria-label="AIが0.01 ETHの送金を依頼する。実行Clientが秘密Policyを持つProverへ証明を依頼し、Proofを受け取る。Clientが送金内容とProofをウォレットへ送り、ウォレットが検証に成功した場合だけ送金する。証明できなければClientは送信せず、検証に失敗すればウォレットは送金しない。">
+  <div class="map-policy"><div class="map-kicker">人間が決めたルールを秘密に保持</div><b>② 条件を満たす証明を作る</b><span>上限・許可された送金先・日次予算</span><small>Policy API / Prover</small></div>
+  <div class="map-exchange"><div><span>証明を依頼</span><b>↑</b></div><div><span>Proofを返す</span><b>↓</b></div></div>
+  <div class="map-agent map-actor"><div class="map-kicker">① 送金を依頼</div><b>AI Agent</b><span>「0.01 ETHを<br>送って」</span><small>Claude Code / Codex</small></div>
+  <div class="map-intent map-arrow"><span>送金内容</span><b>→</b></div>
+  <div class="map-client map-actor"><div class="map-kicker">証明の取得と送信</div><b>実行Client</b><span>送金内容に<br>Proofを添える</span><small>MCP / Payment Client</small></div>
+  <div class="map-proof map-arrow"><span>送金内容<br>＋ Proof</span><b>→</b></div>
+  <div class="map-account map-actor"><div class="map-kicker">③ 証明を検証</div><b>ウォレット</b><span>この送金の証明か<br>実行内容で確認</span><small>Smart Account + Verifier</small></div>
+  <div class="map-success map-arrow"><span>成功</span><b>→</b></div>
+  <div class="map-recipient map-actor"><div class="map-kicker">④ 送金</div><b>送金先</b><span>0.01 ETH</span></div>
+  <div class="map-no-proof map-stop"><b>↓</b><span>証明できない<br><strong>送信しない</strong></span></div>
+  <div class="map-rejected map-stop"><b>↓</b><span>検証に失敗<br><strong>送金しない</strong></span></div>
 </div>
 
+<div class="map-caption">秘密のルールはProver側に留まり、AIには決済結果だけが返る。</div>
+
 <!--
-サービス全体で2分20秒。①から⑥までを追い、ClientとProverの往復を説明する。
-OwnerはPolicy CLIからEIP-712署名とnonceでPolicyを設定し、CommitmentをAccountへ登録する（設定経路は図から省略）。
-Policy APIはAES-256-GCMで保存したPolicyを復号し、秘密入力としてProverに渡す。
-Owner KeyとProof TokenはHostからClient内部に渡す。モデルには渡さない（ADR-0011）。
-③の公開入力はClientが照合するが、Accountは実行引数・オンチェーン状態から自分で再構築する。
-⑥は成功時の公開receipt。失敗時も秘密値・proofを含まない結果を返す。
+サービス全体で2分20秒。まず中央の送金経路を左から右へ追い、次にClientの上にある秘密Policyと証明の往復を説明する。
+① AIが送金内容をMCPへ渡す。例の0.01 ETHは説明用の金額であり、送金可否は設定したPolicy全体に依存する。
+② ClientがPolicy API / Proverへ証明を依頼する。Ownerが設定した秘密Policyを使い、全条件の充足を証明する。満たさなければ正常な証明を作れず、Clientは送信しない。
+③ ClientがOwner署名付きUserOperationをBundler（Alto）とEntryPoint v0.8経由でAccountへ送信する。Accountは実行引数と実状態から15個の公開入力を再構築し、Verifierを呼び出す。ClientのpublicInputs配列をそのまま検証に使わない。
+④ 検証成功後、Accountが累積支出を計上して送金する。検証に失敗した送金は実行しない。成功時は公開receiptをモデルへ返す。結果の戻り経路は図から省略。
+実行ClientはProofと公開入力を取得・照合するが、モデルには秘密・Owner Key・Proof Token・proofを渡さない（ADR-0011）。
+OwnerはPolicy CLIからEIP-712署名とnonceでPolicyを設定し、CommitmentをAccountへ登録する。設定経路は図から省略。
+Policy APIはAES-256-GCMで保存したPolicyを復号してProverへ渡す。秘密Policyには有効期間・asset別上限・allowlist・dailyLimit・salt等を含む。
+対応決済はnative / ERC-20 / Contract。図はnative送金を例にする。Noir + Barretenbergで生成したProofを検証する。
 -->
 
 ---
