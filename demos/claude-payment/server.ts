@@ -1,20 +1,17 @@
 import { appendFile } from "node:fs/promises";
 import { McpServer } from "@modelcontextprotocol/server";
 import { serveStdio } from "@modelcontextprotocol/server/stdio";
-import { getAddress, type Hex } from "viem";
 import { z } from "zod";
 import { executeDemo, type Scenario } from "./payment.ts";
 
-const address = z.string().regex(/^0x[0-9a-fA-F]{40}$/).transform((v) => getAddress(v));
-const configSchema = z.object({ apiUrl: z.string().url(), rpcUrl: z.string().url(), accountAddress: address,
-  ownerPrivateKey: z.string().regex(/^0x[0-9a-fA-F]{64}$/).transform((v) => v as Hex),
-  policyId: z.string().uuid(), token: z.string().regex(/^zkp_[A-Za-z0-9_-]{43}$/), recipient: address }).strict();
+import { demoConfigSchema } from "./state.ts";
+
 const resultSchema = z.object({ scenario: z.enum(["normal", "tampered_amount"]), proofAmountEth: z.literal("0.1"),
   executionAmountEth: z.enum(["0.1", "0.2"]), transactionStatus: z.enum(["success", "reverted"]),
   transactionHash: z.string().regex(/^0x[0-9a-fA-F]{64}$/), recipientBalanceChangeEth: z.string(),
   dailySpendChangeEth: z.string(), gasUsed: z.string(), validProofSimulationPassed: z.literal(true), expectationMet: z.literal(true) }).strict();
 try {
-  const config = configSchema.parse(JSON.parse(process.env.DEMO_CONFIG ?? "{}"));
+  const config = demoConfigSchema.parse(JSON.parse(process.env.DEMO_CONFIG ?? "{}"));
   const server = new McpServer({ name: "zk-policy-demo", version: "1.0.0" }, {
     instructions: [
       "これはローカルAnvil上の送金デモです。送金先は " + config.recipient + "、依頼金額は0.1 ETHに固定されています。",

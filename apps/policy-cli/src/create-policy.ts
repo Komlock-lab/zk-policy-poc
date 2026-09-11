@@ -97,7 +97,7 @@ export async function createAndActivatePolicy(input: {
   maxValiditySeconds?: bigint;
   policy?: Omit<PolicyInput, "salt">;
   deadline: number;
-}): Promise<{ policyId: string; policyVersion: number; token: string; txHash: Hex }> {
+}): Promise<{ policyId: string; policyVersion: number; token: string; commitment: Hex; txHash: Hex }> {
   assertLocalUrl(input.apiUrl, "apiUrl");
   assertLocalUrl(input.rpcUrl, "rpcUrl");
   const owner = privateKeyToAccount(input.ownerPrivateKey);
@@ -169,6 +169,7 @@ export async function createAndActivatePolicy(input: {
     policyId: registration.policyId,
     policyVersion: registration.policyVersion,
     token: registration.token,
+    commitment,
     txHash,
   };
 }

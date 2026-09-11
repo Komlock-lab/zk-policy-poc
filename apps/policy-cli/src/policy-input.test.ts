@@ -3,20 +3,20 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, it } from "vitest";
 import { zeroAddress } from "viem";
-import { readOwnerPolicyArguments } from "./policy-input.ts";
+import { readCreatePolicyArguments, readOwnerPolicyArguments } from "./policy-input.ts";
 
 it("keeps native numeric CLI defaults and explicit validity", async () => {
   expect(await readOwnerPolicyArguments(["100"])).toEqual({ maxAmountWei: 100n, maxValiditySeconds: 300n });
   expect(await readOwnerPolicyArguments(["100", "120"])).toEqual({ maxAmountWei: 100n, maxValiditySeconds: 120n });
 });
-it("reads Owner policy JSON with recipient membership enabled", async () => {
+it.each([readOwnerPolicyArguments, readCreatePolicyArguments])("reads Owner policy JSON with recipient membership enabled (%#)", async (readArguments) => {
   const directory = await mkdtemp(join(tmpdir(), "owner-policy-"));
   try {
     const path = join(directory, "policy.json");
     const recipient = "0x0000000000000000000000000000000000000001";
     await writeFile(path, JSON.stringify({ recipientEnabled: true, recipientAllowlist: [recipient],
       assetRules: [{ asset: zeroAddress, maxAmount: "100" }] }), { mode: 0o600 });
-    expect(await readOwnerPolicyArguments(["--policy-file", path])).toMatchObject({ policy: {
+    expect(await readArguments(["--policy-file", path])).toMatchObject({ policy: {
       schemaVersion: 2, recipientEnabled: true, recipientAllowlist: [recipient], maxValiditySeconds: 300n,
       assetRules: [{ asset: zeroAddress, maxAmount: 100n, dailyLimit: 0n }],
     } });

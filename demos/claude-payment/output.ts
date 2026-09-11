@@ -26,7 +26,7 @@ export function formatDemoGuide(input: DemoGuideInput, color = false): string {
     `  RPC          ${input.rpcUrl}`,
     `  Account      ${input.accountAddress}`,
     `  Recipient    ${input.recipient}`,
-    "  送金上限     0.1 ETH / 回",
+    "  デモ送金額   0.1 ETH",
     "",
     step("01", "正常系 — 0.1 ETHを送金", "Claude Code"),
     "",

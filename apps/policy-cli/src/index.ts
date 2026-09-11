@@ -1,4 +1,4 @@
-import { readOwnerPolicyArguments } from "./policy-input.ts";
+import { readCreatePolicyArguments } from "./policy-input.ts";
 import { z } from "zod";
 import type { Address, Hex } from "viem";
 import { createAndActivatePolicy } from "./create-policy.ts";
@@ -11,7 +11,7 @@ const input = z
     POLICY_OWNER_PRIVATE_KEY: z.string().regex(/^0x[0-9a-fA-F]{64}$/),
   })
   .parse(process.env);
-const policyInput = await readOwnerPolicyArguments(process.argv.slice(2));
+const policyInput = await readCreatePolicyArguments(process.argv.slice(2));
 
 const result = await createAndActivatePolicy({
   apiUrl: input.POLICY_API_URL,
@@ -23,5 +23,5 @@ const result = await createAndActivatePolicy({
 });
 
 process.stdout.write(
-  `${JSON.stringify({ policyId: result.policyId, policyVersion: result.policyVersion, token: result.token })}\n`,
+  `${JSON.stringify({ policyId: result.policyId, policyVersion: result.policyVersion, commitment: result.commitment, txHash: result.txHash })}\n`,
 );

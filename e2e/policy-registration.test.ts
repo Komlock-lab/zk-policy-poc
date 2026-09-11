@@ -49,7 +49,7 @@ describe("initial policy registration", () => {
 
   afterEach(async () => anvil?.stop());
 
-  it("registers an encrypted policy and activates its on-chain commitment", async () => {
+  it.each(["interactive", "arguments"])("registers an encrypted policy and activates its on-chain commitment via %s", async (mode) => {
     anvil = await startAnvil();
     const owner = privateKeyToAccount(OWNER_PRIVATE_KEY);
     const transport = http(anvil.rpcUrl);
@@ -75,11 +75,15 @@ describe("initial policy registration", () => {
     const app = buildPolicyApi(new PolicyService(repository, chain, Buffer.alloc(32, 1)));
     const apiUrl = await app.listen({ host: "127.0.0.1", port: 0 });
     try {
-      const { stdout } = await promisify(execFile)(process.execPath,
-        ["--import", "tsx", "apps/policy-cli/src/index.ts", parseEther("0.1").toString(), "300"],
+      const execution = promisify(execFile)(process.execPath,
+        ["--import", "tsx", "apps/policy-cli/src/index.ts", ...(mode === "arguments" ? [parseEther("0.1").toString(), "300"] : [])],
         { env: { ...process.env, POLICY_API_URL: apiUrl, POLICY_RPC_URL: anvil.rpcUrl,
           POLICY_ACCOUNT_ADDRESS: accountAddress, POLICY_OWNER_PRIVATE_KEY: OWNER_PRIVATE_KEY } });
-      const result = z.object({ policyId: z.string().uuid(), policyVersion: z.literal(1), token: z.string() }).parse(JSON.parse(stdout));
+      if (mode === "interactive") execution.child.stdin!.end("0.1\n");
+      const { stdout } = await execution;
+      const result = z.object({ policyId: z.string().uuid(), policyVersion: z.literal(1), commitment: z.string(), txHash: z.string().regex(/^0x[0-9a-fA-F]{64}$/) }).strict().parse(JSON.parse(stdout));
+      expect(stdout).not.toContain(OWNER_PRIVATE_KEY);
+      expect(stdout).not.toContain("zkp_");
       const active = repository.getActive(result.policyId)!;
       const secret = normalizePolicy(decryptPolicySecret(active, Buffer.alloc(32, 1), result.policyId, 1));
       expect(secret.maxValiditySeconds).toBe(300n);
@@ -91,7 +95,8 @@ describe("initial policy registration", () => {
       ]);
       expect(configured).toBe(true);
       expect(repository.getActive(result.policyId)?.commitment).toBe(commitment);
-      expect(repository.getPolicy(result.policyId)?.tokenHash.toString("utf8")).not.toContain(result.token);
+      expect(result.commitment).toBe(commitment);
+      expect((await publicClient.getTransactionReceipt({ hash: result.txHash as Hex })).status).toBe("success");
     } finally {
       await app.close();
       repository.close();
