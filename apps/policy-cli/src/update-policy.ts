@@ -1,3 +1,4 @@
+import { readOwnerPolicyArguments } from "./policy-input.ts";
 import { z } from "zod";
 import type { Address, Hex } from "viem";
 import { updateAndActivatePolicy } from "./create-policy.ts";
@@ -12,7 +13,7 @@ const input = z
     POLICY_TOKEN: z.string().regex(/^zkp_[A-Za-z0-9_-]{43}$/),
   })
   .parse(process.env);
-const maxAmountWei = z.string().regex(/^(0|[1-9][0-9]*)$/).parse(process.argv[2]);
+const policyInput = await readOwnerPolicyArguments(process.argv.slice(2));
 
 const result = await updateAndActivatePolicy({
   apiUrl: input.POLICY_API_URL,
@@ -21,7 +22,7 @@ const result = await updateAndActivatePolicy({
   ownerPrivateKey: input.POLICY_OWNER_PRIVATE_KEY as Hex,
   policyId: input.POLICY_ID,
   token: input.POLICY_TOKEN,
-  maxAmountWei: BigInt(maxAmountWei),
+  ...policyInput,
   deadline: Math.floor(Date.now() / 1_000) + 600,
 });
 

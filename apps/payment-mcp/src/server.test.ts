@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { PaymentMcpConfig } from "./config.ts";
-import { executePaymentTool, paymentIntentSchema } from "./server.ts";
+import { executePaymentTool, executeERC20PaymentTool, executeContractPaymentTool, paymentIntentSchema } from "./server.ts";
 
 const config: PaymentMcpConfig = {
   apiUrl: "http://127.0.0.1:3000",
@@ -25,6 +25,7 @@ describe("payment MCP tool", () => {
       {
         recipient: "0x0000000000000000000000000000000000000003",
         valueWei: "10000000000000000",
+        validUntil: "400",
       },
       config,
       execute,
@@ -33,6 +34,7 @@ describe("payment MCP tool", () => {
       ...config,
       recipient: "0x0000000000000000000000000000000000000003",
       valueWei: 10_000_000_000_000_000n,
+      validUntil: 400n,
     });
     expect(result).toEqual({
       policyId: config.policyId,
@@ -61,7 +63,7 @@ function zeroAddress() {
 }
 
 describe("public tool schema", () => {
-  it("contains only recipient and valueWei", () => {
+  it("contains the native intent and optional expiry", () => {
     const parsed = paymentIntentSchema.parse({
       recipient: "0x0000000000000000000000000000000000000003",
       valueWei: "1",
@@ -74,4 +76,24 @@ describe("public tool schema", () => {
       }),
     ).toThrow();
   });
+});
+
+it("passes the exact ERC-20 amount and token to the shared client", async () => {
+  const execute = vi.fn().mockResolvedValue({ policyId: config.policyId, policyVersion: 1,
+    userOperationHash: `0x${"11".repeat(32)}`, transactionHash: `0x${"22".repeat(32)}` });
+  await executeERC20PaymentTool({ token: "0x0000000000000000000000000000000000001111",
+    recipient: "0x0000000000000000000000000000000000002222", amount: "123", validUntil: "400" }, config, execute);
+  expect(execute).toHaveBeenCalledWith({ ...config, kind: 1,
+    tokenAddress: "0x0000000000000000000000000000000000001111",
+    recipient: "0x0000000000000000000000000000000000002222", amount: 123n, validUntil: 400n });
+});
+
+it("passes the exact invoice and native value to the contract client", async () => {
+  const execute = vi.fn().mockResolvedValue({ policyId: config.policyId, policyVersion: 1,
+    userOperationHash: `0x${"11".repeat(32)}`, transactionHash: `0x${"22".repeat(32)}` });
+  const invoiceId = `0x${"ff".repeat(32)}`;
+  await executeContractPaymentTool({ contract: "0x0000000000000000000000000000000000001111",
+    invoiceId, valueWei: "123", validUntil: "400" }, config, execute);
+  expect(execute).toHaveBeenCalledWith({ ...config, kind: 2,
+    contractAddress: "0x0000000000000000000000000000000000001111", invoiceId, valueWei: 123n, validUntil: 400n });
 });

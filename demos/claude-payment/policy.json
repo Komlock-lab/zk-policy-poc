@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 2,
+  "maxValiditySeconds": "300",
+  "recipientEnabled": true,
+  "recipientAllowlist": [
+    "0x0000000000000000000000000000000000001234"
+  ],
+  "assetRules": [
+    {
+      "asset": "0x0000000000000000000000000000000000000000",
+      "maxAmount": "100000000000000000",
+      "dailyLimit": "1000000000000000000"
+    }
+  ],
+  "dailyEnabled": true,
+  "contractEnabled": false,
+  "contractAllowlist": []
+}

@@ -12,7 +12,7 @@ import {
 import { privateKeyToAccount } from "viem/accounts";
 import { foundry } from "viem/chains";
 import { z } from "zod";
-import { parseCircuitAmount } from "../../../packages/policy/src/index.ts";
+import { parseCircuitAmount, paymentPublicInputs, paymentIntentSchema, publicInputsSchema, type PaymentContext } from "../../../packages/policy/src/index.ts";
 import { zkPolicyAccountAbi } from "../../policy-api/src/chain.ts";
 
 const policyIdSchema = z.string().uuid();
@@ -34,16 +34,7 @@ const proofResponseSchema = z
       .string()
       .regex(/^0x(?:[0-9a-fA-F]{2})+$/)
       .transform((value) => value as Hex),
-    publicInputs: z.tuple([
-      z
-        .string()
-        .regex(/^0x[0-9a-fA-F]{64}$/)
-        .transform((value) => value as Hex),
-      z
-        .string()
-        .regex(/^0x[0-9a-fA-F]{64}$/)
-        .transform((value) => value as Hex),
-    ]),
+    publicInputs: publicInputsSchema,
   })
   .strict();
 
@@ -51,7 +42,7 @@ export interface PolicyPaymentProof {
   policyId: string;
   policyVersion: number;
   proof: Hex;
-  publicInputs: readonly [Hex, Hex];
+  publicInputs: readonly Hex[];
 }
 
 export function assertLocalPaymentUrl(value: string, label: string): void {
@@ -70,22 +61,24 @@ export function assertLocalPaymentUrl(value: string, label: string): void {
 
 export function validatePolicyPaymentProof(
   value: unknown,
-  expected: { policyId: string; valueWei: bigint; policyCommitment: Hex },
+  expected: { policyId: string; valueWei: bigint; policyCommitment: Hex; context: Omit<PaymentContext, "amount" | "policyCommitment"> },
 ): PolicyPaymentProof {
   const proof = proofResponseSchema.parse(value);
   const expectedValue = toHex(expected.valueWei, { size: 32 });
   if (proof.policyId !== expected.policyId) {
     throw new Error("policy API returned a proof for an unexpected policy");
   }
-  if (proof.publicInputs[0].toLowerCase() !== expectedValue.toLowerCase()) {
+  if (proof.publicInputs[7]!.toLowerCase() !== expectedValue.toLowerCase()) {
     throw new Error("policy proof value does not match the requested payment");
   }
   if (
-    proof.publicInputs[1].toLowerCase() !==
+    proof.publicInputs[3]!.toLowerCase() !==
     expected.policyCommitment.toLowerCase()
   ) {
     throw new Error("policy proof commitment does not match the account");
   }
+  const expectedInputs = paymentPublicInputs({ ...expected.context, amount: expected.valueWei, policyCommitment: BigInt(expected.policyCommitment) });
+  if (proof.publicInputs.some((value, index) => value.toLowerCase() !== expectedInputs[index]!.toLowerCase())) throw new Error("policy proof context does not match the requested payment");
   return proof;
 }
 
@@ -100,6 +93,7 @@ async function proofResponse(response: Response): Promise<unknown> {
 }
 
 export interface PolicyPaymentInput {
+  kind?: 0;
   apiUrl: string;
   rpcUrl: string;
   accountAddress: Address;
@@ -108,17 +102,31 @@ export interface PolicyPaymentInput {
   token: string;
   recipient: Address;
   valueWei: bigint;
+  validUntil?: bigint;
 }
 
-export async function preparePolicyPayment(input: PolicyPaymentInput) {
+export interface ERC20PolicyPaymentInput extends Omit<PolicyPaymentInput, "kind" | "valueWei"> {
+  kind: 1;
+  tokenAddress: Address;
+  amount: bigint;
+}
+export interface ContractPolicyPaymentInput extends Omit<PolicyPaymentInput, "kind" | "recipient"> {
+  kind: 2;
+  contractAddress: Address;
+  invoiceId: Hex;
+}
+export type TypedPolicyPaymentInput = PolicyPaymentInput | ERC20PolicyPaymentInput | ContractPolicyPaymentInput;
+
+export async function preparePolicyPayment(input: TypedPolicyPaymentInput) {
   assertLocalPaymentUrl(input.apiUrl, "apiUrl");
   assertLocalPaymentUrl(input.rpcUrl, "rpcUrl");
   const policyId = policyIdSchema.parse(input.policyId);
   const token = tokenSchema.parse(input.token);
   const accountAddress = paymentAddressSchema.parse(input.accountAddress);
-  const recipient = paymentAddressSchema.parse(input.recipient);
+  const recipient = paymentAddressSchema.parse(input.kind === 2 ? input.contractAddress : input.recipient);
   const ownerPrivateKey = privateKeySchema.parse(input.ownerPrivateKey);
-  const valueWei = parseCircuitAmount(input.valueWei);
+  const valueWei = parseCircuitAmount(input.kind === 1 ? input.amount : input.valueWei);
+  const asset = input.kind === 1 ? paymentAddressSchema.parse(input.tokenAddress) : zeroAddress;
   const owner = privateKeyToAccount(ownerPrivateKey);
   const transport = http(input.rpcUrl, { fetchOptions: { redirect: "error" } });
   const publicClient = createPublicClient({ chain: foundry, transport });
@@ -126,6 +134,10 @@ export async function preparePolicyPayment(input: PolicyPaymentInput) {
   if ((await publicClient.getChainId()) !== 31_337) {
     throw new Error("local chain id must be 31337");
   }
+
+  const block = await publicClient.getBlock();
+  const intent = paymentIntentSchema.parse({ kind: input.kind ?? 0, recipient, asset, amount: valueWei, target: input.kind === 1 ? asset : recipient,
+    invoiceId: input.kind === 2 ? input.invoiceId : toHex(0n, { size: 32 }), issuedAt: block.timestamp, validUntil: input.validUntil ?? block.timestamp + 300n });
 
   const response = await fetch(
     `${input.apiUrl}/v1/policies/${policyId}/proofs`,
@@ -136,7 +148,7 @@ export async function preparePolicyPayment(input: PolicyPaymentInput) {
         authorization: `Bearer ${token}`,
         "content-type": "application/json",
       },
-      body: JSON.stringify({ valueWei: valueWei.toString() }),
+      body: JSON.stringify(intent, (_key, value: unknown) => typeof value === "bigint" ? value.toString() : value),
     },
   );
   const responseBody = await proofResponse(response);
@@ -163,32 +175,36 @@ export async function preparePolicyPayment(input: PolicyPaymentInput) {
   }
   if (!configured) throw new Error("account policy is not configured");
 
+  const [dayId, spentBefore] = await publicClient.readContract({ address: accountAddress, abi: zkPolicyAccountAbi, functionName: "getDailySpend", args: [asset], blockNumber: block.number });
+  const context = { ...intent, chainId: 31337n, account: accountAddress, dayId, spentBefore };
   const proof = validatePolicyPaymentProof(responseBody, {
     policyId,
     valueWei,
     policyCommitment,
+    context,
   });
-  return { owner, publicClient, accountAddress, recipient, valueWei, proof };
+  return { owner, publicClient, accountAddress, recipient, valueWei, proof, intent };
 }
 
-export async function payWithPolicyProof(input: PolicyPaymentInput): Promise<{
+export async function payWithPolicyProof(input: TypedPolicyPaymentInput): Promise<{
   policyId: string;
   policyVersion: number;
   transactionHash: Hex;
 }> {
-  const { owner, publicClient, accountAddress, recipient, valueWei, proof } =
+  const { owner, publicClient, accountAddress, recipient, valueWei, proof, intent } =
     await preparePolicyPayment(input);
   const walletClient = createWalletClient({
     account: owner,
     chain: foundry,
     transport: http(input.rpcUrl, { fetchOptions: { redirect: "error" } }),
   });
-  const transactionHash = await walletClient.writeContract({
-    address: accountAddress,
-    abi: zkPolicyAccountAbi,
-    functionName: "execute",
-    args: [recipient, valueWei, proof.proof],
-  });
+  const transactionHash = intent.kind === 0
+    ? await walletClient.writeContract({ address: accountAddress, abi: zkPolicyAccountAbi, functionName: "execute",
+      args: [recipient, valueWei, intent.issuedAt, intent.validUntil, proof.proof] })
+    : intent.kind === 1 ? await walletClient.writeContract({ address: accountAddress, abi: zkPolicyAccountAbi, functionName: "executeERC20",
+      args: [intent.asset, recipient, valueWei, intent.issuedAt, intent.validUntil, proof.proof] })
+    : await walletClient.writeContract({ address: accountAddress, abi: zkPolicyAccountAbi, functionName: "executeContract",
+      args: [recipient, intent.invoiceId, valueWei, intent.issuedAt, intent.validUntil, proof.proof] });
   const receipt = await publicClient.waitForTransactionReceipt({
     hash: transactionHash,
   });

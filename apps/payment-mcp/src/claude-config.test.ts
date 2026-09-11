@@ -32,12 +32,14 @@ describe("Claude Code project payment configuration", () => {
     });
   });
 
-  it("auto-allows only pay_native", async () => {
+  it("auto-allows only the three typed payment tools", async () => {
     const settings = JSON.parse(
       await readFile(".claude/settings.json", "utf8"),
     ) as { permissions: { allow: string[]; deny: string[] } };
     expect(settings.permissions.allow).toEqual([
       "mcp__zk-policy-payment__pay_native",
+      "mcp__zk-policy-payment__pay_erc20",
+      "mcp__zk-policy-payment__pay_contract",
     ]);
     expect(settings.permissions.deny).toEqual(["Bash"]);
   });

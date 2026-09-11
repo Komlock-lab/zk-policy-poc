@@ -105,6 +105,68 @@ test("accepts a consistent approved plan", () => {
   assert.equal(result.documentCount, 4);
 });
 
+function deferErrorAcceptance(root, extraMetadata = "") {
+  const epic = path.join(root, "docs/epics/phase-two.md");
+  writeFileSync(epic, readFileSync(epic, "utf8").replace(
+    "status: approved",
+    `status: approved\nerror_acceptance: deferred${extraMetadata}`,
+  ));
+  const story = path.join(root, "docs/stories/epic-02/create-policy.md");
+  writeFileSync(story, readFileSync(story, "utf8").replace(
+    "- AC-2 [異常系]: Given invalid input / When user creates / Then request fails",
+    "異常系はEpicに記録したユーザー指定により延期する。",
+  ));
+}
+
+test("accepts normal-only stories with explicit epic scope authorization", () => {
+  const root = createRoot();
+  writeValidPlan(root);
+  deferErrorAcceptance(root,
+    "\nerror_acceptance_reason: Happy paths requested first\nerror_acceptance_authorization: User instruction on 2026-09-06",
+  );
+  assert.deepEqual(validatePlanning(root).errors, []);
+});
+
+test("requires both reason and authorization for deferred error acceptance", () => {
+  for (const metadata of ["", "\nerror_acceptance_reason: Happy paths first", "\nerror_acceptance_authorization: User instruction"]) {
+    const root = createRoot();
+    writeValidPlan(root);
+    deferErrorAcceptance(root, metadata);
+    const errors = validatePlanning(root).errors;
+    assert.ok(errors.some((error) => error.includes("deferred error acceptance requires")));
+    assert.ok(errors.some((error) => error.includes("error acceptance criterion")));
+  }
+});
+
+test("deferral does not waive normal acceptance criteria or tasks", () => {
+  const root = createRoot();
+  writeValidPlan(root);
+  deferErrorAcceptance(root,
+    "\nerror_acceptance_reason: Happy paths first\nerror_acceptance_authorization: User instruction",
+  );
+  const story = path.join(root, "docs/stories/epic-02/create-policy.md");
+  writeFileSync(story, readFileSync(story, "utf8").replace("AC-1 [正常系]", "Unspecified criterion"));
+  rmSync(path.join(root, "docs/tasks/story-02-01/implement-policy.md"));
+  const errors = validatePlanning(root).errors;
+  assert.ok(errors.some((error) => error.includes("normal acceptance criterion")));
+  assert.ok(errors.some((error) => error.includes("at least one task")));
+});
+
+test("deferral on one epic does not waive criteria on another epic", () => {
+  const root = createRoot();
+  writeValidPlan(root);
+  deferErrorAcceptance(root,
+    "\nerror_acceptance_reason: Happy paths first\nerror_acceptance_authorization: User instruction",
+  );
+  writeDocument(root, "docs/epics/phase-three.md", {
+    id: "epic-03", type: "epic", title: "Phase three", status: "draft",
+    created: "2026-09-06", updated: "2026-09-06", adrs: [],
+  }, "# Phase three");
+  const story = path.join(root, "docs/stories/epic-02/create-policy.md");
+  writeFileSync(story, readFileSync(story, "utf8").replace("epic: epic-02", "epic: epic-03"));
+  assert.ok(validatePlanning(root).errors.some((error) => error.includes("error acceptance criterion")));
+});
+
 test("rejects cyclic story dependencies", () => {
   const root = createRoot();
   writeValidPlan(root);

@@ -10,8 +10,8 @@ AIエージェントが提案したトランザクションに対し、秘密の
 | 2 | [epic-02: Policy管理・Proof生成API](epics/epic-02-policy-management-proof-api.md) | review |
 | 3 | [epic-03: ERC-4337対応](epics/epic-03-erc4337.md) | review |
 | 4 | [epic-04: Claude Code・Codex接続](epics/epic-04-agent-integration.md) | approved |
-| 5 | 攻撃・異常系の検証 | 未計画 |
-| 6 | 複数ポリシー対応 | 未計画 |
+| 5 | 攻撃・異常系の検証 | 今回はスキップ |
+| 6 | [epic-06: 複数ポリシー対応](epics/epic-06-multi-policy.md) | in-progress |
 
 ## 1. 単一条件のZK PoC
 
@@ -61,13 +61,16 @@ AIエージェントが提案したトランザクションに対し、秘密の
 
 ## 6. 複数ポリシー対応
 
+詳細なスコープと設計判断は[epic-06](epics/epic-06-multi-policy.md)を正本とする。Phase 5を開始条件とせず、新規の異常系検証は延期する。
+
 次の順番で条件を追加する。
 
 1. トランザクションの有効期限
 2. 送金先Addressのallowlist
 3. TokenおよびContractのallowlist
 4. 一定期間あたりの累積支出上限
-5. Risk Score
+
+Risk Scoreはユーザー指定により対象外とする。
 
 ## 開発方針
 

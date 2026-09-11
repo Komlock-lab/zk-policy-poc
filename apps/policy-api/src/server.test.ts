@@ -1,3 +1,5 @@
+import { fixturePaymentRequest, fixturePaymentContext, fixturePaymentIntent } from "../../../scripts/lib/payment-fixture.ts";
+import { paymentPublicInputs } from "../../../packages/policy/src/index.ts";
 import { describe, expect, it, vi } from "vitest";
 import { toHex, type Address, type Hex } from "viem";
 import { U128_MAX } from "../../../packages/policy/src/index.ts";
@@ -13,7 +15,8 @@ describe("policy API routes", () => {
     const service = new PolicyService(
       repository,
       {
-        getOwner: async () => account,
+        getPaymentState: async () => ({ dayId: 0n, spentBefore: 0n, blockNumber: 1n }),
+      getOwner: async () => account,
         getPolicyState: async () => ({ configured: false, commitment: "0x00" as Hex }),
         getTransaction: async () => {
           throw new Error("not found");
@@ -78,7 +81,8 @@ describe("policy API routes", () => {
     const service = new PolicyService(
       repository,
       {
-        getOwner: async () => account,
+        getPaymentState: async () => ({ dayId: 0n, spentBefore: 0n, blockNumber: 1n }),
+      getOwner: async () => account,
         getPolicyState: async () => ({ configured: false, commitment: toHex(0n, { size: 32 }) }),
         getTransaction: async () => {
           throw new Error("not found");
@@ -90,7 +94,7 @@ describe("policy API routes", () => {
       policyId: "00000000-0000-4000-8000-000000000001",
       policyVersion: 1,
       proof: "0x1234",
-      publicInputs: [toHex(10n, { size: 32 }), toHex(20n, { size: 32 })],
+      publicInputs: paymentPublicInputs({ ...fixturePaymentContext(), amount: 10n, policyCommitment: 20n }),
     });
     const app = buildPolicyApi(service);
     const url = "/v1/policies/00000000-0000-4000-8000-000000000001/proofs";
@@ -100,7 +104,7 @@ describe("policy API routes", () => {
         method: "POST",
         url,
         headers: authorization ? { authorization } : {},
-        payload: { valueWei: "10" },
+        payload: fixturePaymentRequest(),
       });
       expect(response.statusCode).toBe(401);
       expect(response.json()).toEqual({ error: "INVALID_POLICY_TOKEN" });
@@ -108,11 +112,11 @@ describe("policy API routes", () => {
     expect(createProof).not.toHaveBeenCalled();
 
     for (const payload of [
-      { valueWei: "not-a-number" },
-      { valueWei: "01" },
-      { valueWei: "-1" },
-      { valueWei: (U128_MAX + 1n).toString() },
-      { valueWei: "10", extra: true },
+      { ...fixturePaymentRequest(), amount: "not-a-number" },
+      { ...fixturePaymentRequest(), amount: "01" },
+      { ...fixturePaymentRequest(), amount: "-1" },
+      { ...fixturePaymentRequest(), amount: (U128_MAX + 1n).toString() },
+      { ...fixturePaymentRequest(), amount: "10", extra: true },
     ]) {
       const response = await app.inject({
         method: "POST",
@@ -128,12 +132,12 @@ describe("policy API routes", () => {
       method: "POST",
       url,
       headers: { authorization: `Bearer zkp_${"a".repeat(43)}` },
-      payload: { valueWei: "10" },
+      payload: fixturePaymentRequest(),
     });
     expect(valid.statusCode).toBe(200);
     expect(createProof).toHaveBeenCalledWith({
       policyId: "00000000-0000-4000-8000-000000000001",
-      valueWei: "10",
+      intent: fixturePaymentIntent(),
       token: `zkp_${"a".repeat(43)}`,
     });
 
@@ -146,7 +150,7 @@ describe("policy API routes", () => {
       method: "POST",
       url,
       headers: { authorization: `Bearer zkp_${"a".repeat(43)}` },
-      payload: { valueWei: "10" },
+      payload: fixturePaymentRequest(),
     });
     expect(failed.statusCode).toBe(500);
     expect(failed.json()).toEqual({ error: "PROOF_GENERATION_FAILED" });
@@ -161,7 +165,8 @@ describe("policy API routes", () => {
     const service = new PolicyService(
       repository,
       {
-        getOwner: async () => account,
+        getPaymentState: async () => ({ dayId: 0n, spentBefore: 0n, blockNumber: 1n }),
+      getOwner: async () => account,
         getPolicyState: async () => ({ configured: true, commitment: toHex(1n, { size: 32 }) }),
         getTransaction: async () => {
           throw new Error("not found");
