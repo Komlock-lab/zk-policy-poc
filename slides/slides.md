@@ -124,9 +124,9 @@ class: flex flex-col justify-center
 
 # 秘密のルールを登録し、ZKで送金を検証する
 
-<div class="architecture-map" role="img" aria-label="事前にOwnerが秘密のルールをPolicy APIに保存し、そのcommitmentをSmart Accountに登録する。送金時は、1 AIが金額と宛先をMCPへ依頼、2 決済ClientがPolicy APIとProverに証明を依頼して受け取る、3 ClientがOwner署名と証明を付けBundlerへ送信、4 EntryPoint経由でSmart Accountが署名と証明を検証し、成功時だけ送金先に送金する。秘密のルールは証明基盤に留まり、AIへは決済結果が返る。">
+<div class="architecture-map" role="img" aria-label="事前にOwnerが秘密のルールをPolicy APIに保存し、そのcommitmentをSmart Accountに登録する。送金時は、1 AIが金額と宛先を送金処理サーバーへ依頼、2 送金処理サーバーがPolicy APIとProverに証明を依頼して受け取る、3 サーバーがOwner署名と証明を付けBundlerへ送信、4 EntryPoint経由でSmart Accountが署名と証明を検証し、成功時だけ送金先に送金する。秘密のルールは証明基盤に留まり、AIへは決済結果が返る。">
   <div class="architecture-zone architecture-ai-zone">利用者・AI</div>
-  <div class="architecture-zone architecture-local-zone">ローカル実行基盤 <span>オフチェーン</span></div>
+  <div class="architecture-zone architecture-local-zone">送金処理サーバー <span>オフチェーン</span></div>
   <div class="architecture-zone architecture-chain-zone accent-blue">ブロックチェーン</div>
   <div class="architecture-owner"><b>事前設定</b><span>Owner（管理者）</span></div>
   <div class="architecture-setup-arrow" aria-hidden="true">→</div>
@@ -140,8 +140,8 @@ class: flex flex-col justify-center
   </div>
   <div class="architecture-request" aria-hidden="true">→</div>
   <div class="architecture-client">
-    <div class="architecture-name">MCPサーバー / 決済Client</div>
-    <div class="architecture-detail">AIの依頼を受け、証明取得と送信を担当</div>
+    <div class="architecture-name">MCPサーバー</div>
+    <div class="architecture-detail">AIの依頼を受け、証明取得と送信を担当する送金処理サーバー</div>
     <div class="architecture-action accent-blue">③ Owner署名 + 証明を付けて送信</div>
   </div>
   <div class="architecture-transport">
@@ -171,10 +171,10 @@ class: flex flex-col justify-center
 目安：50秒。上段の事前設定を示してから、①→②→③→④を追う。Poseidon2の計算とcommitment取得はオフチェーンで行い、OwnerがAccountへの登録Txに署名する。図では署名操作を省略。図はnative送金の例。0.01 ETHの可否は設定したPolicy全体に依存する。
 事前設定：OwnerはPolicy CLIでEIP-712署名とnonceを使って秘密Policyを設定する。APIは暗号化して保存し、Ownerが別の登録Txに署名してcommitmentをAccountへ登録する。図の「ハッシュ」はsaltを含むPolicyから作るPoseidon2 commitmentの説明用表現。
 ① Claude Code / Codexが送金額と宛先をMCP Toolへ渡す。
-② 決済ClientはPolicy API / Proverへ証明を依頼する。APIはPolicyを復号し、Proverは今回の送金内容・現在のオンチェーン利用状態・秘密Policyから証明する。Proofと公開入力をClientが受け取り照合する。条件を満たさなければClientは送信しない。状態取得のRPC経路は省略。
-③ ClientがOwner署名付きUserOperationをBundler（Alto、オフチェーン）へ送る。送金内容とproofはcalldata、Owner署名はsignatureに入る。BundlerはEntryPoint v0.8へ中継する。
+② 送金処理サーバーはPolicy API / Proverへ証明を依頼する。APIはPolicyを復号し、Proverは今回の送金内容・現在のオンチェーン利用状態・秘密Policyから証明する。Proofと公開入力をサーバーが受け取り照合する。条件を満たさなければ送信しない。状態取得のRPC経路は省略。
+③ 送金処理サーバーがOwner署名付きUserOperationをBundler（Alto、オフチェーン）へ送る。送金内容とproofはcalldata、Owner署名はsignatureに入る。BundlerはEntryPoint v0.8へ中継する。
 ④ AccountはvalidationでOwner署名を確認し、executionで実行引数と実状態から公開入力を再構築してVerifierを呼ぶ。ClientのpublicInputs配列をそのまま使わない。検証成功後に累積支出を計上して送金する。ZKはOwner署名の代わりではない。
-ClientからAIへは公開receiptまたはサニタイズしたエラーを返す。秘密Policy・Owner Key・Proof Token・proofはモデルに渡さない。Owner KeyとProof Tokenはローカルの決済Clientが扱い、秘密Policyは証明バックエンドが扱う。
+送金処理サーバーからAIへは公開receiptまたはサニタイズしたエラーを返す。秘密Policy・Owner Key・Proof Token・proofはモデルに渡さない。Owner KeyとProof Tokenは送金処理サーバーが扱い、秘密Policyは証明バックエンドが扱う。
 対応決済はnative / ERC-20 / Contract。図では処理の役割を優先してVerifierをAccount内の説明に含めたが、実装では別コントラクト。
 根拠：docs/adr/adr-0009-owner-userop-and-zk-proof-separation.md、docs/adr/adr-0011-autonomous-policy-authorization-and-secret-boundary.md、docs/adr/adr-0012-composite-policy-schema.md。
 -->
