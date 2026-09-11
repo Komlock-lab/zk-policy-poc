@@ -25,7 +25,7 @@ async function main() {
   assert.equal(policyInput.assetRules.find((r) => r.asset === zeroAddress)?.maxAmount, parseEther("0.1"));
   assert.ok(policyInput.maxValiditySeconds >= 300n);
   phase = "Anvil startup";
-  const anvil = await startAnvil();
+  const anvil = await startAnvil(8545);
   let repository: PolicyRepository | undefined;
   let app: ReturnType<typeof buildPolicyApi> | undefined;
   let child: ChildProcess | undefined;

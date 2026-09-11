@@ -7,11 +7,11 @@ export interface AnvilInstance {
   stop: () => Promise<void>;
 }
 
-export async function availablePort(): Promise<number> {
+export async function availablePort(port = 0): Promise<number> {
   return await new Promise((resolve, reject) => {
     const server = createServer();
     server.once("error", reject);
-    server.listen(0, "127.0.0.1", () => {
+    server.listen(port, "127.0.0.1", () => {
       const address = server.address();
       if (address === null || typeof address === "string") {
         server.close();
@@ -49,8 +49,8 @@ async function waitForAnvil(rpcUrl: string, process: ChildProcess): Promise<void
   throw new Error("anvil did not become ready");
 }
 
-export async function startAnvil(): Promise<AnvilInstance> {
-  const port = await availablePort();
+export async function startAnvil(requestedPort = 0): Promise<AnvilInstance> {
+  const port = await availablePort(requestedPort);
   const rpcUrl = `http://127.0.0.1:${port}`;
   const process = spawn(
     "anvil",

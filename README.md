@@ -12,6 +12,8 @@
 pnpm demo:claude
 ```
 
+デモのAnvil RPCは`http://127.0.0.1:8545`固定です。正常系・異常系を実行した後、Claude Codeを終了する前に、別ターミナルから`cast receipt`で送金成功・失敗を確認できます。コマンドは[デモ手順書のRPC確認手順](demos/claude-payment/README.md#6-castでrpcから正常系異常系を確認)を参照してください。
+
 ## アーキテクチャ
 
 ```mermaid
