@@ -33,8 +33,6 @@ pnpm dev
 
 図はmermaidを使わず、gridとflexのHTMLで組んでいる。ノード数が増えると自動レイアウトの矢印が交差して読めなくなったため、配置を固定した。図を足すときも同じ方針で書く。4枚目の図は`style.css`の`.payment-map`と`map-`で始まる専用クラスで配置し、ラベルと矢印をHTMLのまま編集できる。
 
-2枚目（`.flow-diagram`）と3枚目（`.guardrail-compare`）はインラインSVGのシンプルなアイコン（人・AI・鍵）で状態を示す一目でわかる図にしている。色は`.accent-pink`（秘密・非公開）/`.accent-blue`（検証・公開）で統一し、ダークモードの色は`style.css`側で上書きする。
-
 見出し・表・コードの共通スタイルは`style.css`に置き、Slidevが自動で全スライドに読み込む。スライドごとの`<style>`ブロックはそのスライドにしかかからないので、共通スタイルをそこに書かない。
 
 | スライドの記述 | 正本 |
@@ -59,3 +57,7 @@ pnpm export  # PDFを出力（Playwrightが必要）
 `main`に`slides/`の変更がpushされると、`.github/workflows/deploy-slides.yml`がビルドしてGitHub Pagesに自動デプロイする（`https://komlock-lab.github.io/zk-policy-poc/`）。
 
 初回のみ、リポジトリのSettings → PagesでSourceを「GitHub Actions」に設定する必要がある。Pagesサイトの新規作成はリポジトリ管理者権限が要る操作で、ワークフローの標準`GITHUB_TOKEN`では`pages: write`を与えても実行できない（`configure-pages`に`enablement: true`を渡しても「Resource not accessible by integration」で失敗する）。一度Source設定さえ済ませれば、以降のデプロイ自体は標準`GITHUB_TOKEN`で問題なく動く。
+
+## 図の凡例（2・3枚目）
+
+2枚目（`.flow-diagram`）と3枚目（`.guardrail-compare`）はインラインSVGのシンプルなアイコン（人・AI・鍵）で状態を示す一目でわかる図にしている。色は`.accent-pink`（秘密・非公開）/`.accent-blue`（検証・公開）で統一し、ダークモードの色は`style.css`側で上書きする。
