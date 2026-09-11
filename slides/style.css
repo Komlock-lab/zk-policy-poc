@@ -49,3 +49,48 @@
 .slidev-layout code {
   font-size: 0.9em;
 }
+
+/* Architecture: the proof round trip stays inside the local execution boundary. */
+.architecture-map { display: grid; grid-template-columns: 166px 30px 290px 120px 1fr; grid-template-rows: 28px 68px 122px 48px 108px; margin-top: 14px; font-size: 13px; line-height: 1.5; }
+.architecture-zone { border-bottom: 1px solid rgb(127 127 127 / 35%); font-size: 14px; font-weight: 700; }
+.architecture-zone span { margin-left: 8px; font-size: 11px; font-weight: 400; }
+.architecture-ai-zone { grid-column: 1; }
+.architecture-local-zone { grid-column: 3 / 5; margin-right: 16px; }
+.architecture-chain-zone { grid-column: 5; }
+.architecture-agent { grid-area: 3 / 1; padding-top: 17px; }
+.architecture-name { font-size: 16px; font-weight: 700; }
+.architecture-detail { font-size: 12px; margin-top: 5px; line-height: 1.6; }
+.architecture-action { font-size: 13px; font-weight: 700; margin-bottom: 5px; }
+.architecture-request { grid-area: 3 / 2; align-self: center; font-size: 24px; color: #1288ab; }
+.architecture-client { grid-area: 3 / 3; padding: 14px 12px 8px; background: rgb(127 127 127 / 6%); border: 1px solid rgb(127 127 127 / 30%); border-radius: 6px; margin-top: 10px; }
+.architecture-client .architecture-action { margin: 9px 0 0; }
+.architecture-transport { grid-area: 3 / 4; align-self: center; text-align: center; font-size: 11px; }
+.architecture-transport span { display: block; }
+.architecture-transport-arrow { font-size: 27px; line-height: 1; color: #1288ab; }
+.architecture-account { grid-area: 3 / 5 / 5 / 6; padding: 10px 14px; margin-top: 10px; background: rgb(18 136 171 / 6%); border: 1px solid #1288ab; border-radius: 6px; }
+.architecture-entry { font-size: 12px; border-bottom: 1px solid rgb(18 136 171 / 25%); padding-bottom: 5px; margin-bottom: 7px; }
+.architecture-entry span { margin-left: 12px; }
+.architecture-account .architecture-detail { line-height: 1.4; }
+.architecture-result { grid-area: 4 / 1 / 6 / 2; align-self: start; padding-top: 13px; font-size: 12px; }
+.architecture-proof-link { grid-area: 4 / 3; display: flex; align-items: center; justify-content: space-around; color: #a8446b; }
+.architecture-prover { grid-area: 5 / 3; padding: 10px 12px; border: 1px solid #a8446b; border-radius: 6px; background: rgb(168 68 107 / 5%); }
+.architecture-secret { font-size: 12px; margin-top: 8px; }
+.architecture-secret span { display: block; font-size: 11px; margin-top: 2px; }
+.architecture-recipient { grid-area: 5 / 5; text-align: center; padding-top: 12px; }
+.architecture-recipient b { display: block; font-size: 18px; margin-top: 9px; }
+.architecture-recipient span { font-size: 12px; }
+.architecture-takeaway { margin-top: 17px; padding-top: 10px; border-top: 1px solid rgb(127 127 127 / 25%); font-size: 12px; }
+.dark .architecture-prover { border-color: #d98098; }
+.dark .architecture-proof-link { color: #d98098; }
+.dark .architecture-account { border-color: #65bdd7; }
+.dark .architecture-request, .dark .architecture-transport-arrow { color: #65bdd7; }
+
+.architecture-owner { grid-area: 2 / 1; align-self: center; font-size: 13px; }
+.architecture-owner span, .architecture-policy span, .architecture-hash span, .architecture-commitment span { display: block; font-size: 11px; margin-top: 3px; }
+.architecture-setup-arrow { grid-area: 2 / 2; align-self: center; font-size: 24px; color: #a8446b; }
+.architecture-policy { grid-area: 2 / 3; align-self: center; padding-left: 12px; border-left: 3px solid #a8446b; }
+.architecture-hash { grid-area: 2 / 4; align-self: center; text-align: center; font-size: 12px; }
+.architecture-commitment { grid-area: 2 / 5; align-self: center; padding-left: 14px; border-left: 3px solid #1288ab; }
+.dark .architecture-policy { border-color: #d98098; }
+.dark .architecture-setup-arrow { color: #d98098; }
+.dark .architecture-commitment { border-color: #65bdd7; }
