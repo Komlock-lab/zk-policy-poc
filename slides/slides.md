@@ -146,11 +146,12 @@ class: flex flex-col justify-center
 <!--
 この図は部品の配置・責務・保持データ・接続を示す構成図。実行順は次のZKシーケンスで説明する。実線は接続、破線はProverとVerifierの回路の対応関係であり、直接通信ではない。
 左は利用者、中央はオフチェーンの送金処理サーバーと証明サーバー、右はオンチェーンのコントラクト。
+事前に一度だけ、OwnerがPolicy CLIで秘密PolicyとsaltをPolicy APIに登録し、そのPoseidon2 commitmentを署名付きTxでSmart Accountに設定する。ここから先、送金のたびに毎回この図の接続を辿る。
 MCPサーバーはAIへの窓口であり、内部の決済処理が証明APIの呼び出し、Owner署名、BundlerへのUserOperation送信を担当する。Owner鍵とAPI Tokenはモデルに渡さない。BundlerはオフチェーンのERC-4337中継サービスで、EntryPointへ接続する。
-Policy APIは秘密PolicyとsaltをAES-256-GCMで保存し、証明生成時には復号して扱う。Noirはcommitmentの一致と支出条件を記述する言語。コンパイル済み回路の実行でwitnessを生成し、BarretenbergのUltraHonkBackendがEVM向けの証明を生成する。witnessは公開しない。
-UltraHonkは証明方式、Barretenbergは実装。オンチェーンのVerifierは同じNoir回路に対応する検証鍵を持つ。検証鍵とSolidity Verifierはscripts/generate-verifier.shで生成する。
+Policy APIは秘密PolicyとsaltをAES-256-GCMで保存し、証明生成時には復号して扱う。NoirはcommitmentとPolicy条件を記述し、UltraHonk（実装はBarretenberg）で証明する。回路のコンパイルから証明生成までの流れは次のZKシーケンスで説明する。
+オンチェーンのVerifierは同じNoir回路に対応する検証鍵を持つ、Accountとは別のコントラクト。
 Accountは資金・commitment・利用状態を保持する。Owner署名の確認、実際の送金引数と状態からの公開入力構成、独立したVerifierの呼び出し、条件を満たす送金の実行を担当する。Verifierは資金を持たず、証明検証を担当する。
-commitmentはsaltを含む秘密PolicyのPoseidon2ハッシュ。OwnerがPolicy CLIでPolicyを設定し、別の署名付きTxでAccountのcommitmentを管理する。図では管理API・管理Tx・状態取得RPC・送金先への接続を省略する。
+commitmentはsaltを含む秘密PolicyのPoseidon2ハッシュ。図では管理API・管理Tx・状態取得RPC・送金先への接続を省略する。
 実装根拠：packages/prover/src/spend-limit.ts、scripts/generate-verifier.sh、docs/adr/adr-0003-commitment-and-proving-system.md、docs/adr/adr-0009-owner-userop-and-zk-proof-separation.md、docs/adr/adr-0011-autonomous-policy-authorization-and-secret-boundary.md。
 -->
 
