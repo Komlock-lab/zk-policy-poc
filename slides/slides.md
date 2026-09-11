@@ -122,54 +122,61 @@ class: flex flex-col justify-center
 
 <div class="text-xs tracking-widest uppercase opacity-50 font-mono">サービス — アーキテクチャ</div>
 
-# 秘密のルールで証明し、ウォレットが送金を許可する
+# 秘密のルールを登録し、ZKで送金を検証する
 
-「0.01 ETHを送って」という依頼が、実行されるまで。
-
-<div class="flow-diagram" role="img" aria-label="AIエージェントが実行Clientに送金を依頼し、実行Clientが秘密Policyから証明を取得し、Smart Accountが証明を検証できたときだけ送金先へ送金する">
-  <div class="flow-step">
-    <div class="flow-icon opacity-70"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="8" width="14" height="11" rx="3"/><circle cx="9.5" cy="13.5" r="1.2" fill="currentColor" stroke="none"/><circle cx="14.5" cy="13.5" r="1.2" fill="currentColor" stroke="none"/><path d="M12 8V4"/><circle cx="12" cy="3" r="1.2" fill="currentColor" stroke="none"/></svg></div>
-    <div class="flow-title">AIエージェント</div>
-    <div class="flow-desc">「0.01 ETHを送って」</div>
+<div class="architecture-map" role="img" aria-label="事前にOwnerが秘密のルールをPolicy APIに保存し、そのcommitmentをSmart Accountに登録する。送金時は、1 AIが金額と宛先をMCPへ依頼、2 決済ClientがPolicy APIとProverに証明を依頼して受け取る、3 ClientがOwner署名と証明を付けBundlerへ送信、4 EntryPoint経由でSmart Accountが署名と証明を検証し、成功時だけ送金先に送金する。秘密のルールは証明基盤に留まり、AIへは決済結果が返る。">
+  <div class="architecture-zone architecture-ai-zone">利用者・AI</div>
+  <div class="architecture-zone architecture-local-zone">ローカル実行基盤 <span>オフチェーン</span></div>
+  <div class="architecture-zone architecture-chain-zone accent-blue">ブロックチェーン</div>
+  <div class="architecture-owner"><b>事前設定</b><span>Owner（管理者）</span></div>
+  <div class="architecture-setup-arrow" aria-hidden="true">→</div>
+  <div class="architecture-policy"><b class="accent-pink">秘密のPolicy + salt</b><span>ルールと秘密の乱数をAPIに保存</span></div>
+  <div class="architecture-hash"><b>Poseidon2</b><span>ハッシュ化 →</span></div>
+  <div class="architecture-commitment"><b>commitmentを登録</b><span>ルールを固定するハッシュを保存 ↓</span></div>
+  <div class="architecture-agent">
+    <div class="architecture-action">① 送金を依頼</div>
+    <div class="architecture-name">Claude Code / Codex</div>
+    <div class="architecture-detail">「0.01 ETHを送って」</div>
   </div>
-  <div class="flow-arrow">→</div>
-  <div class="flow-step">
-    <div class="flow-icon opacity-70"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 11l18-8-8 18-2-8-8-2z"/></svg></div>
-    <div class="flow-title">実行Client</div>
-    <div class="flow-desc">Proofを取得して送信</div>
+  <div class="architecture-request" aria-hidden="true">→</div>
+  <div class="architecture-client">
+    <div class="architecture-name">MCPサーバー / 決済Client</div>
+    <div class="architecture-detail">AIの依頼を受け、証明取得と送信を担当</div>
+    <div class="architecture-action accent-blue">③ Owner署名 + 証明を付けて送信</div>
   </div>
-  <div class="flow-arrow">→</div>
-  <div class="flow-step">
-    <div class="flow-icon accent-pink"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></div>
-    <div class="flow-title">秘密Policy</div>
-    <div class="flow-desc">条件を満たす証明を生成</div>
+  <div class="architecture-transport">
+    <div>送金内容 + 証明</div>
+    <div class="architecture-transport-arrow" aria-hidden="true">→</div>
+    <b>Bundler</b><span>送信を中継</span>
   </div>
-  <div class="flow-arrow">→</div>
-  <div class="flow-step highlight">
-    <div class="flow-icon accent-blue"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l7 3v5c0 5-3.2 8.5-7 10-3.8-1.5-7-5-7-10V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg></div>
-    <div class="flow-title">Smart Account</div>
-    <div class="flow-desc">Proofを検証</div>
+  <div class="architecture-account">
+    <div class="architecture-entry">EntryPoint <span>↓ 呼び出し</span></div>
+    <div class="architecture-action accent-blue">④ 検証して実行</div>
+    <div class="architecture-name">Smart Account</div>
+    <div class="architecture-detail">資金を保管 / Owner署名を確認<br><b>登録済みcommitment + 送金内容</b><br>を使い、Verifierで証明を検証</div>
   </div>
-  <div class="flow-arrow">→</div>
-  <div class="flow-step">
-    <div class="flow-icon accent-green"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg></div>
-    <div class="flow-title">送金先</div>
-    <div class="flow-desc">検証成功のときだけ着金</div>
+  <div class="architecture-result"><span aria-hidden="true">←</span> 決済結果がAIへ戻る</div>
+  <div class="architecture-proof-link"><span>↓ ② 証明を依頼</span><span>↑ 証明を返す</span></div>
+  <div class="architecture-prover">
+    <div class="architecture-name">Policy API / Prover</div>
+    <div class="architecture-detail">登録内容との一致 + 送金条件への適合を証明</div>
+    <div class="architecture-secret accent-pink"><b>登録時と同じPolicy + saltを使用</b><span>Noir回路で条件を定義 / Barretenbergで証明</span></div>
   </div>
+  <div class="architecture-recipient"><div class="accent-green">↓ 検証成功時だけ送金</div><b>送金先</b><span>人・店舗・コントラクト</span></div>
 </div>
 
-<div class="text-sm opacity-60 mt-3">秘密のルールはProver側に留まり、AIには決済結果だけが返る。</div>
+<div class="architecture-takeaway"><b>ZKで示すこと：</b>「登録したルールを、この送金が満たす」。<span class="accent-pink">ルールとsaltは非公開</span>、送金内容・commitment・証明は公開。</div>
 
 <!--
-サービス全体で2分20秒。左から右へ、AIエージェント→実行Client→秘密Policy→Smart Account→送金先の順に追う。
-① AIが送金内容をMCPへ渡す。例の0.01 ETHは説明用の金額であり、送金可否は設定したPolicy全体に依存する。
-② ClientがPolicy API / Proverへ証明を依頼する。Ownerが設定した秘密Policyを使い、全条件の充足を証明する。満たさなければ正常な証明を作れず、Clientは送信しない。
-③ ClientがOwner署名付きUserOperationをBundler（Alto）とEntryPoint v0.8経由でAccountへ送信する。Accountは実行引数と実状態から15個の公開入力を再構築し、Verifierを呼び出す。ClientのpublicInputs配列をそのまま検証に使わない。
-④ 検証成功後、Accountが累積支出を計上して送金する。検証に失敗した送金は実行しない。成功時は公開receiptをモデルへ返す。結果の戻り経路は図から省略。
-実行ClientはProofと公開入力を取得・照合するが、モデルには秘密・Owner Key・Proof Token・proofを渡さない（ADR-0011）。
-OwnerはPolicy CLIからEIP-712署名とnonceでPolicyを設定し、CommitmentをAccountへ登録する。設定経路は図から省略。
-Policy APIはAES-256-GCMで保存したPolicyを復号してProverへ渡す。秘密Policyには有効期間・asset別上限・allowlist・dailyLimit・salt等を含む。
-対応決済はnative / ERC-20 / Contract。図はnative送金を例にする。Noir + Barretenbergで生成したProofを検証する。
+目安：50秒。上段の事前設定を示してから、①→②→③→④を追う。Poseidon2の計算とcommitment取得はオフチェーンで行い、OwnerがAccountへの登録Txに署名する。図では署名操作を省略。図はnative送金の例。0.01 ETHの可否は設定したPolicy全体に依存する。
+事前設定：OwnerはPolicy CLIでEIP-712署名とnonceを使って秘密Policyを設定する。APIは暗号化して保存し、Ownerが別の登録Txに署名してcommitmentをAccountへ登録する。図の「ハッシュ」はsaltを含むPolicyから作るPoseidon2 commitmentの説明用表現。
+① Claude Code / Codexが送金額と宛先をMCP Toolへ渡す。
+② 決済ClientはPolicy API / Proverへ証明を依頼する。APIはPolicyを復号し、Proverは今回の送金内容・現在のオンチェーン利用状態・秘密Policyから証明する。Proofと公開入力をClientが受け取り照合する。条件を満たさなければClientは送信しない。状態取得のRPC経路は省略。
+③ ClientがOwner署名付きUserOperationをBundler（Alto、オフチェーン）へ送る。送金内容とproofはcalldata、Owner署名はsignatureに入る。BundlerはEntryPoint v0.8へ中継する。
+④ AccountはvalidationでOwner署名を確認し、executionで実行引数と実状態から公開入力を再構築してVerifierを呼ぶ。ClientのpublicInputs配列をそのまま使わない。検証成功後に累積支出を計上して送金する。ZKはOwner署名の代わりではない。
+ClientからAIへは公開receiptまたはサニタイズしたエラーを返す。秘密Policy・Owner Key・Proof Token・proofはモデルに渡さない。Owner KeyとProof Tokenはローカルの決済Clientが扱い、秘密Policyは証明バックエンドが扱う。
+対応決済はnative / ERC-20 / Contract。図では処理の役割を優先してVerifierをAccount内の説明に含めたが、実装では別コントラクト。
+根拠：docs/adr/adr-0009-owner-userop-and-zk-proof-separation.md、docs/adr/adr-0011-autonomous-policy-authorization-and-secret-boundary.md、docs/adr/adr-0012-composite-policy-schema.md。
 -->
 
 ---
