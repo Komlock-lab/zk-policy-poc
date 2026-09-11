@@ -145,7 +145,6 @@ class: flex flex-col justify-center
 
 <!--
 この図は部品の配置・責務・保持データ・接続を示す構成図。実行順は次のZKシーケンスで説明する。実線は接続、破線はProverとVerifierの回路の対応関係であり、直接通信ではない。
-目安：50秒。
 左は利用者、中央はオフチェーンの送金処理サーバーと証明サーバー、右はオンチェーンのコントラクト。
 事前に一度だけ、OwnerがPolicy CLIで秘密PolicyとsaltをPolicy APIに登録し、そのPoseidon2 commitmentを署名付きTxでSmart Accountに設定する。ここから先、送金のたびに毎回この図の接続を辿る。
 MCPサーバーはAIへの窓口であり、内部の決済処理が証明APIの呼び出し、Owner署名、BundlerへのUserOperation送信を担当する。Owner鍵とAPI Tokenはモデルに渡さない。BundlerはオフチェーンのERC-4337中継サービスで、EntryPointへ接続する。
