@@ -70,13 +70,12 @@
 .system-held { font-size: 11px; margin-top: 10px; }
 .system-owner { grid-area: 4 / 1; align-self: center; padding: 12px; border-color: #a8446b; background: rgb(168 68 107 / 4%); }
 .system-owner > b { font-size: 13px; }
-.system-owner-link { grid-area: 4 / 2; }
+.system-owner-link { grid-area: 4 / 2; display: grid; place-items: center; font-size: 25px; color: #a8446b; }
 .system-api-link { grid-area: 3 / 3; }
 .system-verifier-link { grid-area: 3 / 5; }
 .system-vertical { align-self: center; text-align: center; font-size: 11px; }
 .system-proof { grid-area: 4 / 3; padding: 10px 12px; border-color: #a8446b; background: rgb(168 68 107 / 4%); }
 .system-proof .system-held { margin-top: 5px; }
-.system-policy-examples { margin-top: 2px; font-size: 10px; color: rgb(127 127 127); }
 .system-tech { margin-top: 4px; }
 .system-tech b { display: block; font-size: 14px; }
 .system-tech span { display: block; font-size: 11px; }
