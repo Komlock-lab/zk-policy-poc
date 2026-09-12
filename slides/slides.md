@@ -124,7 +124,7 @@ class: flex flex-col justify-center
 
 # ZK Policyのシステム構成
 
-<div class="system-map" role="img" aria-label="AIとローカルMCPサーバーはMCPで接続。オフチェーンのローカルMCPサーバーはOwner鍵とAPI Tokenを保持し、Policy APIの証明APIとBundlerを利用する。Policy APIは秘密Policyとsaltを保持し、ProverはNoir回路とBarretenbergのUltraHonkを使用する。オンチェーンのEntryPointはSmart Accountを呼び出す。Accountは資金、commitment、利用状態を保持し、独立したUltraHonk Verifierを呼び出す。ProverとVerifierは同じNoir回路に対応する。commitmentは秘密PolicyとsaltのPoseidon2ハッシュ。">
+<div class="system-map" role="img" aria-label="Ownerは秘密PolicyをPolicy APIに設定し、commitmentをSmart Accountに登録する。AIとローカルMCPサーバーはMCPで接続。オフチェーンのローカルMCPサーバーはOwner鍵とAPI Tokenを保持し、Policy APIの証明APIとBundlerを利用する。Policy APIは秘密Policyとsaltを保持し、ProverはNoir回路とBarretenbergのUltraHonkを使用する。オンチェーンのEntryPointはSmart Accountを呼び出す。Accountは資金、commitment、利用状態を保持し、独立したUltraHonk Verifierを呼び出す。ProverとVerifierは同じNoir回路に対応する。commitmentは秘密PolicyとsaltのPoseidon2ハッシュ。">
   <div class="system-zone system-users">利用者・AI</div>
   <div class="system-zone system-local">オフチェーン <span>ローカルMCP・証明サーバー</span></div>
   <div class="system-zone system-chain">オンチェーン <span>コントラクト</span></div>
@@ -132,11 +132,12 @@ class: flex flex-col justify-center
   <div class="system-mcp-link system-link"><span>MCP</span><i></i><small>ツール</small></div>
   <div class="system-server system-box"><b>送金処理MCPサーバー（ローカル）</b><p>AIの窓口・決済処理</p><p>証明APIの利用・署名・送信</p><div class="system-held accent-pink">秘密：Owner鍵・API Token</div></div>
   <div class="system-bundler system-link"><small>UserOperation</small><i></i><b>Bundler</b><small>ERC-4337中継</small></div>
-  <div class="system-account system-box"><div class="system-entry">EntryPoint v0.8 <span>— Account呼び出し</span></div><b>Smart Account</b><p>Owner認証・公開入力の構成・送金</p><div class="system-held accent-blue">保持：資金・commitment・利用状態</div></div>
-  <div class="system-owner"><b>Owner（管理者）</b><p>Policyとcommitmentの<br>設定権限を持つ</p></div>
+  <div class="system-account system-box"><div class="system-entry">EntryPoint v0.8 <span>— Account呼び出し</span></div><b>Smart Account</b><p>Owner認証・公開入力の構成・送金</p><div class="system-held accent-blue">保持：資金・commitment・利用状態</div><div class="system-setting">Ownerがcommitmentを登録</div></div>
+  <div class="system-owner system-box"><b>Owner（管理者）</b><p>秘密Policyの設定<br>commitmentの登録</p></div>
+  <div class="system-owner-link system-link"><span>Policyを設定</span><i></i><small>管理経路</small></div>
   <div class="system-api-link system-vertical">│ 証明API</div>
   <div class="system-verifier-link system-vertical">│ 検証呼び出し：証明 + 公開入力</div>
-  <div class="system-proof system-box"><b>Policy API / Prover</b><div class="system-held accent-pink">保持：秘密Policy + salt（暗号化保存）</div><div class="system-tech"><b>Noir回路</b><span>commitmentの一致・送金条件を定義</span></div><div class="system-tech"><b>UltraHonk / Barretenberg</b><span>証明方式 / 証明生成の実装</span></div></div>
+  <div class="system-proof system-box"><b>Policy API / Prover</b><div class="system-held accent-pink">保持：秘密Policy + salt（暗号化保存）</div><div class="system-policy-examples">例：上限額・有効期限・送金先</div><div class="system-tech"><b>Noir回路</b><span>commitmentの一致・送金条件を定義</span></div><div class="system-tech"><b>UltraHonk / Barretenberg</b><span>証明方式 / 証明生成の実装</span></div></div>
   <div class="system-circuit-link system-link"><span>同じNoir回路</span><i></i><small>に対応</small></div>
   <div class="system-verifier system-box"><b>UltraHonk Verifier</b><p>証明検証専用のSolidityコントラクト</p><div class="system-held accent-blue">保持：回路に対応する検証鍵</div><p>Accountとは別のコントラクト<br>資金の保管・送金はAccountの責務</p></div>
 </div>
