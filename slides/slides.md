@@ -134,7 +134,7 @@ class: flex flex-col justify-center
   <div class="system-bundler system-link"><small>UserOperation</small><i></i><b>Bundler</b><small>ERC-4337中継</small></div>
   <div class="system-account system-box"><div class="system-entry">EntryPoint v0.8 <span>— Account呼び出し</span></div><b>Smart Account</b><p>Owner認証・公開入力の構成・送金</p><div class="system-held accent-blue">保持：資金・commitment・利用状態</div><div class="system-setting">Ownerがcommitmentを登録</div></div>
   <div class="system-owner system-box"><b>Owner（管理者）</b><p>秘密Policyの設定<br>commitmentの登録</p></div>
-  <div class="system-owner-link system-link"><span>Policyを設定</span><i></i><small>管理経路</small></div>
+  <div class="system-owner-link system-link"><span>設定</span><i></i><small>管理</small></div>
   <div class="system-api-link system-vertical">│ 証明API</div>
   <div class="system-verifier-link system-vertical">│ 検証呼び出し：証明 + 公開入力</div>
   <div class="system-proof system-box"><b>Policy API / Prover</b><div class="system-held accent-pink">保持：秘密Policy + salt（暗号化保存）</div><div class="system-policy-examples">例：上限額・有効期限・送金先</div><div class="system-tech"><b>Noir回路</b><span>commitmentの一致・送金条件を定義</span></div><div class="system-tech"><b>UltraHonk / Barretenberg</b><span>証明方式 / 証明生成の実装</span></div></div>
