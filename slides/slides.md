@@ -124,13 +124,13 @@ class: flex flex-col justify-center
 
 # ZK Policyのシステム構成
 
-<div class="system-map" role="img" aria-label="AIとMCPサーバーはMCPで接続。オフチェーンのMCPサーバーはOwner鍵とAPI Tokenを保持し、Policy APIの証明APIとBundlerを利用する。Policy APIは秘密Policyとsaltを保持し、ProverはNoir回路とBarretenbergのUltraHonkを使用する。オンチェーンのEntryPointはSmart Accountを呼び出す。Accountは資金、commitment、利用状態を保持し、独立したUltraHonk Verifierを呼び出す。ProverとVerifierは同じNoir回路に対応する。commitmentは秘密PolicyとsaltのPoseidon2ハッシュ。">
+<div class="system-map" role="img" aria-label="AIとローカルMCPサーバーはMCPで接続。オフチェーンのローカルMCPサーバーはOwner鍵とAPI Tokenを保持し、Policy APIの証明APIとBundlerを利用する。Policy APIは秘密Policyとsaltを保持し、ProverはNoir回路とBarretenbergのUltraHonkを使用する。オンチェーンのEntryPointはSmart Accountを呼び出す。Accountは資金、commitment、利用状態を保持し、独立したUltraHonk Verifierを呼び出す。ProverとVerifierは同じNoir回路に対応する。commitmentは秘密PolicyとsaltのPoseidon2ハッシュ。">
   <div class="system-zone system-users">利用者・AI</div>
-  <div class="system-zone system-local">オフチェーン <span>送金処理・証明サーバー</span></div>
+  <div class="system-zone system-local">オフチェーン <span>ローカルMCP・証明サーバー</span></div>
   <div class="system-zone system-chain">オンチェーン <span>コントラクト</span></div>
   <div class="system-agent"><b>AIエージェント</b><p>Claude Code / Codex</p><p>送金内容を指定<br>決済結果を参照</p></div>
   <div class="system-mcp-link system-link"><span>MCP</span><i></i><small>ツール</small></div>
-  <div class="system-server system-box"><b>送金処理サーバー</b><p>MCPサーバー / 決済処理</p><p>証明APIの利用・署名・送信</p><div class="system-held accent-pink">秘密：Owner鍵・API Token</div></div>
+  <div class="system-server system-box"><b>送金処理MCPサーバー（ローカル）</b><p>AIの窓口・決済処理</p><p>証明APIの利用・署名・送信</p><div class="system-held accent-pink">秘密：Owner鍵・API Token</div></div>
   <div class="system-bundler system-link"><small>UserOperation</small><i></i><b>Bundler</b><small>ERC-4337中継</small></div>
   <div class="system-account system-box"><div class="system-entry">EntryPoint v0.8 <span>— Account呼び出し</span></div><b>Smart Account</b><p>Owner認証・公開入力の構成・送金</p><div class="system-held accent-blue">保持：資金・commitment・利用状態</div></div>
   <div class="system-owner"><b>Owner（管理者）</b><p>Policyとcommitmentの<br>設定権限を持つ</p></div>
@@ -145,10 +145,10 @@ class: flex flex-col justify-center
 
 <!--
 この図は部品の配置・責務・保持データ・接続を示す構成図。実行順は次のZKシーケンスで説明する。実線は接続、破線はProverとVerifierの回路の対応関係であり、直接通信ではない。
-左は利用者、中央はオフチェーンの送金処理サーバーと証明サーバー、右はオンチェーンのコントラクト。
+左は利用者、中央はオフチェーンのローカルMCPサーバーと証明サーバー、右はオンチェーンのコントラクト。
 事前に一度だけ、OwnerがPolicy CLIで秘密PolicyとsaltをPolicy APIに登録し、そのPoseidon2 commitmentを署名付きTxでSmart Accountに設定する。ここから先、送金のたびに毎回この図の接続を辿る。
-MCPサーバーはAIへの窓口であり、内部の決済処理が証明APIの呼び出し、Owner署名、BundlerへのUserOperation送信を担当する。Owner鍵とAPI Tokenはモデルに渡さない。BundlerはオフチェーンのERC-4337中継サービスで、EntryPointへ接続する。
 Policy APIは秘密PolicyとsaltをAES-256-GCMで保存し、証明生成時には復号して扱う。NoirはcommitmentとPolicy条件を記述し、UltraHonk（実装はBarretenberg）で証明する。回路のコンパイルから証明生成までの流れは次のZKシーケンスで説明する。
+このPolicy APIにAIエージェントからの依頼を仲介するのが送金処理MCPサーバー（ローカル）である。AIへの窓口であり、内部の決済処理が証明APIの呼び出し、Owner署名、BundlerへのUserOperation送信を担当する。Owner鍵とAPI Tokenはここに閉じ、モデルには渡さない。将来的にAIエージェント自身がsession keyや署名用の限定クレデンシャルを持つ設計も考えられるが、今回のPoCではローカルMCPサーバーに鍵を集約している。BundlerはオフチェーンのERC-4337中継サービスで、EntryPointへ接続する。
 オンチェーンのVerifierは同じNoir回路に対応する検証鍵を持つ、Accountとは別のコントラクト。
 Accountは資金・commitment・利用状態を保持する。Owner署名の確認、実際の送金引数と状態からの公開入力構成、独立したVerifierの呼び出し、条件を満たす送金の実行を担当する。Verifierは資金を持たず、証明検証を担当する。
 commitmentはsaltを含む秘密PolicyのPoseidon2ハッシュ。図では管理API・管理Tx・状態取得RPC・送金先への接続を省略する。
