@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ZK Policy — Owner Console</title><link rel="stylesheet" href="/owner/style.css"><script src="/owner/app.js" defer></script></head>
+<body>
+<aside class="sidebar">
+  <a class="brand" href="/owner"><span class="brand-mark">Z</span>ZK POLICY<span class="brand-sub">OWNER CONSOLE</span></a>
+  <div class="workspace"><span class="small">WORKSPACE</span><strong>Payment demo</strong><span class="network"><i></i>Local Anvil · 31337</span></div>
+  <nav aria-label="設定の進行状況"><ol class="steps"><li data-step="login" aria-current="step"><span>01</span><div>オーナーログイン<small>ウォレットを接続</small></div></li><li data-step="policy"><span>02</span><div>ポリシー設定<small>送金のルールを設定</small></div></li><li data-step="confirm"><span>03</span><div>コミットメント登録<small>内容を確認して送信</small></div></li></ol></nav>
+  <div class="side-bottom"><span class="small">PRIVATE BY DESIGN</span><p>ルールは非公開のまま。<br>証明だけを、オンチェーンへ。</p><span class="version">LOCAL DEMO / v0.1</span></div>
+</aside>
+<div class="shell">
+<header><span>設定 / オーナーコンソール</span><div class="header-right"><span class="local-pill">LOCAL NETWORK</span><button id="logout" class="text-button" hidden>ログアウト</button></div></header>
+<main>
+<div id="error" class="error" role="alert" hidden></div>
+<section id="login" class="screen">
+  <div class="eyebrow">01 / AUTHENTICATION</div><h1>あなたのルールで、<br>送金を管理する。</h1>
+  <form id="login-form" class="card login-card"><div class="card-heading"><span class="icon">⌘</span><div><h2>オーナーログイン</h2></div></div>
+  <button class="primary" type="submit">ウォレットを接続 <span>→</span></button>
+  </form>
+  <p class="below-card">認証 → ルールの設定 → 登録内容の確認</p>
+</section>
+<section id="policy" class="screen" hidden>
+  <div class="eyebrow">02 / POLICY SETTINGS</div><h1>送金のルールを設定。</h1><p class="intro">1回あたりの送金上限を決めて、コミットメントを作成します。</p>
+  <div class="account-strip"><span>SMART ACCOUNT</span><code class="account-address"></code><span class="connected">接続済み</span></div>
+  <form id="policy-form">
+    <div class="card amount-card"><div class="section-title"><div><span class="tag">このデモで設定</span><h2>1回あたりの送金上限</h2><p>1回のトランザクションで送金できる最大金額です。</p></div><span class="number">01</span></div>
+      <label for="max-amount">上限金額</label><div class="amount-input"><input id="max-amount" name="maxAmountEth" value="0.1" inputmode="decimal" autocomplete="off" required aria-describedby="amount-help"><span>ETH</span></div><p id="amount-help" class="help">デモでは0.1 ETHを送金します。0.1 ETH以上を設定してください。</p>
+    </div>
+    <div class="advanced-heading"><h2>その他のポリシー</h2><span>表示のみ · 今回のデモでは変更しません</span></div>
+    <div class="policy-grid">
+      <fieldset disabled class="card secondary-card"><legend>有効期限</legend><p>証明を使って送金できる期間</p><label for="validity">有効期間（秒）</label><input id="validity" type="number" placeholder="既定のポリシーを使用"></fieldset>
+      <fieldset disabled class="card secondary-card"><legend>送金先の制限</legend><p>送金を許可するアドレス</p><label for="recipients">許可リスト</label><textarea id="recipients" placeholder="0x…"></textarea></fieldset>
+      <fieldset disabled class="card secondary-card"><legend>トークン・資産の制限</legend><p>資産ごとの送金上限</p><label for="asset">トークンアドレス</label><input id="asset" placeholder="Native ETH / 0x…"><label for="asset-limit">資産ごとの上限</label><input id="asset-limit" placeholder="上限金額"></fieldset>
+      <fieldset disabled class="card secondary-card"><legend>累積送金上限</legend><p>資産ごとの1日あたりの利用額</p><label for="daily-enabled"><input id="daily-enabled" type="checkbox"> 日次制限を有効にする</label><label for="daily-limit">1日あたりの上限</label><input id="daily-limit" placeholder="資産ごとの上限金額"></fieldset>
+      <fieldset disabled class="card secondary-card wide"><legend>コントラクトの制限</legend><p>呼び出しを許可するコントラクト</p><label for="contracts">許可リスト</label><textarea id="contracts" placeholder="0x…"></textarea></fieldset>
+    </div>
+    <div class="action-row"><p>次の画面で内容を確認してから登録します。</p><button class="primary" type="submit">コミットメントを作成 <span>→</span></button></div>
+  </form>
+</section>
+<section id="confirm" class="screen" hidden>
+  <div class="eyebrow">03 / COMMITMENT</div><h1 id="confirm-title">このコミットメントを<br>登録しますか？</h1><p class="intro" id="confirm-intro">作成したコミットメントをSmart Accountに登録します。</p>
+  <div class="card commitment-card"><div class="section-title"><h2>登録内容</h2><span class="tag" id="commit-status">未登録</span></div>
+    <dl class="summary"><div><dt>1回あたりの上限</dt><dd id="summary-amount"></dd></div><div><dt>ネットワーク</dt><dd>Local Anvil <span class="muted">/ Chain ID 31337</span></dd></div><div><dt>登録先</dt><dd><code class="account-address"></code></dd></div></dl>
+    <div class="hash-box"><span class="small">POLICY COMMITMENT</span><code id="commitment"></code><p>ポリシーを表すハッシュ値です。この値がそのまま登録されます。</p></div>
+    <div id="result" hidden><h2>登録結果</h2><dl id="result-fields" class="summary"></dl><div class="next-command">送金デモへ進む<code>pnpm demo:claude</code></div></div>
+    <div class="confirm-actions" id="confirm-actions"><button id="back" class="secondary">設定に戻る</button><button id="confirm-button" class="primary">このコミットメントを登録する <span>→</span></button></div>
+    <p id="progress" class="help" role="status" aria-live="polite">「登録する」を押すと、オンチェーンのトランザクションが送信されます。</p>
+  </div>
+</section>
+</main><footer><span>ZK POLICY ENFORCEMENT</span><span>Owner-controlled. Proof-enforced.</span></footer>
+</div>
+</body></html>

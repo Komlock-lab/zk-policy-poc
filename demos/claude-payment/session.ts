@@ -9,7 +9,8 @@ import type { DemoConfig } from "./state.ts";
 
 export async function runPaymentSession(config: DemoConfig, selfTest = false) {
   const { accountAddress, recipient } = config;
-  const demoConfig = JSON.stringify(config);
+  const { maxAmountWei, ...paymentConfig } = config;
+  const demoConfig = JSON.stringify(paymentConfig);
   let child: ChildProcess | undefined;
   const stopChild = () => child?.kill("SIGTERM");
   process.once("SIGINT", stopChild);
@@ -38,7 +39,7 @@ export async function runPaymentSession(config: DemoConfig, selfTest = false) {
     } else {
       await writeFile("demo-mcp.json", JSON.stringify({ mcpServers: { "zk-policy-demo": { command: process.execPath, args } } }, null, 2));
       console.log(formatDemoGuide({
-        rpcUrl: config.rpcUrl, accountAddress, recipient,
+        rpcUrl: config.rpcUrl, accountAddress, recipient, maxAmountWei: BigInt(maxAmountWei),
         resultsPath: process.cwd() + "/demo-results.jsonl",
         normalPrompt: (await readFile("demos/claude-payment/prompts/normal.txt", "utf8")).replaceAll("{{recipient}}", recipient),
         abnormalPrompt: (await readFile("demos/claude-payment/prompts/abnormal.txt", "utf8")).replaceAll("{{recipient}}", recipient),

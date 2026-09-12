@@ -39,6 +39,7 @@ cp "$DEMO_ROOT/scripts/lib/anvil.ts" "$DEMO_RUN/scripts/lib/anvil.ts"
 cp "$DEMO_ROOT/apps/policy-cli/src/create-policy.ts" "$DEMO_ROOT/apps/policy-cli/src/policy-input.ts" "$DEMO_RUN/apps/policy-cli/src/"
 mkdir -p "$DEMO_RUN/demos/claude-payment"
 cp "$DEMO_SOURCE/"*.ts "$DEMO_SOURCE/tsconfig.json" "$DEMO_SOURCE/policy.json" "$DEMO_RUN/demos/claude-payment/"
+cp -R "$DEMO_SOURCE/ui" "$DEMO_RUN/demos/claude-payment/"
 cp -R "$DEMO_SOURCE/prompts" "$DEMO_RUN/demos/claude-payment/"
 ln -s "$DEMO_ROOT/node_modules" "$DEMO_RUN/node_modules"
 cd "$DEMO_RUN"
@@ -52,6 +53,6 @@ if [[ "$DEMO_MODE" == "prepare" ]]; then
 else
   node --experimental-sqlite --import tsx demos/claude-payment/steps.ts prepare
   trap 'if [[ -f demo-connection.json ]]; then node --experimental-sqlite --import tsx demos/claude-payment/steps.ts stop; fi' EXIT
-  printf '0.1\n' | node --experimental-sqlite --import tsx demos/claude-payment/steps.ts policy
+  printf '0.1\n' | node --experimental-sqlite --import tsx demos/claude-payment/steps.ts policy --cli
   node --experimental-sqlite --import tsx demos/claude-payment/steps.ts claude --self-test
 fi

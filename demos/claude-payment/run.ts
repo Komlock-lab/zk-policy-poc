@@ -1,3 +1,4 @@
+import { registerOwnerUi } from "./owner-ui.ts";
 import { pathToFileURL } from "node:url";
 import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
@@ -12,7 +13,7 @@ import { PolicyRepository } from "../../apps/policy-api/src/repository.ts";
 import { PolicyService } from "../../apps/policy-api/src/service.ts";
 import { buildPolicyApi } from "../../apps/policy-api/src/server.ts";
 import { createPolicyChainGateway } from "../../apps/policy-api/src/chain.ts";
-import { createAndActivatePolicy } from "../../apps/policy-cli/src/create-policy.ts";
+import { createAndActivatePolicy, preparePolicyRegistration } from "../../apps/policy-cli/src/create-policy.ts";
 import { configureDemoPolicy, demoPolicyRequest, type DemoConfig } from "./state.ts";
 
 export async function prepareDemo(onReady: () => void) {
@@ -66,9 +67,26 @@ export async function prepareDemo(onReady: () => void) {
       }
       try {
         const result = await createAndActivatePolicy({ apiUrl, rpcUrl: anvil.rpcUrl, accountAddress, ownerPrivateKey: LOCAL_OWNER_KEY, policy, deadline: Math.floor(Date.now() / 1000) + 600 });
-        config = { apiUrl, rpcUrl: anvil.rpcUrl, accountAddress, ownerPrivateKey: LOCAL_OWNER_KEY, policyId: result.policyId, token: result.token, recipient };
+        config = { apiUrl, rpcUrl: anvil.rpcUrl, accountAddress, ownerPrivateKey: LOCAL_OWNER_KEY, policyId: result.policyId, token: result.token, recipient, maxAmountWei: policy.assetRules.find((rule) => rule.asset === zeroAddress)!.maxAmount.toString() };
         return { policyId: result.policyId, policyVersion: result.policyVersion, commitment: result.commitment, txHash: result.txHash };
       } catch { return reply.code(500).send({ error: "登録を完了できませんでした。demo:stop後にdemo:prepareからやり直してください" }); }
+    });
+    registerOwnerUi(app, {
+      ownerAddress: owner.address, accountAddress, configured: () => Boolean(config),
+      prepare: async (maxAmountWei) => {
+        if (configuring || config) throw new Error("policy already configured");
+        const policy = configureDemoPolicy(JSON.parse(await readFile("demos/claude-payment/policy.json", "utf8")), maxAmountWei);
+        const recipient = policy.recipientAllowlist[0];
+        if (!recipient || recipient === zeroAddress) throw new Error("recipient is required");
+        const prepared = await preparePolicyRegistration({ apiUrl, rpcUrl: anvil.rpcUrl, accountAddress, ownerPrivateKey: LOCAL_OWNER_KEY, policy });
+        return { commitment: prepared.commitment, activate: async () => {
+          if (configuring || config) throw new Error("policy already configured");
+          configuring = true;
+          const result = await prepared.activate(Math.floor(Date.now() / 1000) + 600);
+          config = { apiUrl, rpcUrl: anvil.rpcUrl, accountAddress, ownerPrivateKey: LOCAL_OWNER_KEY, policyId: result.policyId, token: result.token, recipient, maxAmountWei: policy.assetRules.find((rule) => rule.asset === zeroAddress)!.maxAmount.toString() };
+          return result;
+        } };
+      },
     });
     app.post("/demo/session", async (_request, reply) => {
       if (!config || sessionStarted) return reply.code(409).send({ error: "demo:policyで設定後、送金デモを1回だけ起動できます" });

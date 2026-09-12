@@ -88,7 +88,7 @@ async function json<T>(response: Response, schema: z.ZodType<T>): Promise<T> {
   return schema.parse(body);
 }
 
-export async function createAndActivatePolicy(input: {
+export type CreatePolicyInput = {
   apiUrl: string;
   rpcUrl: string;
   accountAddress: Address;
@@ -97,7 +97,15 @@ export async function createAndActivatePolicy(input: {
   maxValiditySeconds?: bigint;
   policy?: Omit<PolicyInput, "salt">;
   deadline: number;
-}): Promise<{ policyId: string; policyVersion: number; token: string; commitment: Hex; txHash: Hex }> {
+};
+export type CreatedPolicy = { policyId: string; policyVersion: number; token: string; commitment: Hex; txHash: Hex };
+
+export async function createAndActivatePolicy(input: CreatePolicyInput): Promise<CreatedPolicy> {
+  const prepared = await preparePolicyRegistration(input);
+  return prepared.activate(input.deadline);
+}
+
+export async function preparePolicyRegistration(input: Omit<CreatePolicyInput, "deadline">) {
   assertLocalUrl(input.apiUrl, "apiUrl");
   assertLocalUrl(input.rpcUrl, "rpcUrl");
   const owner = privateKeyToAccount(input.ownerPrivateKey);
@@ -107,71 +115,74 @@ export async function createAndActivatePolicy(input: {
   const walletClient = createWalletClient({ account: owner, chain: foundry, transport });
   if ((await publicClient.getChainId()) !== 31_337) throw new Error("local chain id must be 31337");
 
-  const context = await json(
-    await fetch(`${input.apiUrl}/v1/accounts/${accountAddress}/policy-context`),
-    contextResponseSchema,
-  );
   const salt = generateSalt();
   const policy = normalizePolicy(input.policy ? { ...input.policy, salt } : { maxAmountWei: input.maxAmountWei, salt, maxValiditySeconds: input.maxValiditySeconds });
   const commitment = toHex(await computePolicyCommitment(policy), { size: 32 });
-  const message = {
-    policyId: context.policyId,
-    account: accountAddress,
-    policyCommitment: commitment,
-    nonce: BigInt(context.nonce),
-    deadline: BigInt(input.deadline),
-  };
-  const signature = await owner.signTypedData({
-    domain: policyDomain(accountAddress),
-    types: policyUpdateTypes,
-    primaryType: "PolicyUpdate",
-    message,
-  });
-  const registration = await json(
-    await fetch(`${input.apiUrl}/v1/policies/${context.policyId}`, {
-      method: "PUT",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        account: accountAddress,
-        policy: serializePolicy(policy),
-        salt: salt.toString(),
-        policyCommitment: commitment,
-        nonce: context.nonce,
-        deadline: input.deadline,
-        signature,
+  async function activate(deadline: number): Promise<CreatedPolicy> {
+    const context = await json(
+      await fetch(`${input.apiUrl}/v1/accounts/${accountAddress}/policy-context`),
+      contextResponseSchema,
+    );
+    const message = {
+      policyId: context.policyId,
+      account: accountAddress,
+      policyCommitment: commitment,
+      nonce: BigInt(context.nonce),
+      deadline: BigInt(deadline),
+    };
+    const signature = await owner.signTypedData({
+      domain: policyDomain(accountAddress),
+      types: policyUpdateTypes,
+      primaryType: "PolicyUpdate",
+      message,
+    });
+    const registration = await json(
+      await fetch(`${input.apiUrl}/v1/policies/${context.policyId}`, {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          account: accountAddress,
+          policy: serializePolicy(policy),
+          salt: salt.toString(),
+          policyCommitment: commitment,
+          nonce: context.nonce,
+          deadline,
+          signature,
+        }),
       }),
-    }),
-    registrationResponseSchema,
-  );
-  const expectedCalldata = verifyPendingRegistration(registration, {
-    policyId: context.policyId,
-    policyVersion: 1,
-    commitment,
-  });
-  const txHash = await walletClient.sendTransaction({ to: accountAddress, data: expectedCalldata });
-  const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
-  if (receipt.status !== "success") throw new Error("policy update transaction reverted");
-  const activation = await json(
-    await fetch(`${input.apiUrl}/v1/policies/${context.policyId}/activate`, {
-      method: "POST",
-      headers: {
-        authorization: `Bearer ${registration.token}`,
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({ txHash }),
-    }),
-    activationResponseSchema,
-  );
-  if (activation.policyVersion !== registration.policyVersion) {
-    throw new Error("policy API activated an unexpected policy version");
+      registrationResponseSchema,
+    );
+    const expectedCalldata = verifyPendingRegistration(registration, {
+      policyId: context.policyId,
+      policyVersion: 1,
+      commitment,
+    });
+    const txHash = await walletClient.sendTransaction({ to: accountAddress, data: expectedCalldata });
+    const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+    if (receipt.status !== "success") throw new Error("policy update transaction reverted");
+    const activation = await json(
+      await fetch(`${input.apiUrl}/v1/policies/${context.policyId}/activate`, {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${registration.token}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ txHash }),
+      }),
+      activationResponseSchema,
+    );
+    if (activation.policyVersion !== registration.policyVersion) {
+      throw new Error("policy API activated an unexpected policy version");
+    }
+    return {
+      policyId: registration.policyId,
+      policyVersion: registration.policyVersion,
+      token: registration.token,
+      commitment,
+      txHash,
+    };
   }
-  return {
-    policyId: registration.policyId,
-    policyVersion: registration.policyVersion,
-    token: registration.token,
-    commitment,
-    txHash,
-  };
+  return { commitment, activate };
 }
 
 export async function updateAndActivatePolicy(input: {

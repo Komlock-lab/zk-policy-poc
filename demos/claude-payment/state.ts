@@ -11,7 +11,8 @@ export const connectionSchema = z.object({ apiUrl: localUrl, controlToken: z.str
 export const demoConfigSchema = z.object({ apiUrl: localUrl, rpcUrl: localUrl, accountAddress: address,
   ownerPrivateKey: z.string().regex(/^0x[0-9a-fA-F]{64}$/).transform((v) => v as Hex),
   policyId: z.string().uuid(), token: z.string().regex(/^zkp_[A-Za-z0-9_-]{43}$/), recipient: address }).strict();
-export type DemoConfig = z.infer<typeof demoConfigSchema>;
+export const demoSessionSchema = demoConfigSchema.extend({ maxAmountWei: z.string().refine((value) => amountSchema.safeParse(value).success) });
+export type DemoConfig = z.infer<typeof demoSessionSchema>;
 export const demoPolicyRequest = z.object({ maxAmountWei: amountSchema }).strict();
 export function configureDemoPolicy(template: unknown, maxAmountWei: bigint) {
   const policy = policySchema.omit({ salt: true }).parse(template);

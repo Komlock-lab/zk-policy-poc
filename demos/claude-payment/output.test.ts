@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { formatDemoGuide } from "./output.ts";
 
 const input = {
+  maxAmountWei: 300000000000000000n,
   rpcUrl: "http://127.0.0.1:8545",
   accountAddress: "0x1111111111111111111111111111111111111111",
   recipient: "0x2222222222222222222222222222222222222222",
@@ -23,6 +24,8 @@ describe("formatDemoGuide", () => {
     expect(output).toContain("status: 1 (success)");
     expect(output).toContain("status: 0 (failed)");
     expect(output).toContain(input.resultsPath);
+    expect(output).toContain("送金上限額   0.3 ETH / 回");
+    expect(output).toContain("デモ送金額   0.1 ETH");
     expect(output).toContain("正常系の依頼\n\n");
     expect(output).not.toContain("\x1b[");
   });

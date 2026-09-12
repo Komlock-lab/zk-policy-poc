@@ -1,7 +1,10 @@
+import { formatEther } from "viem";
+
 export interface DemoGuideInput {
   rpcUrl: string;
   accountAddress: string;
   recipient: string;
+  maxAmountWei: bigint;
   resultsPath: string;
   normalPrompt: string;
   abnormalPrompt: string;
@@ -27,6 +30,7 @@ export function formatDemoGuide(input: DemoGuideInput, color = false): string {
     `  Account      ${input.accountAddress}`,
     `  Recipient    ${input.recipient}`,
     "  デモ送金額   0.1 ETH",
+    `  送金上限額   ${formatEther(input.maxAmountWei)} ETH / 回`,
     "",
     step("01", "正常系 — 0.1 ETHを送金", "Claude Code"),
     "",

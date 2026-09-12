@@ -3,7 +3,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import { readFile } from "node:fs/promises";
 import { z } from "zod";
 import { readCreatePolicyArguments } from "../../apps/policy-cli/src/policy-input.ts";
-import { connectionSchema, demoConfigSchema } from "./state.ts";
+import { connectionSchema, demoSessionSchema } from "./state.ts";
 import { runPaymentSession } from "./session.ts";
 
 class DemoError extends Error {}
@@ -67,6 +67,14 @@ async function main() {
   if (mode === "policy") {
     const status = z.object({ configured: z.boolean(), sessionStarted: z.boolean() }).parse(await request("/demo/status"));
     if (status.configured) throw new DemoError("設定済みです。次に pnpm demo:claude を実行してください");
+    if (!process.argv.includes("--cli")) {
+      const connection = connectionSchema.parse(JSON.parse(await readFile("demo-connection.json", "utf8")));
+      const url = connection.apiUrl + "/owner";
+      console.log("② ポリシー設定画面: " + url + "\nオーナーキーでログインし、設定・コミットメント登録を完了してください。\n完了後は pnpm demo:claude を実行してください。");
+      const browser = spawn("open", [url], { stdio: "ignore" });
+      browser.once("error", () => console.log("上のURLをブラウザーで開いてください。"));
+      return;
+    }
     console.log("② ポリシー設定（送金デモは0.1 ETHを使用します）");
     const input = await readCreatePolicyArguments([]);
     if (!("maxAmountWei" in input) || input.maxAmountWei === undefined) throw new DemoError("上限金額が必要です");
@@ -76,7 +84,7 @@ async function main() {
     console.log("② 設定完了。次に pnpm demo:claude を実行してください。");
     return;
   }
-  const config = demoConfigSchema.parse(await request("/demo/session", {}));
+  const config = demoSessionSchema.parse(await request("/demo/session", {}));
   try { await runPaymentSession(config, process.argv.includes("--self-test")); }
   finally { await stopEnvironment(); }
 }
